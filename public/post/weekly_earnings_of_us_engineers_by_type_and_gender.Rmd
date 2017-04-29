@@ -1,0 +1,384 @@
+---
+title       : "Weekly Earnings Of U.S. Engineers: By Type And Gender"
+date        : "04-21-2017"
+author      : "Luke Smith"
+description : ""
+tags        : [r, projects, election analysis, political analysis]
+---
+
+```{r setup, include=FALSE}
+library(seasmith)
+library(plyr)
+library(tidyverse)
+library(forcats)
+library(ggalt)
+library(scales)
+library(rvest)
+library(jsonlite)
+library(knitr)
+library(kableExtra)
+# library(huxtable)
+
+
+# Do not show code
+opts_chunk$set(echo = FALSE)
+
+# Print large numbers without exponential notation
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+# Print large numbers with commas and convert characters to title
+knit_hooks$set(inline = function(x) {
+    if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+      if (is.character(x)) return(stringr::str_to_title(x)) else
+        return(x)
+  })
+
+# Store hook settings for resets
+old_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+# Declare default value if conditioning/filtering fails (i.e. length(x) == 0)
+il_condition_default <- function(x, cond, ret) {
+
+  if (eval(substitute(cond)) == TRUE) return(ret) else return(x)
+
+}
+
+# Rearrange the numeric base
+il_num_base <- function(x, current_base = 0, new_base = 0) {
+ 
+  new_power <- current_base - new_base
+  
+  return(x * 10^new_power)
+  
+}
+
+
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_green      <- "#008348"
+my_green2     <- "#1e6545"
+my_lightgreen <- "#00be68"
+my_darkgreen  <- "#00371e"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+```
+
+```{r import_setup}
+fapi <- "8422d5c5396bd742cf7f64f054e290f7"
+root <- "https://api.stlouisfed.org/fred"
+
+q_release <- "/release/series?release_id="
+q_series  <- "/series/observations?series_id="
+
+q_api <- "api_key="
+q_tags <- "tag_names="
+
+file_type <- "file_type=json"
+```
+
+
+
+
+
+```{r import_332_engineering_meta, cache=TRUE}
+id_release <- 332
+tags <- "engineering"
+
+search <- paste0(root, q_release, id_release, "&",
+                 q_api, fapi, "&",
+                 q_tags, tags, "&",
+                 file_type)
+
+h <- search %>% read_html()
+h_json <- h %>% html_text() %>% fromJSON()
+```
+
+```{r wrangle_332_engineering_meta, cache=TRUE}
+eng <- h_json$seriess %>% as_tibble()
+
+# cat_emp_total <- "^Employed full time: Wage and salary workers"
+
+eng2 <- eng %>%
+  .$title %>%
+  stringi::stri_split(regex = ": ") %>%
+  map(as.matrix) %>%
+  map(t) %>%
+  map(function(x) as.data.frame(x, stringsAsFactors = FALSE)) %>%
+  map(function(x) if (length(x) < 5) add_column(x, V5 = NA_character_) else x) %>%
+  map(function(x) if (length(x) < 6) add_column(x, V6 = NA_character_) else x)
+
+eng2 <- eng2 %>%
+  Reduce(function(...) dplyr::union_all(...), .) %>%
+  as_tibble()
+
+eng2 <- eng2 %>%
+  add_column(id = eng$id) %>%
+  # mutate(pk = row_number()) %>%
+  select(id, everything())
+
+levels <- eng2 %>%
+  filter(V1 == "Employed full time",
+         V2 == "Wage and salary workers") %>%
+  arrange(V3)
+
+median_earnings <- eng2 %>%
+  filter(V1 == "Employed full time",
+         V2 == "Median usual weekly nominal earnings (second quartile)",
+         V3 == "Wage and salary workers") %>%
+  arrange(V4)
+```
+
+
+
+
+
+```{r import_levels, cache=TRUE}
+id_series <- levels$id
+
+search <- paste0(root, q_series, id_series, "&",
+                 q_api, fapi, "&",
+                 file_type)
+
+h2 <- search %>% map(read_html)
+h2_json <- h2 %>% map(html_text) %>% map(fromJSON)
+```
+
+```{r wrangle_levels, cach=TRUE}
+lvls <- h2_json %>% map(function(x) {
+  x <- select(x$observations, date, value)
+  x <- mutate(.data = x,
+              date  = as.Date(date),
+              value = as.numeric(value))
+  x <- as_tibble(x)
+  })
+
+names(lvls) <- id_series
+
+lvls <- lvls %>%
+  ldply() %>%
+  group_by(.id) %>%
+  nest()
+```
+
+
+
+
+
+```{r import_median_earnings, cache=TRUE}
+id_series <- median_earnings$id
+
+search <- paste0(root, q_series, id_series, "&",
+                 q_api, fapi, "&",
+                 file_type)
+
+h3 <- search %>% map(read_html)
+h3_json <- h3 %>% map(html_text) %>% map(fromJSON)
+```
+
+```{r wrangle_median_earnings, cach=TRUE}
+mern <- h3_json %>% map(function(x) {
+  x <- select(x$observations, date, value)
+  x <- mutate(.data = x,
+              date  = as.Date(date),
+              value = as.numeric(value))
+  x <- as_tibble(x)
+  })
+
+names(mern) <- id_series
+
+mern <- mern %>%
+  ldply() %>%
+  group_by(.id) %>%
+  nest()
+```
+
+
+
+
+```{r}
+cmb <- lvls %>%
+  add_column(id2 = rep("Level", times = nrow(.))) %>%
+  dplyr::union_all(mern %>% add_column(id2 = rep("Median_Earnings", times = nrow(.))))
+
+eng2 <- eng2 %>% inner_join(cmb, by = c("id" = ".id"))
+```
+
+
+
+
+
+```{r}
+eng_l <- eng2 %>%
+  filter(id2 == "Level", !is.na(V5)) %>%
+  select(V3:id2, -V4, -V6, -id2) %>%
+  unnest()
+
+eng_l <- eng_l %>%
+  spread(V5, value) %>%
+  mutate(WM_Ratio = Women / Men) %>%
+  gather(... = -c(V3, date))
+
+eng_me <- eng2 %>%
+  filter(id2 == "Median_Earnings", !is.na(V6)) %>%
+  select(V4:id2, -V5, -id2) %>%
+  unnest()
+
+eng_me <- eng_me %>%
+  spread(V6, value) %>%
+  mutate(WM_Ratio = Women / Men) %>%
+  gather(... = -c(V4, date))
+
+eng_cmb <- eng_l %>%
+  inner_join(eng_me, by = c("V3" = "V4",
+                            "date",
+                            "key"))
+
+names(eng_cmb)[4:5] <- c("level", "earnings")
+
+# eng2_lvls <- eng2 %>%
+#   filter(id2 == "Level") %>%
+#   unnest()
+```
+
+```{r} 
+eng_l %>%
+  filter(key != "WM_Ratio") %>%
+  ggplot(aes(date, value)) +
+  geom_line(aes(color = V3)) +
+  facet_wrap(~forcats::fct_relevel(key, "Men", "Women")) +
+  guides(color = FALSE) +
+  theme_minimal()
+
+eng_l %>%
+  filter(key != "WM_Ratio") %>%
+  spread(key, value) %>%
+  mutate(V3 = stringi::stri_replace(V3, "", regex = "\\soccupations")) %>%
+  ggplot(aes(Men, Women)) +
+    geom_point(aes(color = V3)) +
+    # facet_wrap(~V3, scales = "free") +
+    guides(color = FALSE) +
+    theme_minimal()
+```
+
+```{r, fig.height=25}
+eng_l %>%
+  filter(key != "WM_Ratio") %>%
+  spread(key, value) %>%
+  mutate(V3 = stringi::stri_replace(V3, "", regex = "\\soccupations")) %>%
+  ggplot(aes(Men, Women)) +
+    geom_point(aes(color = V3)) +
+    facet_wrap(~V3, scales = "free", ncol = 2) +
+    guides(color = FALSE) +
+    theme_minimal()
+
+
+
+
+    plain <- eng_l %>%
+      filter(key != "WM_Ratio") %>%
+      spread(key, value) %>%
+      rename(v3 = V3)
+    
+    plain2 <- eng_l %>%
+      filter(key == "WM_Ratio") %>%
+      spread(key, value) %>%
+      rename(v3 = V3)
+    
+
+eng_l %>%
+  filter(key != "WM_Ratio") %>%
+  spread(key, value) %>%
+  mutate(V3 = stringi::stri_replace(V3, "", regex = "\\soccupations")) %>%
+  ggplot(aes(Men, Women)) +
+    geom_point(aes(Men, Women, group = v3), plain, color = "gray40") +
+    geom_smooth(aes(group = V3), method = "lm") +
+    facet_wrap(~V3, ncol = 2) +
+    guides(color = FALSE) +
+    theme_minimal()
+```
+
+```{r, fig.height=50}
+p <- eng_l %>%
+  filter(key == "WM_Ratio") %>%
+  spread(key, value) %>%
+  mutate(V3 = stringi::stri_replace(V3, "", regex = "\\soccupations")) %>%
+  ggplot(aes(date, WM_Ratio)) +
+    geom_line(aes(date, WM_Ratio, group = v3), plain2, color = "gray40") +
+    geom_line(aes(color = V3), size = 1.5) +
+    facet_wrap(~V3, scales = "free_y", ncol = 1) +
+    guides(color = FALSE) +
+    scale_x_date(position = "top") +
+    scale_y_continuous(minor_breaks = NULL,
+                       limits       = c(0, 0.7)) +
+    labs(x = "Year",
+         y = "Women:Men Employment Ratio") +
+    theme_minimal()
+
+
+# More work needed
+
+    eng_cmb_plain <- eng_cmb %>%
+      filter(key == "WM_Ratio") %>%
+      rename(v3 = V3)
+
+q <- eng_cmb %>%
+    filter(key == "WM_Ratio") %>%
+    ggplot(aes(earnings, level)) +
+    geom_point(aes(earnings, level), eng_cmb_plain %>% filter(earnings >= 1.0), color = "gray70") +
+    geom_point(aes(earnings, level), eng_cmb_plain %>% filter(earnings < 1.0), color = "gray30") +
+    geom_point(aes(color = V3)) +
+    facet_wrap(~V3, ncol = 1) +
+    guides(color = FALSE) +
+    scale_x_continuous(minor_breaks = NULL,
+                       breaks       = c(0, 1.0, 2.0),
+                       position     = "top") +
+    scale_y_continuous(minor_breaks = NULL,
+                       limits = c(0, 0.7)) +
+    labs(x = "Women:Men Median Earnings Ratio",
+         y = "Women:Men Employment Ratio") +
+    theme_minimal()
+
+gridExtra::grid.arrange(p, q, ncol = 2)
+```
+
+```{r, fig.height=50}
+    plain_me <- eng_me %>%
+          filter(key == "WM_Ratio") %>%
+          spread(key, value) %>%
+          rename(v4 = V4)
+
+p <- eng_me %>%
+  filter(key == "WM_Ratio") %>%
+  spread(key, value) %>%
+  mutate(V4 = stringi::stri_replace(V4, "", regex = "\\soccupations")) %>%
+  ggplot(aes(date, WM_Ratio)) +
+    geom_line(aes(date, WM_Ratio, group = v4), plain_me, color = "gray40") +
+    geom_line(aes(color = V4), size = 1.5) +
+    facet_wrap(~V4, scales = "free_y", ncol = 1) +
+    guides(color = FALSE) +
+    scale_x_date(position = "top") +
+    scale_y_continuous(minor_breaks = NULL,
+                       breaks       = c(0, 1.0, 2.0)) +
+    labs(x = "Year",
+         y = "Women:Men Median Earnings Ratio") +
+    theme_minimal()
+
+q <- q +
+  coord_flip() +
+  scale_x_continuous(minor_breaks = NULL,
+                     breaks       = c(0, 1.0, 2.0),
+                     position     = "bottom") +
+  scale_y_continuous(minor_breaks = NULL,
+                     limits       = c(0, 0.7),
+                     position     = "right")
+
+gridExtra::grid.arrange(p, q, ncol = 2)
+```

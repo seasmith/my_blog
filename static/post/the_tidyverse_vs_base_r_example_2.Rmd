@@ -1,0 +1,158 @@
+---
+title : "The tidyverse vs base R: Example 2"
+author: "Luke Smith"
+date  : "03-02-2017"
+description: "Bring order to a chaotic universe."
+tags: [r, tidyverse, base R, data wrangling]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# library(RODBC)
+# db <- odbcDriverConnect('driver=SQL Server;server=DAGOBAH\\SQLEXPRESS1;database=lahman;trusted_connection=true')
+# knitr::opts_chunk$set(connection = "db")
+```
+
+Besides being occasionally better than base R, the tidyverse can also overcome some of the verbosity and complexity of SQL.
+
+## dplyr vs base R vs SQL
+### Finding the Youngest Player-Debut For Every Season
+For example, let's find the youngest player to have debut each year in Major League Baseball (MLB) using the Lahman database (which the R version can be found [here][R_Lahman] and the SQL version [here][SQL_Lahman]).
+
+[R_Lahman]: https://cran.r-project.org/package=Lahman
+[SQL_Lahman]: http://www.seanlahman.com/baseball-archive/statistics/
+
+```{r data_Lahman, message=FALSE}
+library(Lahman)
+
+Master <- tibble::as_tibble(Master)
+
+# The Lahman master table
+print(Master)
+```
+
+<br>
+
+All three methods will be presented below.
+
+#### tidyverse
+
+```{r tidyverse_Lahman, message=FALSE}
+library(tidyverse)
+library(lubridate) # Included in the install; must be loaded separately
+
+Master2 <- Master %>%
+  filter(!is.na(birthDate) & !is.na(debut)) %>%
+  mutate(debut      = as.Date(debut),
+         debut_year = year(debut),
+         debut_age  = debut - birthDate)
+
+tidyverse_result <- Master2 %>%
+  group_by(debut_year = year(debut)) %>%
+  filter(debut_age == min(debut_age)) %>%
+  arrange(debut_year) %>%
+  ungroup()
+```
+
+<br>
+
+#### base R
+And now the base R solution which uses assignment (`<-`) in place of `dplyr::mutate()`; `split()` in place of `dplyr::group_by()`; and single-bracket (`[`) subsetting in place of `dplyr::filter()`.
+
+```{r base_R_Lahman, message=FALSE}
+keep_this <- !is.na(Master$birthDate)
+keep_that <- !is.na(Master$debut)
+
+Master2 <- Master[keep_this & keep_that, ]
+debut_split <- strsplit(x     = as.character.Date(Master2$debut),
+                            split = "-",
+                            fixed = TRUE)
+Master2$debut_year <- vapply(debut_split, `[`, character(1), 1)
+Master2$debut_age  <- as.Date(Master2$debut) - Master2$birthDate
+
+by_debut_year <- split(Master2, Master2$debut_year)
+
+get_min <- function(x) x[x$debut_age == min(x$debut_age), ]
+
+ydbR <- lapply(by_debut_year, get_min)
+ydbR <- Reduce(function(...) merge(..., all = TRUE), ydbR)
+base_R_result <- ydbR[order(ydbR$debut_year), ]
+```
+
+<br>
+
+And last, the SQL solution, using T-SQL within SQL Server. I've decided to hide the actual function used to retrieve the data in favor of showing you the syntax-highlighted SQL statement.
+
+```{r SQL_Lahman_connect, message=FALSE}
+library(RODBC)
+
+db <- odbcDriverConnect('driver=SQL Server;server=DAGOBAH\\SQLEXPRESS1;database=lahman;trusted_connection=true')
+```
+```{r SQL_Lahman, include=FALSE}
+sql_result <- sqlQuery(db, "SELECT playerID, nameFirst, nameLast, debutAge, debut
+FROM Master
+INNER JOIN (
+	SELECT MIN(debutAge) as debutAge, m.debutYear
+	FROM (
+		SELECT *,
+			YEAR(debut) as debutYear,
+			DATEDIFF(day, CAST(CAST(birthYear as nchar) + '/' + CAST(birthMonth as nchar) + '/' + CAST(birthDay as nchar) as date), debut) as debutAge,
+			CAST(CAST(birthYear as nchar) + '/' + CAST(birthMonth as nchar) + '/' + CAST(birthDay as nchar) as date) as birthDate
+		FROM Master
+		WHERE birthDay IS NOT NULL AND
+			birthMonth IS NOT NULL AND
+			birthYear IS NOT NULL AND
+			debut IS NOT NULL
+		) as m
+	GROUP BY m.debutYear
+	) as n
+ON DATEDIFF(day, CAST(CAST(birthYear as nchar) + '/' + CAST(birthMonth as nchar) + '/' + CAST(birthDay as nchar) as date), debut) = n.debutAge AND
+	YEAR(debut) = n.debutYear
+ORDER BY YEAR(debut)
+;")
+```
+
+```sql
+SELECT playerID, nameFirst, nameLast, debutAge, debut
+FROM Master
+INNER JOIN (
+	SELECT MIN(debutAge) as debutAge, m.debutYear
+	FROM (
+		SELECT *,
+			YEAR(debut) as debutYear,
+			DATEDIFF(day, CAST(CAST(birthYear as nchar) + '/' + CAST(birthMonth as nchar) + '/' + CAST(birthDay as nchar) as date), debut) as debutAge,
+			CAST(CAST(birthYear as nchar) + '/' + CAST(birthMonth as nchar) + '/' + CAST(birthDay as nchar) as date) as birthDate
+		FROM Master
+		WHERE birthDay IS NOT NULL AND
+			birthMonth IS NOT NULL AND
+			birthYear IS NOT NULL AND
+			debut IS NOT NULL
+		) as m
+	GROUP BY m.debutYear
+	) as n
+ON DATEDIFF(day, CAST(CAST(birthYear as nchar) + '/' + CAST(birthMonth as nchar) + '/' + CAST(birthDay as nchar) as date), debut) = n.debutAge AND
+	YEAR(debut) = n.debutYear
+ORDER BY YEAR(debut)
+;
+```
+<br>
+
+Wow. I don't think you have to be much of a programmer, coder, hacker, or whatever to tell which one of the three you would rather __NOT USE__ on a daily basis.
+
+```{r}
+# Compare tidyverse to base R
+anti_join(tidyverse_result, base_R_result, by = "playerID")
+
+# Compare base R to tidyverse
+anti_join(base_R_result, tidyverse_result, by = "playerID")
+
+# Compare tidyverse to SQL
+anti_join(tidyverse_result, sql_result, by = "playerID")
+
+# Compare SQL to tidyverse
+anti_join(tidyverse_result, sql_result, by = "playerID")
+```
+
+<br>
+<br>

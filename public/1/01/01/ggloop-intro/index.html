@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title> ggloop: Intro &middot; A Hugo website </title>
+
+
+<link rel="stylesheet" href="../../../../css/slim.css">
+<link rel="stylesheet" href="../../../../css/highlight.min.css">
+<link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Source+Code+Pro' rel='stylesheet' type='text/css'>
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../../../../apple-touch-icon-144-precomposed.png">
+<link rel="shortcut icon" href="../../../../favicon.ico">
+
+
+<link href="" rel="alternate" type="application/rss+xml" title="A Hugo website" />
+
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+  <h1 class="site-title"><a href="../../../../">A Hugo website</a></h1>
+  <p class="site-tagline"></p>
+  <div class="nav">
+    <a class="nav-btn" href="#">
+      <span class="ci ci-burger"></span>
+    </a>
+    <ul class="nav-list">
+      
+      <li><a href="../../../../about/">About</a></li>
+      
+      <li><a href="https://github.com/seasmith">GitHub</a></li>
+      
+      <li><a href="../../../../projects/">Projects</a></li>
+      
+      <li><a href="https://twitter.com/lksmth">Twitter</a></li>
+       
+	  <li class="spacer">&ac;</li>
+  
+    </ul>
+  </div>
+</div>
+    <div class="content">
+      <div class="posts">
+        <div class="post">
+          <h2 class="post-title"><a href="../../../../1/01/01/ggloop-intro/">ggloop: Intro</a></h2>
+          <span class="post-date">Jan 1, 0001 </span>
+          <div class="post-content">
+            <hr />
+<div id="what-is-it" class="section level2">
+<h2>What is it?</h2>
+<p><code>ggloop</code> is a package which allows the user to construct multiple <code>ggplot2</code> plots by passing vectors of aesthetics rather than single aesthetics. Users can pass <code>x</code>, <code>y</code>, and <code>...</code> vectors to <code>aes_loop()</code>, which like <code>aes()</code>, is a nested function - which sits inside of <code>ggloop()</code>. The pairing, or remapping, behaviors of these vectors are determined by the <code>remap_xy</code> and <code>remap_dots</code> options.</p>
+<div id="some-quick-tips" class="section level3">
+<h3>Some quick tips</h3>
+<ul>
+<li>Nested lists or lists of <code>ggplot2</code> plots can have features added to them by using the special l-plus operator - <code>%L+%</code>.</li>
+<li>All vectors greater than length one which are passed to <code>x</code>, <code>y</code>, or <code>...</code> must be wrapped by <code>c()</code> and must not contain any nested <code>c()</code>.</li>
+<li><code>remap_xy</code> controls how the <code>x</code> and <code>y</code> vectors are paired
+<ul>
+<li><code>TRUE</code> = default; acts like <code>expand.grid()</code> but removes duplicates and unordered sets</li>
+<li><code>FALSE</code> = mimics R’s internal recycling method</li>
+<li><code>NA</code> = leaves unpaired aesthetics unpaired (i.e. if <code>x</code> is one element longer than <code>y</code>, then the last mapping will have no <code>y</code> aesthetic)</li>
+</ul></li>
+<li><code>remap_dots</code> controls how the <code>...</code> arguments are paired
+<ul>
+<li><code>TRUE</code> = similar to <code>remap_xy = TRUE</code> but actually more like <code>expand.grid()</code>; for example, if two paired aesthetics (i.e. <code>color</code> and <code>size</code>) have the same variable (i.e. <code>gear</code>) then they will be paired (i.e. <code>colour &lt;- gear; size &lt;- gear</code>)</li>
+<li><code>FALSE</code> = default; similar to <code>remap_xy = NA</code>; any unpaired aesthetics will be left unpaired.</li>
+</ul></li>
+</ul>
+</div>
+</div>
+<div id="where-to-get-it" class="section level2">
+<h2>Where to get it</h2>
+<p><code>ggloop</code> can be downloaded from <a href="https://cran.r-project.org/package=ggloop">CRAN</a> by using <code>install.packages(&quot;ggloop&quot;)</code> or it can be obtained from <a href="https://github.com/seasmith/ggloop">GitHub</a> by using <code>devtools::instal_github(&quot;seasmith/ggloop&quot;)</code>.</p>
+</div>
+<div id="examples" class="section level2">
+<h2>Examples</h2>
+<p>Create a list of xy plots.</p>
+<pre class="r"><code>library(ggloop)
+library(ggplot2)
+
+g &lt;- ggloop(data = mtcars, 
+            mappings = aes_loop(x = c(mpg:hp, mpg/cyl), 
+                                y = c(hp:mpg, disp/hp),
+                                color = gear), 
+            remap_xy = FALSE)
+g &lt;- g %L+% geom_point()</code></pre>
+<pre><code>## Warning in g %L+% geom_point(): The special infix operator `%L+%` will be
+## deprecated. Please use `+` as you would for &#39;ggplot2&#39;.</code></pre>
+<pre class="r"><code>g$color.gear$`x.mpg/cyl_y.disp/hp`  ## view one of the plots</code></pre>
+<p><img src="../../../../post/ggloop_intro_files/figure-html/ex1-1.png" width="672" /></p>
+</div>
+
+          </div>
+        </div>
+        <div class="pagination">
+          <a class="btn previous " href="../../../../resume/"> Prev</a>  
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer">
+  
+  <p>Powered by <a href="http://gohugo.io">Hugo</a>. This theme—Slim—is open sourced on <a href="https://github.com/zhe/hugo-theme-slim">Github</a>.</p>
+  
+</div>
+
+  </div>
+  <script src="../../../../js/slim.js"></script>
+  <script src="../../../../js/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+  
+</body>
+
+</html>

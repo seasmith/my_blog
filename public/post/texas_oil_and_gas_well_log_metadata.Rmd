@@ -1,0 +1,294 @@
+---
+title  : ""
+author : "Luke Smith"
+date   : ""
+tags   : [r, oil and gas, economics, plotting]
+---
+
+```{r setup_std, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(plyr)
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+
+
+# ---- Hooks_Setup
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+old_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Inline_Function_Setup
+# Provide a default value for a given condition
+il_condition_default <- function(x, cond, ret) {
+  
+  if (eval(substitute(cond)) == TRUE) return(ret) else return(x)
+  
+}
+
+# Rearrange the numeric base
+il_num_base <- function(x, current_base = 0, new_base = 0) {
+  
+  new_power <- current_base - new_base
+  
+  return(x * 10^new_power)
+  
+}
+
+
+
+# ---- Extra_Function_Setup
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+
+
+# ---- Color_Setup
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_green      <- "#008348"
+my_green2     <- "#1e6545"
+my_lightgreen <- "#00be68"
+my_darkgreen  <- "#00371e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+
+
+# ---- Recession_Setup
+recessions <- read.table(textConnection(
+  "Peak, Trough
+  1857-06-01, 1858-12-01
+  1860-10-01, 1861-06-01
+  1865-04-01, 1867-12-01
+  1869-06-01, 1870-12-01
+  1873-10-01, 1879-03-01
+  1882-03-01, 1885-05-01
+  1887-03-01, 1888-04-01
+  1890-07-01, 1891-05-01
+  1893-01-01, 1894-06-01
+  1895-12-01, 1897-06-01
+  1899-06-01, 1900-12-01
+  1902-09-01, 1904-08-01
+  1907-05-01, 1908-06-01
+  1910-01-01, 1912-01-01
+  1913-01-01, 1914-12-01
+  1918-08-01, 1919-03-01
+  1920-01-01, 1921-07-01
+  1923-05-01, 1924-07-01
+  1926-10-01, 1927-11-01
+  1929-08-01, 1933-03-01
+  1937-05-01, 1938-06-01
+  1945-02-01, 1945-10-01
+  1948-11-01, 1949-10-01
+  1953-07-01, 1954-05-01
+  1957-08-01, 1958-04-01
+  1960-04-01, 1961-02-01
+  1969-12-01, 1970-11-01
+  1973-11-01, 1975-03-01
+  1980-01-01, 1980-07-01
+  1981-07-01, 1982-11-01
+  1990-07-01, 1991-03-01
+  2001-03-01, 2001-11-01
+  2007-12-01, 2009-06-01"), sep=',',
+  colClasses=c('Date', 'Date'), header=TRUE)
+
+recessions <- as_tibble(recessions)
+
+```
+
+```{r setup_extra, include=FALSE}
+library(httr)
+library(readxl)
+```
+
+```{r import_setup, include=FALSE, cache=TRUE}
+url <- "http://www.rrc.state.tx.us/oil-gas/research-and-statistics/obtaining-commission-records/oil-gas-well-records-gis-well-logs/"
+```
+
+```{r import_data, include=FALSE, cache=TRUE}
+x <- url %>% read_html()
+
+hrefs <- x %>%
+  html_nodes(".table.table-bordered") %>%
+  html_nodes("tr") %>%
+  html_nodes("td") %>%
+  html_nodes("a") %>%
+  html_attr("href")
+
+links <- url %>%
+  parse_url() %>%
+  {paste0(.$scheme, "://", .$hostname, hrefs)}
+```
+
+```{r store_data_setup, include=FALSE, cache=TRUE}
+dir.create("tog_wl_metadata")
+
+fnames <- links %>%
+  basename() %>%
+  file.path("tog_wl_metadata", .)
+```
+
+```{r store_data, include=FALSE, cache=TRUE}
+dload <- Map(download.file, links, fnames)
+# Download xls file with mode = "wb"
+dload2 <- download.file(links[tools::file_ext(links) == "xls"],
+                        fnames[tools::file_ext(fnames) == "xls"],
+                        mode = "wb")
+```
+
+```{r extract_data_setup, include=FALSE, cache=TRUE}
+zips_which <- fnames %>% tools::file_ext() %>% `==`("zip")
+
+zips <- zips_which %>% fnames[.]
+
+# Add arbitrary day number for conversion to date
+proto_date <- hrefs %>%
+  basename() %>%
+  tools::file_path_sans_ext() %>%
+  paste0("1", .) %>%
+  stri_replace("", regex = "xls$")
+
+# Extract only first three month characters; extract year; convert
+mon  <- proto_date %>% stri_extract(regex = "[a-z]{3}")
+year <- proto_date %>% stri_extract(regex = "[0-9]+$")
+dates <- as.Date(paste0("1", mon, year), format = "%d%B%Y")
+           
+```
+
+```{r extract_data, include=FALSE, cache=TRUE}
+date_folders <- file.path("tog_wl_metadata", dates)
+
+unz_files <- Map(function(x, y) {dir.create(x); unzip(y, exdir = x)}, date_folders[zips_which], zips)
+
+xls_folders <- dir.create(date_folders[!zips_which])
+xls_files <- file.copy(fnames[!zips_which], date_folders[!zips_which])
+```
+
+```{r import_extracted_data, include=FALSE}
+imp_files <- date_folders %>% map(function(x) dir(x, full.names = TRUE, recursive = TRUE))
+sheets <- c("01", "02", "03", "04", "05", "08", "09", "10", "7B", "7C", "8A")
+
+wl <- map(imp_files, function(x) map(sheets, function(y) read_excel(x, y, col_types = rep("text", times = 23))))
+
+wl <- map(imp_files, function(x) {
+  sheets <- excel_sheets(x)
+  map(sheets, function(y) read_excel(x, y))
+  })
+# http://www.rrc.state.tx.us/about-us/organization-activities/rrc-locations/counties-by-dist/
+
+```
+
+```{r plots_misc}
+wl %>%
+    filter(District == "01" | District == "02" | District == "03" | District == "04" | District == "05" | District == "06") %>%
+    filter(`Log Description` != "SURVEYS CASED HOLE") %>%
+    filter(`Log Description` != "OTHER") %>%
+    filter(grepl("eagle ford", `Field Name`, ignore.case = TRUE)) %>%
+    mutate(tli = as.numeric(`Top Log Interval`),
+           btd = as.numeric(`Bottom Total Depth`)) %>%
+    gather(... = c(tli, btd)) %>%
+    ggplot(aes(factor(key), value)) +
+    geom_boxplot(aes(color = factor(`County Name`))) +
+    facet_grid(`Log Description` ~ ., scales = "free_y") +
+    theme_minimal()
+
+wl %>%
+    filter(District == "01" | District == "02" | District == "03" | District == "04" | District == "05" | District == "06") %>%
+    filter(`Log Description` != "SURVEYS CASED HOLE") %>%
+    filter(`Log Description` != "OTHER") %>%
+    filter(grepl("eagle ford", `Field Name`, ignore.case = TRUE)) %>%
+    mutate(tli = as.numeric(`Top Log Interval`),
+           btd = as.numeric(`Bottom Total Depth`)) %>%
+    gather(... = c(tli, btd)) %>%
+    ggplot(aes(factor(key), value)) +
+    geom_boxplot(aes(color = key)) +
+    facet_grid(`Log Description` ~ ., scales = "free_y") +
+    theme_minimal()
+
+wl %>%
+    filter(District == "01" | District == "02" | District == "03" | District == "04" | District == "05" | District == "06") %>%
+    filter(`Log Description` != "SURVEYS CASED HOLE") %>%
+    filter(`Log Description` != "OTHER") %>%
+    filter(grepl("eagle ford", `Field Name`, ignore.case = TRUE)) %>%
+    mutate(tli = as.numeric(`Top Log Interval`),
+           btd = as.numeric(`Bottom Total Depth`)) %>%
+    gather(... = c(tli, btd)) %>%
+    ggplot(aes(factor(key), value)) +
+    geom_boxplot(aes(color = key)) +
+    facet_grid(`Log Description` ~ key, scales = "free_y") +
+    theme_minimal()
+
+wl %>%
+    filter(District == "01" | District == "02" | District == "03" | District == "04" | District == "05" | District == "06") %>%
+    filter(`Log Description` != "SURVEYS CASED HOLE") %>%
+    filter(`Log Description` != "OTHER") %>%
+    filter(grepl("eagle ford", `Field Name`, ignore.case = TRUE)) %>%
+    mutate(tli = as.numeric(`Top Log Interval`),
+           btd = as.numeric(`Bottom Total Depth`)) %>%
+    gather(... = c(tli, btd)) %>%
+    ggplot(aes(factor(`County Name`), value)) +
+    geom_boxplot(aes(color = key)) +
+    facet_grid(`Log Description` ~ key, scales = "free_y") +
+    theme_minimal()
+
+wl %>%
+    filter(District == "01" | District == "02" | District == "03" | District == "04" | District == "05" | District == "06") %>%
+    filter(`Log Description` != "SURVEYS CASED HOLE") %>%
+    filter(`Log Description` != "OTHER") %>%
+    filter(grepl("eagle ford", `Field Name`, ignore.case = TRUE)) %>%
+    mutate(tli = as.numeric(`Top Log Interval`),
+           btd = as.numeric(`Bottom Total Depth`)) %>%
+    gather(... = c(tli, btd)) %>%
+    ggplot(aes(factor(`County Name`), value)) +
+    geom_boxplot(aes(color = `Log Description`)) +
+    facet_wrap(~key) +
+    theme_minimal()
+```

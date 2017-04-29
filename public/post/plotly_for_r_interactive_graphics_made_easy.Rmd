@@ -1,0 +1,80 @@
+---
+title: "Plotly for R: Interactive Graphics Made Easy"
+author: "Luke Smith"
+date: "02-28-2017"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The [`plotly`](https://github.com/ropensci/plotly) package provides an R interface to the plotly.js JavaScript library. The library focuses on interactive graphics, and if you know `ggplot2` then making an interactive plotly grpah is quite easy.
+
+```{r plotly_jh, fig.width=10, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(forcats)
+library(plotly)
+load("~/R/basketball/jh.RData")
+
+# Create a ggplot
+jh_PTS <- jh %>%
+  ggplot(aes(x   = Date,
+             y   = PTS,
+             AST = AST,
+             TRB = TRB,
+             STL = STL,
+             TOV = TOV,
+             PF  = PF,
+             OPP = Opp,
+             WL  = WL)) +
+    geom_line(aes(group = Season, color = Tm), size = 0.5, alpha = 1/2) +
+    geom_point(aes(color = Tm)) +
+    facet_grid(. ~ Season, scales = "free_x") +
+    ggExtra::rotateTextX() +
+    labs(title = "John Harden: 2009-Present") +
+    scale_color_manual(values = c("#007ac2", "#ce1141"))
+
+# Pass the ggplot to ggplotly()
+ggplotly(jh_PTS, tooltip = c("PTS", "AST"))
+```
+
+While these may not quite be New York Times publishable d3.js graphics, they are fairly easy to make when generating exploratory graphs.
+
+```{r fig.height=12}
+jh_AST_PTS <- jh %>%
+  filter(!is.na(PTS)) %>%
+  ggplot(aes(AST, PTS,
+             TRB = TRB,
+             STL = STL,
+             TOV = TOV,
+             PF  = PF,
+             OPP = Opp)) +
+    geom_point(aes(color = Season)) +
+    facet_grid(Season ~ fct_rev(WL))
+
+ggplotly(jh_AST_PTS)
+```
+
+
+```{r plotly_jh_hou_record, fig.width=7, fig.height=14, message=FALSE, warning=FALSE}
+# This does not work - possibly due to negative values.
+
+# jh_plusminus_diff <- jh %>%
+#   filter(!is.na(PTS)) %>%
+#   ggplot(aes(x   = Diff,
+#              y   = `+/-`,
+#              PTS = PTS,
+#              AST = AST,
+#              TRB = TRB,
+#              STL = STL,
+#              TOV = TOV,
+#              PF  = PF,
+#              OPP = Opp,
+#              WL  = WL)) +
+#     geom_point(aes(group = Season, color = Season), alpha = 1/2) +
+#     # geom_vline(xintercept = 0, alpha = 1/10) +
+#     # geom_hline(yintercept = 0, alpha = 1/10) +
+#     facet_grid(Season ~ .)
+# 
+# ggplotly(jh_plusminus_diff)
+```

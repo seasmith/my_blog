@@ -1,0 +1,118 @@
+---
+title  : "How MLB Players Change Teams"
+date   : "2017-03-25"
+author : "Luke Smith"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(Lahman)
+library(tidyverse)
+library(igraph)
+library(ggraph)
+```
+
+Proof of concept: For Loop
+
+```{r, eval=FALSE}
+e <- Appearances %>% filter(playerID == "abreuto01") %>% .$teamID %>% as.character()
+
+e_len  <- length(e)
+it_len <- e_len - 1
+it_seq <- seq(it_len)
+
+out <- logical(e_len)
+out[1] <- TRUE
+
+for (i in it_seq) {
+  out[i + 1] <- e[i] != e[i + 1]
+}
+
+out
+```
+
+Proof of concept: tidyverse
+
+```{r}
+Appearances %>%
+  filter(playerID == "abreuto01") %>%
+  select(yearID, teamID, playerID) %>%
+  mutate(uid      = teamID != lag(teamID) | teamID != lead(teamID),
+         changed  = teamID != lag(teamID))
+
+# Appearances %>%
+#   filter(yearID >= 2006) %>%
+#   select(yearID, teamID, playerID) %>%
+#   group_by(playerID) %>%
+#   mutate(uid      = teamID != lag(teamID) | teamID != lead(teamID),
+#          changed  = teamID != lag(teamID))
+
+gr <- Appearances %>%
+  dplyr::union_all(Appearances) %>%
+    filter(yearID >= 2006) %>%
+    group_by(playerID) %>%
+    mutate(seq_id = if_else(is.na(teamID != lag(teamID)),
+                            FALSE,
+                            teamID != lag(teamID)),
+           seq_id = cumsum(seq_id)) %>%
+    select(yearID, teamID, playerID, seq_id) %>%
+    filter(row_number() > 1 & n() > 2 & row_number() < n() & n() > 2 | n() == 2) %>%
+    ungroup() %>%
+    split(.$playerID) %>%
+    lapply(function(x) {
+        igraph::graph(as.character(x$teamID))
+    }) %>%
+    Reduce(function(...) igraph::union(...), .)
+
+V(gr)$degree <- degree(gr)
+
+
+
+
+Appearances %>%
+  filter(playerID == "abreuto01" | playerID == "aardsda01") %>%
+    select(yearID, teamID, playerID) %>%
+    arrange(playerID) %>%
+    group_by(playerID) %>%
+    mutate(seq_id = if_else(is.na(teamID != lag(teamID)), FALSE, teamID != lag(teamID)),
+         seq_id = cumsum(seq_id)) %>%
+    distinct(teamID, playerID, seq_id) %>% ungroup() %>%
+    split(.$playerID) %>%
+    lapply(function(x) {
+        x$teamID %>% as.character() %>% vapply(rep, character(2), times = 2)
+    })    
+
+
+
+
+
+Appearances %>%
+  dplyr::union_all(Appearances) %>%
+  arrange(playerID, yearID) %>%
+    filter(playerID == "abreuto01" | playerID == "aardsda01" | playerID == "abbotda01") %>%
+    group_by(playerID) %>%
+    mutate(seq_id = if_else(is.na(teamID != lag(teamID)),
+                            FALSE,
+                            teamID != lag(teamID)),
+           seq_id = cumsum(seq_id)) %>%
+    select(yearID, teamID, playerID, seq_id) %>%
+    filter(row_number() > 1 & n() > 2 & row_number() < n() & n() > 2 | n() == 2) %>%
+    ungroup() %>%
+    split(.$playerID) %>%
+    lapply(function(x) {
+        x$teamID %>%
+            as.character() %>%
+            igraph::graph()
+    }) %>%
+    {igraph::union(.[[1]], .[[2]])}
+
+
+groups %>%
+    distinct(teamID, playerID, seq_id) %>%
+    .$teamID %>%
+    as.character() %>%
+    vapply(rep, character(2), times = 2) %>%
+    as.character() %>%
+    .[-c(1L, length(.))]
+```

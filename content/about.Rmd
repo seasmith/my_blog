@@ -1,0 +1,10 @@
+---
+title : "About"
+author: "Luke Smith"
+---
+
+Relative new-comer to R (and statistics).
+
+Find out more about me from my [resume](/about/Resume.pdf), if you'd like.
+
+Check me out on [Twitter](https://twitter.com/lksmth) and [GitHub](https://github.com/seasmith).

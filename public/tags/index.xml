@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Tags on Blog: A blog about R and other stuff</title>
+    <link>/tags/</link>
+    <description>Recent content in Tags on Blog: A blog about R and other stuff</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 28 Nov 2016 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Baseball</title>
+      <link>/tags/baseball/</link>
+      <pubDate>Mon, 28 Nov 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/baseball/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>C&#43;&#43;</title>
+      <link>/tags/c&#43;&#43;/</link>
+      <pubDate>Thu, 19 Jan 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/c&#43;&#43;/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Climate</title>
+      <link>/tags/climate/</link>
+      <pubDate>Tue, 20 Dec 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/climate/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>El Nino</title>
+      <link>/tags/el-nino/</link>
+      <pubDate>Tue, 20 Dec 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/el-nino/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Election Analysis</title>
+      <link>/tags/election-analysis/</link>
+      <pubDate>Tue, 21 Feb 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/election-analysis/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Enso</title>
+      <link>/tags/enso/</link>
+      <pubDate>Tue, 20 Dec 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/enso/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Global Temperature</title>
+      <link>/tags/global-temperature/</link>
+      <pubDate>Tue, 20 Dec 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/global-temperature/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Graphs</title>
+      <link>/tags/graphs/</link>
+      <pubDate>Wed, 22 Mar 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/graphs/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Imports</title>
+      <link>/tags/imports/</link>
+      <pubDate>Thu, 13 Apr 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/imports/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Mysql</title>
+      <link>/tags/mysql/</link>
+      <pubDate>Mon, 28 Nov 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/mysql/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Network Graphs</title>
+      <link>/tags/network-graphs/</link>
+      <pubDate>Wed, 22 Mar 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/network-graphs/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>North Dakota</title>
+      <link>/tags/north-dakota/</link>
+      <pubDate>Wed, 22 Mar 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/north-dakota/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Oil</title>
+      <link>/tags/oil/</link>
+      <pubDate>Thu, 13 Apr 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/oil/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Oil And Gas</title>
+      <link>/tags/oil-and-gas/</link>
+      <pubDate>Thu, 13 Apr 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/oil-and-gas/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Oil Imports</title>
+      <link>/tags/oil-imports/</link>
+      <pubDate>Thu, 13 Apr 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/oil-imports/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Packages</title>
+      <link>/tags/packages/</link>
+      <pubDate>Sat, 05 Nov 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/packages/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Plots</title>
+      <link>/tags/plots/</link>
+      <pubDate>Sat, 05 Nov 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/plots/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Political Analysis</title>
+      <link>/tags/political-analysis/</link>
+      <pubDate>Tue, 21 Feb 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/political-analysis/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Projects</title>
+      <link>/tags/projects/</link>
+      <pubDate>Tue, 21 Feb 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/projects/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>R</title>
+      <link>/tags/r/</link>
+      <pubDate>Thu, 13 Apr 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/r/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Rcpp</title>
+      <link>/tags/rcpp/</link>
+      <pubDate>Thu, 19 Jan 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/rcpp/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Rmysql</title>
+      <link>/tags/rmysql/</link>
+      <pubDate>Mon, 28 Nov 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/rmysql/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Saudi Arabia</title>
+      <link>/tags/saudi-arabia/</link>
+      <pubDate>Thu, 13 Apr 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/saudi-arabia/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Sql</title>
+      <link>/tags/sql/</link>
+      <pubDate>Mon, 28 Nov 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/sql/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Stack Overflow</title>
+      <link>/tags/stack-overflow/</link>
+      <pubDate>Mon, 07 Nov 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/stack-overflow/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>United States</title>
+      <link>/tags/united-states/</link>
+      <pubDate>Thu, 13 Apr 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/united-states/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>

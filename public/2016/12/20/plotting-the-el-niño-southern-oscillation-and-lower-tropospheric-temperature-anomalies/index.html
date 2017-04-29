@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title> Plotting the El Niño Southern Oscillation and Lower Tropospheric Temperature Anomalies &middot; A Hugo website </title>
+
+
+<link rel="stylesheet" href="../../../../css/slim.css">
+<link rel="stylesheet" href="../../../../css/highlight.min.css">
+<link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Source+Code+Pro' rel='stylesheet' type='text/css'>
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../../../../apple-touch-icon-144-precomposed.png">
+<link rel="shortcut icon" href="../../../../favicon.ico">
+
+
+<link href="" rel="alternate" type="application/rss+xml" title="A Hugo website" />
+
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+  <h1 class="site-title"><a href="../../../../">A Hugo website</a></h1>
+  <p class="site-tagline"></p>
+  <div class="nav">
+    <a class="nav-btn" href="#">
+      <span class="ci ci-burger"></span>
+    </a>
+    <ul class="nav-list">
+      
+      <li><a href="../../../../about/">About</a></li>
+      
+      <li><a href="https://github.com/seasmith">GitHub</a></li>
+      
+      <li><a href="../../../../projects/">Projects</a></li>
+      
+      <li><a href="https://twitter.com/lksmth">Twitter</a></li>
+       
+	  <li class="spacer">&ac;</li>
+  
+    </ul>
+  </div>
+</div>
+    <div class="content">
+      <div class="posts">
+        <div class="post">
+          <h2 class="post-title"><a href="../../../../2016/12/20/plotting-the-el-ni%C3%B1o-southern-oscillation-and-lower-tropospheric-temperature-anomalies/">Plotting the El Niño Southern Oscillation and Lower Tropospheric Temperature Anomalies</a></h2>
+          <span class="post-date">Dec 20, 2016 </span>
+          <div class="post-content">
+            <!-- BLOGDOWN-HEAD -->
+<!-- /BLOGDOWN-HEAD -->
+
+<!-- BLOGDOWN-BODY-BEFORE -->
+<!-- /BLOGDOWN-BODY-BEFORE -->
+
+<p>One of the two largest El Niños on record came to an end this year. From late-2014 to mid-2016, a pool of tropical Pacific water sat 0.5° C above its 1980-2010 average (on a three month central moving average basis). Events such as that can have world wide effects on weather systems and ecosystems, such as <a href="http://www.cbsnews.com/news/el-nino-drought-leaves-millions-hungry-in-southern-africa/">droughts in southern Africa</a> and <a href="https://www.climate.gov/news-features/featured-images/el-ni%C3%B1o-revs-coral-bleaching-threat-caribbean">coral bleaching in the Caribbean</a>.</p>
+<p>There are two questions I have:</p>
+<ol style="list-style-type: decimal">
+<li>Was there any noticeable change in the lower tropospheric temperature due to this event?</li>
+<li>Do past El Niño Southern Oscillation (ENSO) events have a noticeable relationship with lower tropospheric temperature?</li>
+</ol>
+<div id="downloading-and-wrangling-the-data" class="section level2">
+<h2>Downloading and Wrangling the Data</h2>
+<p>I’ll need two data sets: one that measrues ENSO and one that measures lower-tropospheric temperature data. Fortunately, there are two such datasets available on the internet: ENSO from NOAA and lower-tropospheric temepratures from the University of Alabama-Huntsville.</p>
+<p>Both datasets will also need to be cleansed of any miscellaneous information that does not pertain to the data or the data object itself (such as rows with <code>&quot;Year&quot;</code>, <code>&quot;DJF&quot;</code>, <code>&quot;JFM&quot;</code>, etc in the <code>enso</code> table).</p>
+<pre class="r"><code># Load Dependencies -------------------------------------------------------
+
+library(dplyr)
+library(rvest)
+library(tidyr)
+library(tibble)
+library(stringr)
+library(zoo)
+
+
+# ENSO Data ---------------------------------------------------------------
+
+# - Download data and extract table.
+url &lt;- &quot;http://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ensoyears.shtml&quot;
+enso.orig &lt;- url %&gt;% 
+  read_html() %&gt;% 
+  html_nodes(&quot;table&quot;) %&gt;%
+  .[[8]] %&gt;%
+  html_table(header = TRUE) %&gt;%
+  filter(Year != &quot;Year&quot;) %&gt;%
+  as_tibble()
+
+# - Convert three-month central moving average labels to numeric Month-Date.
+enso &lt;- enso.orig %&gt;% 
+  rename(&quot;01-01&quot; = DJF, &quot;02-01&quot; = JFM, &quot;03-01&quot; = FMA,
+         &quot;04-01&quot; = MAM, &quot;05-01&quot; = AMJ, &quot;06-01&quot; = MJJ,
+         &quot;07-01&quot; = JJA, &quot;08-01&quot; = JAS, &quot;09-01&quot; = ASO,
+         &quot;10-01&quot; = SON, &quot;11-01&quot; = OND, &quot;12-01&quot; = NDJ)
+
+# - Gather and unite data into two columns: Date, SSTA.
+enso &lt;- enso %&gt;%
+  gather(mon, SSTA, -Year) %&gt;%
+  unite(&quot;Date&quot;, c(Year, mon), sep = &quot;-&quot;) %&gt;%
+  mutate(Date = as.Date(Date)) %&gt;%
+  arrange(Date)
+
+
+# Lower-Troposheric Temperatue Anomaly Data -------------------------------
+
+# - Download data and extract HTML.
+url2 &lt;- &quot;http://www.nsstc.uah.edu/data/msu/v6.0beta/tlt/uahncdc_lt_6.0beta5.txt&quot;
+ltta &lt;- url2 %&gt;%
+  read.fwf(widths = c(5, 3, 6)) %&gt;%
+  as_tibble()
+
+# - Add headers.
+names(ltta) &lt;- c(&quot;Year&quot;, &quot;Mo&quot;, &quot;LTTA&quot;)
+
+# - Remove leading and trailing white spaces.
+ltta &lt;- ltta %&gt;%
+  mutate(Year = str_trim(Year),
+         Mo   = str_trim(Mo))
+
+# - Remove unecessary first line.
+ltta &lt;- ltta[-1, ]
+
+# - Remove miscellaneous text from the bottom of the table.
+ltta &lt;- ltta$Year %&gt;%
+  str_trim() %&gt;%
+  `==`(&quot;Year&quot;) %&gt;%
+  which() %&gt;%
+  .[[1]] %&gt;%
+  `:`(length(ltta$Year)) %&gt;%
+  `-`() %&gt;%
+  ltta[., ]
+
+# - Combine columns and convert to date.
+# - Convert LTTA to numeric (from factor).
+ltta &lt;- ltta %&gt;%
+  unite(&quot;Date&quot;, c(Year, Mo), sep = &quot;-&quot;) %&gt;%
+  mutate(Date  = as.Date(as.yearmon(Date)),
+         LTTA = as.numeric(as.character(LTTA)))</code></pre>
+</div>
+<div id="merge-data" class="section level2">
+<h2>Merge Data</h2>
+<p>With the datasets downloaded and cleansed, they can now be merged into a single, manageable data frame.</p>
+<pre class="r"><code># Merge -------------------------------------------------------------------
+
+# - Merge the two datasets.
+gccd &lt;- ltta %&gt;%
+  inner_join(enso, by = &quot;Date&quot;) %&gt;%
+  filter(nzchar(SSTA)) %&gt;%
+  mutate(SSTA = as.numeric(SSTA))</code></pre>
+<p>The resulting data frame should have three columns: Date, LTTA, and SSTA.</p>
+<pre><code>## # A tibble: 455 × 3
+##          Date  LTTA  SSTA
+##        &lt;date&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1  1978-12-01 -0.36   0.0
+## 2  1979-01-01 -0.33   0.0
+## 3  1979-02-01 -0.27   0.1
+## 4  1979-03-01 -0.26   0.2
+## 5  1979-04-01 -0.28   0.3
+## 6  1979-05-01 -0.27   0.3
+## 7  1979-06-01 -0.26   0.1
+## 8  1979-07-01 -0.18   0.1
+## 9  1979-08-01 -0.28   0.2
+## 10 1979-09-01 -0.16   0.3
+## # ... with 445 more rows</code></pre>
+</div>
+<div id="plot-data" class="section level2">
+<h2>Plot data</h2>
+<div id="distribution" class="section level3">
+<h3>Distribution</h3>
+<div id="histogram-and-density" class="section level4">
+<h4>Histogram and Density</h4>
+<p>Now that the datasets have been merged, they can be viewed - using <code>ggplot2</code>, of course. Let’s start with some standard histograms and density plots to get an idea about the distribution of the anomalies.</p>
+<pre class="r"><code>library(ggplot2)
+
+dist &lt;- list()
+
+# - Density: LTTA &amp; SSTA
+dist$density &lt;- gccd %&gt;%
+  gather(-Date, key = &quot;Measurement&quot;, value = &quot;Anomaly&quot;) %&gt;%
+  ggplot(aes(Anomaly)) +
+  facet_wrap(~Measurement, scales = &quot;free&quot;) +
+  geom_density()
+
+# - Histogram: LTTA &amp; SSTA
+dist$histogram &lt;- gccd %&gt;%
+  gather(-Date, key = &quot;Measurement&quot;, value = &quot;Anomaly&quot;) %&gt;%
+  ggplot(aes(Anomaly)) +
+  facet_wrap(~Measurement, scales = &quot;free&quot;) +
+  geom_histogram(binwidth = 0.1)
+
+# - View density
+dist$density +
+  labs(title = &quot;Lower Tropospheric Temperature Anomaly (LTTA) &amp; 
+ENSO Anomaly (SSTA)&quot;,
+       subtitle = &quot;Distribution (Density)&quot;)
+
+# - View histogram
+dist$histogram +
+  labs(title = &quot;Lower Tropospheric Temperature Anomaly (LTTA) &amp; 
+ENSO Anomaly (SSTA)&quot;,
+       subtitle = &quot;Distribution (Histogram)&quot;)</code></pre>
+<p><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/histodensity-1.png" width="672" /><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/histodensity-2.png" width="672" /></p>
+<p>There appears a slightly larger distribution of positive anomalies for both LTTA (mean = 0.022) and SSTA (mean = 0.059).</p>
+</div>
+<div id="boxplots" class="section level4">
+<h4>Boxplots</h4>
+<p>There is one more kind of distribution plot which may be of use to answer my questions - a boxplot (I am not going to explore point plots at this time). Boxplots are packed with useful information: median values, interquartile range (IQR), and outliers.</p>
+<p>I can plot two continuous variables with a boxplot by cutting the data to create binwidths and intervals (bins). It’s also good to explore different binwidths and intervals when using boxplots, so I have chosen a binwidth and interval for each comparison that I felt was good enough.</p>
+<pre class="r"><code>box &lt;- list()
+
+# Boxplot: SSTA ~ LTTA
+box_SSTA.LTTA &lt;- gccd %&gt;%
+  ggplot(aes(SSTA, LTTA))
+
+  box$SSTA.LTTA_binw.5 &lt;- box_SSTA.LTTA +
+    geom_boxplot(aes(group = cut_width(SSTA, 0.50)))
+  
+  box$SSTA.LTTA_inter20 &lt;- box_SSTA.LTTA +
+    geom_boxplot(aes(group = cut_interval(SSTA, 20)))
+
+
+# Boxplot: LTTA ~ SSTA
+box_LLTA.SSTA &lt;- gccd %&gt;%
+  ggplot(aes(LTTA, SSTA))
+
+  box$LTTA.SSTA_binw.25 &lt;- box_LLTA.SSTA +
+    geom_boxplot(aes(group = cut_width(LTTA, 0.25)))
+  
+  box$LTTA.SSTA_inter20 &lt;- box_LLTA.SSTA +
+    geom_boxplot(aes(group = cut_interval(LTTA, 20)))
+
+
+# - View boxplots
+box$SSTA.LTTA_binw.5 + labs(title = &quot;Boxplot: SSTA ~ LTTA&quot;,
+                           subtitle = &quot;Binwidth = 0.50&quot;)
+box$SSTA.LTTA_inter20 + labs(title = &quot;Boxplot: SSTA ~ LTTA&quot;,
+                           subtitle = &quot;Bins = 20&quot;)
+
+box$LTTA.SSTA_binw.25 + labs(title = &quot;Boxplot: LTTA ~ SSTA&quot;,
+                           subtitle = &quot;Binwidth = 0.25&quot;)
+box$LTTA.SSTA_inter20 + labs(title = &quot;Boxplot: LTTA ~ SSTA&quot;,
+                           subtitle = &quot;Bins = 20&quot;)</code></pre>
+<p><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/boxes-1.png" width="672" /><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/boxes-2.png" width="672" /><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/boxes-3.png" width="672" /><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/boxes-4.png" width="672" /></p>
+<p>From the second set of boxplots it looks like there is a correlation between positive LTTA values and positive SSTA values. The seems especially true for LTTA values above 0.5°C.</p>
+<p>Having looked at all of these distribution plots, I feel it is time to move on to a line graph, where I can map one variable as <code>x</code> and the other as <code>color</code>.</p>
+</div>
+</div>
+<div id="lines-plotting-against-time" class="section level3">
+<h3>Lines: Plotting against time</h3>
+<p>I can make a line chart of one variable and use the other variable to mark the color of that line based on its values.</p>
+<pre class="r"><code>line &lt;- list()
+
+# - Line: LTTA (color = SSTA)
+line$LTTA_color.SSTA &lt;- gccd %&gt;%
+  ggplot() +
+  geom_hline(yintercept = 0, size = 1) +
+  geom_line(aes(Date, LTTA, color = SSTA), size = 1.25) +
+  scale_color_continuous(low = &quot;yellow&quot;, high = &quot;brown&quot;) +
+  theme_dark() +
+  labs(title = &quot;LTTA: 1978-12-01 to 2016-10-01&quot;, subtitle = &quot;Line (color = SSTA)&quot;)
+
+
+# - Line: SSTA ()
+line$SSTA_color.LTTA &lt;- gccd %&gt;%
+  ggplot() +
+  geom_hline(yintercept = 0, size = 1) +
+  geom_line(aes(Date, SSTA, color = LTTA), size = 1.25) +
+  scale_color_continuous(low = &quot;yellow&quot;, high = &quot;brown&quot;) +
+  theme_dark() +
+  labs(title = &quot;SSTA: 1978-12-01 to 2016-10-01&quot;, subtitle = &quot;Line (color = LTTA)&quot;)
+
+# - View: LTTA (color = SSTA)
+line$LTTA_color.SSTA
+
+# - View: SSTA (color = LTTA)
+line$SSTA_color.LTTA</code></pre>
+<p><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/line1-1.png" width="672" /><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/line1-2.png" width="672" /></p>
+<div id="a-lagging-relationship" class="section level4">
+<h4>A lagging relationship</h4>
+<p>The one thing that stands out to me is that LTTA peaks 4 months after an SSTA peak. That is to say - SSTA is a leading indicator or, in other words, changes in LTTA lag changes in SSTA by 4 months.</p>
+<p>I can probably match the peaks in SSTA and LTTA better if I were to set <code>lag(gccd$SSTA, n = 4)</code> as my new SSTA dataset.</p>
+<pre class="r"><code>gccd_SSTA.lag4 &lt;- gccd %&gt;%
+  mutate(SSTA = lag(SSTA, 4))
+
+print(gccd_SSTA.lag4)</code></pre>
+<pre><code>## # A tibble: 455 × 3
+##          Date  LTTA  SSTA
+##        &lt;date&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1  1978-12-01 -0.36    NA
+## 2  1979-01-01 -0.33    NA
+## 3  1979-02-01 -0.27    NA
+## 4  1979-03-01 -0.26    NA
+## 5  1979-04-01 -0.28   0.0
+## 6  1979-05-01 -0.27   0.0
+## 7  1979-06-01 -0.26   0.1
+## 8  1979-07-01 -0.18   0.2
+## 9  1979-08-01 -0.28   0.3
+## 10 1979-09-01 -0.16   0.3
+## # ... with 445 more rows</code></pre>
+</div>
+<div id="other-factors" class="section level4">
+<h4>Other factors</h4>
+<p>From reading the NOAA’s <a href="https://www.climate.gov/news-features/department/8443/all">ENSO blog</a> (and other material), I know that that both the <strong>El Chicon (1982)</strong> and <strong>Pinatubo (1991)</strong> eruptions had significant effects on global temperatures. So, I’ll also place those two events on my new offset plot to see if there is any visible relationship there as well.</p>
+</div>
+<div id="lines-revisited-with-a-lagging-ssta" class="section level4">
+<h4>Lines: Revisited with a lagging SSTA</h4>
+<p>Here is what those previous two line charts look like with the new data.</p>
+<pre class="r"><code># - LTTA: (color = lag(SSTA, 4))
+  line$LTTA_color.SSTA.lag4 &lt;- gccd %&gt;%
+    mutate(SSTA = lag(SSTA, 4)) %&gt;%
+    ggplot() +
+    geom_hline(yintercept = 0, size = 1) +
+    geom_line(aes(Date, LTTA, color = SSTA), size = 1.25) +
+    scale_color_continuous(low = &quot;yellow&quot;, high = &quot;brown&quot;) +
+    theme_dark() +
+    labs(title = &quot;LTTA: 1979-04-01 to 2016-10-01&quot;,
+         subtitle = &quot;Line (color = SSTA.lag4)&quot;)
+
+# - lag(SSTA, 4): (color = LTTA)
+  line$SSTA.lag4_color.LTTA &lt;- gccd %&gt;%
+    mutate(SSTA = lag(SSTA, 4)) %&gt;%
+    ggplot() +
+    geom_hline(yintercept = 0, size = 1) +
+    geom_line(aes(Date, SSTA, color = LTTA), size = 1.25) +
+    scale_color_continuous(low = &quot;yellow&quot;, high = &quot;brown&quot;) +
+    theme_dark() +
+    labs(title = &quot;SSTA lagged 4-months: 1979-04-01 to 2016-10-01&quot;,
+         subtitle = &quot;Line (color = LTTA)&quot;)
+
+# - Eruptions
+El_Chicon &lt;- &quot;1982-03-29&quot; %&gt;% as.Date() %&gt;% as.numeric()
+Pinatubo  &lt;- &quot;1991-06-15&quot; %&gt;% as.Date() %&gt;% as.numeric()
+eruptions &lt;- data.frame(Date     = c(El_Chicon, Pinatubo),
+                        Eruption = c(&quot;El_Chicon&quot;, &quot;Pinatubo&quot;),
+                        stringsAsFactors = FALSE)
+
+# - View: LTTA: (color = lag(SSTA, 4))
+line$LTTA_color.SSTA.lag4 +
+  geom_vline(data    = eruptions,
+             mapping = aes(xintercept = Date,
+                           linetype   = Eruption),
+             size        = 1,
+             show.legend = TRUE)
+
+# - View: lag(SSTA, 4): (color = LTTA)
+line$SSTA.lag4_color.LTTA +
+  geom_vline(data    = eruptions,
+             mapping = aes(xintercept = Date,
+                           linetype   = Eruption),
+             size        = 1,
+             show.legend = TRUE)</code></pre>
+<pre><code>## Warning: Removed 4 rows containing missing values (geom_path).</code></pre>
+<p><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/line2-1.png" width="672" /><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/line2-2.png" width="672" /></p>
+</div>
+</div>
+<div id="boxplots-revisited" class="section level3">
+<h3>Boxplots: Revisited</h3>
+<p>Having seen the relation between the 4-month lagged SSTA and LTTA, I think it would be wise to go back and view the boxplots from earlier with a 4-month lagged SSTA.</p>
+<pre class="r"><code># Boxplot: SSTA.lag4 ~ LTTA
+SSTA.lag4.LTTA &lt;- gccd %&gt;%
+  mutate(SSTA = lag(SSTA, 4))
+
+  box$SSTA.lag4.LTTA_binw.5 &lt;- SSTA.lag4.LTTA %&gt;%
+    ggplot(aes(SSTA, LTTA)) +
+    geom_boxplot(aes(group = cut_width(SSTA, 0.50)))
+  
+  box$SSTA.lag4.LTTA_inter20 &lt;- SSTA.lag4.LTTA %&gt;%
+    ggplot(aes(SSTA, LTTA)) +
+    geom_boxplot(aes(group = cut_interval(SSTA, 20)))
+
+# Boxplot: LTTA ~ SSTA.lag4
+LTTA.SSTA.lag4 &lt;- gccd %&gt;%
+  mutate(SSTA = lag(SSTA, 4))
+
+  box$LTTA.SSTA.lag4_binw.25 &lt;- LTTA.SSTA.lag4 %&gt;%
+    ggplot(aes(LTTA, SSTA)) +
+    geom_boxplot(aes(group = cut_width(LTTA, 0.25)))
+
+  box$LTTA.SSTA.lag4_inter20 &lt;- LTTA.SSTA.lag4 %&gt;%
+    ggplot(aes(LTTA, SSTA)) +
+    geom_boxplot(aes(group = cut_interval(LTTA, 20)))
+
+# - View plots
+box$SSTA.lag4.LTTA_binw.5 + labs(title = &quot;Boxplot: SSTA.lag4 ~ LTTA&quot;,
+                           subtitle = &quot;Binwidth = 0.50&quot;)</code></pre>
+<pre><code>## Warning: Removed 4 rows containing non-finite values (stat_boxplot).</code></pre>
+<pre class="r"><code>box$SSTA.lag4.LTTA_inter20 + labs(title = &quot;Boxplot: SSTA.lag4 ~ LTTA&quot;,
+                           subtitle = &quot;Interval = 20&quot;)</code></pre>
+<pre><code>## Warning: Removed 4 rows containing non-finite values (stat_boxplot).</code></pre>
+<pre class="r"><code>box$LTTA.SSTA.lag4_binw.25 + labs(title = &quot;Boxplot: LTTA ~ SSTA.lag4&quot;,
+                           subtitle = &quot;Binwidth = 0.25&quot;)</code></pre>
+<pre><code>## Warning: Removed 4 rows containing non-finite values (stat_boxplot).</code></pre>
+<pre class="r"><code>box$LTTA.SSTA.lag4_inter20 + labs(title = &quot;Boxplot: LTTA ~ SSTA.lag4&quot;,
+                           subtitle = &quot;Interval = 20&quot;)</code></pre>
+<pre><code>## Warning: Removed 4 rows containing non-finite values (stat_boxplot).</code></pre>
+<p><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/boxes2-1.png" width="672" /><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/boxes2-2.png" width="672" /><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/boxes2-3.png" width="672" /><img src="../../../../post/ggplot2_enso_and_ltta_files/figure-html/boxes2-4.png" width="672" /></p>
+</div>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>This wasn’t a very rigorous analysis of the data, but with the lag applied to SSTA, the relationship between the two variables becomes more clear.</p>
+<p>Changes in SSTA lead similar changes in LTTA. This may not be true for every case, such as after the Pinatubo eruption in which LTTA dropped despite a rise in SSTA, or recently when SSTA began dropping mid-2016 while LTTA dropped but then began to rise shortly after.</p>
+<p>For now, I feel my questions have been answered. There was a noticeable effect on LTTA due to the most recent El Niño, and I think there is an expected correlation between SSTA and LTTA. I will try to revist this later on with other datasets.</p>
+</div>
+
+          </div>
+        </div>
+        <div class="pagination">
+          <a class="btn previous " href="../../../../2016/12/30/a-plain-markdown-post/"> Prev</a>  
+          <a class="btn next " href="../../../../2016/12/12/texasprimary2016-z-scores/"> Next</a> 
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer">
+  
+  <p>Powered by <a href="http://gohugo.io">Hugo</a>. This theme—Slim—is open sourced on <a href="https://github.com/zhe/hugo-theme-slim">Github</a>.</p>
+  
+</div>
+
+  </div>
+  <script src="../../../../js/slim.js"></script>
+  <script src="../../../../js/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+  
+</body>
+
+</html>

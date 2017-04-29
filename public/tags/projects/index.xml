@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Projects on Blog: A blog about R and other stuff</title>
+    <link>/tags/projects/</link>
+    <description>Recent content in Projects on Blog: A blog about R and other stuff</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 21 Feb 2017 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/projects/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>TexasPrimary2016: Economic Data - Part 1</title>
+      <link>/2017/02/21/texasprimary2016-economic-data---part-1/</link>
+      <pubDate>Tue, 21 Feb 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/2017/02/21/texasprimary2016-economic-data---part-1/</guid>
+      <description>Here is a look at some of my exploratory graphs from my analysis of the 2016 Texas Presidential Primary economic data. The economic data comes from FRED (Federal Reserve Economic Data) and is actually from 2014.
+In this post, I’ll focus on plotting income data against population and unemployment data. In future posts I’ll explore the longer timeline of economic data - stretching back to the 1990’s.
+Examining the DataIf you want to know more about the dataset used in this post, you can jump down to the About section at the bottom fo the page.</description>
+    </item>
+    
+    <item>
+      <title>TexasPrimary2016: Z-Scores</title>
+      <link>/2016/12/12/texasprimary2016-z-scores/</link>
+      <pubDate>Mon, 12 Dec 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/2016/12/12/texasprimary2016-z-scores/</guid>
+      <description>Z-ScoreThe z-score () is an interesting stat which tells not only whether a value is above or below the mean but also tells how many standard deviations that value is above or below the mean.
+Calculating z-scoresUsing the tex.results data frame (candidate and party vote totals) and the rankR and rankD data frames (candidate rankings by party), I built two data frames to hold the per county z-score for each candidate - one for Republicans and one for Democrats.</description>
+    </item>
+    
+    <item>
+      <title>TexasPrimary2016: Update</title>
+      <link>/2016/11/21/texasprimary2016-update/</link>
+      <pubDate>Mon, 21 Nov 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/2016/11/21/texasprimary2016-update/</guid>
+      <description>For the past six months I have not worked much on my TexasPrimary2016 project. Recently, since successfully submitting ggloop to CRAN, I have picked back up this project.
+So far, I have cleaned up the code - better variable names, placing common objects in lists, using better map colors, etc - and renamed some of the files I have been working on. I am planning to use the actual 2016 election data within the project, so I am considering a new name for the project.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title> Using StackOverflow data to find the top 25 R users to follow &middot; Blog: A blog about R and other stuff </title>
+
+
+<link rel="stylesheet" href="../../../../css/slim.css">
+<link rel="stylesheet" href="../../../../css/highlight.min.css">
+<link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Source+Code+Pro' rel='stylesheet' type='text/css'>
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../../../../apple-touch-icon-144-precomposed.png">
+<link rel="shortcut icon" href="../../../../favicon.ico">
+
+
+<link href="" rel="alternate" type="application/rss+xml" title="Blog: A blog about R and other stuff" />
+
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+  <h1 class="site-title"><a href="../../../../">Blog: A blog about R and other stuff</a></h1>
+  <p class="site-tagline"></p>
+  <div class="nav">
+    <a class="nav-btn" href="#">
+      <span class="ci ci-burger"></span>
+    </a>
+    <ul class="nav-list">
+      
+      <li><a href="../../../../about/">About</a></li>
+      
+      <li><a href="../../../../packages/">Packages</a></li>
+      
+      <li><a href="../../../../projects/">Projects</a></li>
+       
+	  <li class="spacer">&ac;</li>
+  
+    </ul>
+  </div>
+</div>
+    <div class="content">
+      <div class="posts">
+        <div class="post">
+          <h2 class="post-title"><a href="../../../../2016/11/07/using-stackoverflow-data-to-find-the-top-25-r-users-to-follow/">Using StackOverflow data to find the top 25 R users to follow</a></h2>
+          <span class="post-date">Nov 7, 2016 </span>
+          <div class="post-content">
+            <!-- BLOGDOWN-HEAD -->
+<!-- /BLOGDOWN-HEAD -->
+
+<!-- BLOGDOWN-BODY-BEFORE -->
+<!-- /BLOGDOWN-BODY-BEFORE -->
+
+<p>I created a <a href="http://data.stackexchange.com/stackoverflow/query/571064/top-r-vote-getters-with-a-website">data.Stackexchange query</a> to filter the top 25 users by votes and their website. The query only looks at the <code>r</code> tag, returns the gross number of votes, not net, and filters out users who do not have a website. It’s not a perfect filter or technique, but it is both a start and an idea.</p>
+<pre class="r"><code>top25 &lt;- read.csv(&quot;~/R/seasmith.github.io/posts/reference/top25_r_users.csv&quot;)
+# htmlTable::htmlTable(top25, align = c(&quot;l&quot;, &quot;r&quot;, &quot;r&quot;, &quot;l&quot;), margin.left = &quot;2px&quot;)
+knitr::kable(top25, align = c(&quot;l&quot;, &quot;l&quot;, &quot;r&quot;, &quot;l&quot;))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">DisplayName</th>
+<th align="left">Id</th>
+<th align="right">totalVotes</th>
+<th align="left">WebsiteUrl</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Dirk Eddelbuettel</td>
+<td align="left">143305</td>
+<td align="right">16506</td>
+<td align="left"><a href="http://dirk.eddelbuettel.com" class="uri">http://dirk.eddelbuettel.com</a></td>
+</tr>
+<tr class="even">
+<td align="left">A Handcart And Mohair</td>
+<td align="left">1270695</td>
+<td align="right">9883</td>
+<td align="left"><a href="http://news.mrdwab.com" class="uri">http://news.mrdwab.com</a></td>
+</tr>
+<tr class="odd">
+<td align="left">Gavin Simpson</td>
+<td align="left">429846</td>
+<td align="right">9612</td>
+<td align="left"><a href="http://www.fromthebottomoftheheap.net" class="uri">http://www.fromthebottomoftheheap.net</a></td>
+</tr>
+<tr class="even">
+<td align="left">Joshua Ulrich</td>
+<td align="left">271616</td>
+<td align="right">9212</td>
+<td align="left"><a href="http://www.fosstrading.com" class="uri">http://www.fosstrading.com</a></td>
+</tr>
+<tr class="odd">
+<td align="left">joran</td>
+<td align="left">324364</td>
+<td align="right">9033</td>
+<td align="left"><a href="http://statisticalskier.com" class="uri">http://statisticalskier.com</a></td>
+</tr>
+<tr class="even">
+<td align="left">Andrie</td>
+<td align="left">602276</td>
+<td align="right">8945</td>
+<td align="left"><a href="http://rfordummies.com/" class="uri">http://rfordummies.com/</a></td>
+</tr>
+<tr class="odd">
+<td align="left">Ben Bolker</td>
+<td align="left">190277</td>
+<td align="right">8124</td>
+<td align="left"><a href="http://www.math.mcmaster.ca/bolker" class="uri">http://www.math.mcmaster.ca/bolker</a></td>
+</tr>
+<tr class="even">
+<td align="left">agstudy</td>
+<td align="left">1838509</td>
+<td align="right">6419</td>
+<td align="left"><a href="http://www.linkedin.com/in/aminegassem" class="uri">http://www.linkedin.com/in/aminegassem</a></td>
+</tr>
+<tr class="odd">
+<td align="left">Arun</td>
+<td align="left">559784</td>
+<td align="right">6400</td>
+<td align="left"><a href="https://github.com/Rdatatable/data.table/wiki/Getting-started" class="uri">https://github.com/Rdatatable/data.table/wiki/Getting-started</a></td>
+</tr>
+<tr class="even">
+<td align="left">Joris Meys</td>
+<td align="left">428790</td>
+<td align="right">5970</td>
+<td align="left"><a href="http://biomath.ugent.be/biomath/index.php" class="uri">http://biomath.ugent.be/biomath/index.php</a></td>
+</tr>
+<tr class="odd">
+<td align="left">hadley</td>
+<td align="left">16632</td>
+<td align="right">5538</td>
+<td align="left"><a href="http://hadley.nz" class="uri">http://hadley.nz</a></td>
+</tr>
+<tr class="even">
+<td align="left">MrFlick</td>
+<td align="left">2372064</td>
+<td align="right">5528</td>
+<td align="left"><a href="http://www.matthewflickinger.com" class="uri">http://www.matthewflickinger.com</a></td>
+</tr>
+<tr class="odd">
+<td align="left">Shane</td>
+<td align="left">163053</td>
+<td align="right">5454</td>
+<td align="left"><a href="http://www.statalgo.com" class="uri">http://www.statalgo.com</a></td>
+</tr>
+<tr class="even">
+<td align="left">David Arenburg</td>
+<td align="left">3001626</td>
+<td align="right">5196</td>
+<td align="left"><a href="http://www.linkedin.com/pub/david-arenburg/1a/432/9b4" class="uri">http://www.linkedin.com/pub/david-arenburg/1a/432/9b4</a></td>
+</tr>
+<tr class="odd">
+<td align="left">Richie Cotton</td>
+<td align="left">134830</td>
+<td align="right">5055</td>
+<td align="left"><a href="http://4dpiecharts.com/" class="uri">http://4dpiecharts.com/</a></td>
+</tr>
+<tr class="even">
+<td align="left">flodel</td>
+<td align="left">1201032</td>
+<td align="right">4512</td>
+<td align="left"><a href="http://www.linkedin.com/in/florentdelmotte" class="uri">http://www.linkedin.com/in/florentdelmotte</a></td>
+</tr>
+<tr class="odd">
+<td align="left">Sven Hohenstein</td>
+<td align="left">1627235</td>
+<td align="right">3882</td>
+<td align="left"><a href="https://orcid.org/0000-0002-9708-1593" class="uri">https://orcid.org/0000-0002-9708-1593</a></td>
+</tr>
+<tr class="even">
+<td align="left">Didzis Elferts</td>
+<td align="left">1857266</td>
+<td align="right">3782</td>
+<td align="left"><a href="http://delferts.github.io" class="uri">http://delferts.github.io</a></td>
+</tr>
+<tr class="odd">
+<td align="left">thelatemail</td>
+<td align="left">496803</td>
+<td align="right">3708</td>
+<td align="left"><a href="http://www.daleidoscope.com" class="uri">http://www.daleidoscope.com</a></td>
+</tr>
+<tr class="even">
+<td align="left">Spacedman</td>
+<td align="left">211116</td>
+<td align="right">3708</td>
+<td align="left"><a href="http://barry.rowlingson.com/" class="uri">http://barry.rowlingson.com/</a></td>
+</tr>
+<tr class="odd">
+<td align="left">kohske</td>
+<td align="left">314020</td>
+<td align="right">3631</td>
+<td align="left"><a href="http://www.fennel.rcast.u-tokyo.ac.jp/profilee_ktakahashi.html" class="uri">http://www.fennel.rcast.u-tokyo.ac.jp/profilee_ktakahashi.html</a></td>
+</tr>
+<tr class="even">
+<td align="left">Tyler Rinker</td>
+<td align="left">1000343</td>
+<td align="right">3228</td>
+<td align="left"><a href="http://trinkerrstuff.wordpress.com/" class="uri">http://trinkerrstuff.wordpress.com/</a></td>
+</tr>
+<tr class="odd">
+<td align="left">Chase</td>
+<td align="left">415635</td>
+<td align="right">3212</td>
+<td align="left"><a href="http://www.rsginc.com" class="uri">http://www.rsginc.com</a></td>
+</tr>
+<tr class="even">
+<td align="left">baptiste</td>
+<td align="left">471093</td>
+<td align="right">3153</td>
+<td align="left"><a href="http://baptiste.github.io" class="uri">http://baptiste.github.io</a></td>
+</tr>
+<tr class="odd">
+<td align="left">Paul Hiemstra</td>
+<td align="left">1033808</td>
+<td align="right">3100</td>
+<td align="left"><a href="http://www.numbertheory.nl" class="uri">http://www.numbertheory.nl</a></td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+          </div>
+        </div>
+        <div class="pagination">
+          <a class="btn previous " href="../../../../2016/11/21/texasprimary2016-update/"> Prev</a>  
+          <a class="btn next " href="../../../../2016/11/05/ggloop-intro/"> Next</a> 
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer">
+  
+  <p>Powered by <a href="http://gohugo.io">Hugo</a>. This theme—Slim—is open sourced on <a href="https://github.com/zhe/hugo-theme-slim">Github</a>.</p>
+  
+</div>
+
+  </div>
+  <script src="../../../../js/slim.js"></script>
+  <script src="../../../../js/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+  
+</body>
+
+</html>

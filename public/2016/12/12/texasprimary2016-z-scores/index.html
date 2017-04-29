@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title> TexasPrimary2016: Z-Scores &middot; Blog: A blog about R and other stuff </title>
+
+
+<link rel="stylesheet" href="../../../../css/slim.css">
+<link rel="stylesheet" href="../../../../css/highlight.min.css">
+<link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Source+Code+Pro' rel='stylesheet' type='text/css'>
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../../../../apple-touch-icon-144-precomposed.png">
+<link rel="shortcut icon" href="../../../../favicon.ico">
+
+
+<link href="" rel="alternate" type="application/rss+xml" title="Blog: A blog about R and other stuff" />
+
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+  <h1 class="site-title"><a href="../../../../">Blog: A blog about R and other stuff</a></h1>
+  <p class="site-tagline"></p>
+  <div class="nav">
+    <a class="nav-btn" href="#">
+      <span class="ci ci-burger"></span>
+    </a>
+    <ul class="nav-list">
+      
+      <li><a href="../../../../about/">About</a></li>
+      
+      <li><a href="../../../../packages/">Packages</a></li>
+      
+      <li><a href="../../../../projects/">Projects</a></li>
+       
+	  <li class="spacer">&ac;</li>
+  
+    </ul>
+  </div>
+</div>
+    <div class="content">
+      <div class="posts">
+        <div class="post">
+          <h2 class="post-title"><a href="../../../../2016/12/12/texasprimary2016-z-scores/">TexasPrimary2016: Z-Scores</a></h2>
+          <span class="post-date">Dec 12, 2016 </span>
+          <div class="post-content">
+            <!-- BLOGDOWN-HEAD -->
+<!-- /BLOGDOWN-HEAD -->
+
+<!-- BLOGDOWN-BODY-BEFORE -->
+<!-- /BLOGDOWN-BODY-BEFORE -->
+
+<div id="z-score" class="section level2">
+<h2>Z-Score</h2>
+<p>The z-score (<img src="../../../../post/http://chart.apis.google.com/chart?cht=tx&chl=%5Cfrac%7Bx%20-%20%5Cbar%7Bx%7D%7D%7Bsd%7D">) is an interesting stat which tells not only whether a value is above or below the mean but also tells how many standard deviations that value is above or below the mean.</p>
+<div id="calculating-z-scores" class="section level3">
+<h3>Calculating z-scores</h3>
+<p>Using the <code>tex.results</code> data frame (candidate and party vote totals) and the <code>rankR</code> and <code>rankD</code> data frames (candidate rankings by party), I built two data frames to hold the per county z-score for each candidate - one for Republicans and one for Democrats.</p>
+<pre class="r"><code># Load dependencies
+library(dplyr)
+load(&quot;~/R/TexasPrimary2016/Data/Primary/tex.results.RData&quot;)
+load(&quot;~/R/TexasPrimary2016/Data/Primary/rankR.RData&quot;)
+load(&quot;~/R/TexasPrimary2016/Data/Primary/rankD.RData&quot;)
+
+# Create lists to hold data frames
+stats &lt;- list()
+stats$zscores   &lt;- list()
+
+# Data frame - Republican per county z-scores -------------------------------
+# Standard deviation
+stats$zscores$R &lt;- tex.results %&gt;%
+  select(Bush:Uncommitted) %&gt;%
+  apply(1, sd) %&gt;%
+  data.frame(sd = .)
+
+# Mean
+stats$zscores$R$mean &lt;- tex.results %&gt;%
+  select(Bush:Uncommitted) %&gt;%
+  apply(1, mean)
+
+# Z-Score
+stats$zscores$R &lt;- tex.results %&gt;%
+  select(Bush:Uncommitted) %&gt;%
+  lapply(function(x) (x - stats$zscores$R$mean) / stats$zscores$R$sd) %&gt;%
+  dplyr::bind_cols(stats$zscores$R,
+                   data.frame(TotalVotesR = tex.results$TotalVotesR),
+                   data.frame(Winner      = rankR$Winner,
+                              RunnerUp    = rankR$RunnerUp))
+
+# Data frame - Democrat per county z-scores ---------------------------------
+# Standard deviation
+stats$zscores$D &lt;- tex.results %&gt;%
+  select(Clinton:Wilson) %&gt;%
+  apply(1, sd) %&gt;%
+  data.frame(sd = .)
+
+# Mean
+stats$zscores$D$mean &lt;- tex.results %&gt;%
+  select(Clinton:Wilson) %&gt;%
+  apply(1, mean)
+
+# Z-Score
+stats$zscores$D &lt;- tex.results %&gt;%
+  select(Clinton:Wilson) %&gt;%
+  lapply(function(x) (x - stats$zscores$D$mean) / stats$zscores$D$sd) %&gt;%
+  dplyr::bind_cols(stats$zscores$D,
+                   data.frame(TotalVotesD = tex.results$TotalVotesD),
+                   data.frame(Winner      = rankD$Winner))</code></pre>
+</div>
+</div>
+<div id="visualizing-the-new-data" class="section level2">
+<h2>Visualizing the new data</h2>
+<p>I built the data so that I could see the data, and I use ggplot2 for that.</p>
+<pre class="r"><code># Load dependencies
+library(ggplot2)
+
+# Create lists to hold plots
+plots &lt;- list()
+plots$zscore &lt;- list()
+
+# Plot
+plots$zscore$R &lt;- ggplot(stats$zscores$R,
+                         aes(x     = Cruz,
+                             y     = Trump,
+                             size  = TotalVotesR,
+                             color = Winner)) +
+  geom_point(alpha = 3/5) +
+  scale_color_manual(values = c(&quot;blue&quot;, &quot;red&quot;))
+
+plots$zscore$D &lt;- ggplot(stats$zscores$D,
+                         aes(x     = Clinton,
+                             y     = Sanders,
+                             size  = TotalVotesD,
+                             color = Winner)) +
+  geom_point(alpha = 3/5) +
+  scale_color_manual(values = c(&quot;blue&quot;, &quot;red&quot;, &quot;purple&quot;))
+
+# View the plots
+plots$zscore$R + labs(title = &quot;Z-Score: Cruz vs Trump&quot;)</code></pre>
+<p><img src="../../../../post/texasprimary2016_update_with_zscores_files/figure-html/plots.zscore-1.png" width="672" /></p>
+<pre class="r"><code>plots$zscore$D + labs(title = &quot;Z-Score: Clinton vs Sanders&quot;)</code></pre>
+<p><img src="../../../../post/texasprimary2016_update_with_zscores_files/figure-html/plots.zscore-2.png" width="672" /></p>
+<div id="comparison" class="section level3">
+<h3>Comparison</h3>
+<p>Looking at the two graphs, what stands out the most to me is the <em>tightness</em> in the <code>Clinton vs Sanders</code> line compared to the <code>Cruz vs Trump</code> line. It could be due to distortion in the x/y scales, but I figure that it is more likely due to Clinton and Sanders accounting for a higher percent of total votes within their party than Cruz or Trump accounted for within their party.</p>
+<pre class="r"><code># Clinton and Sanders as percent of total
+D &lt;- tex.results %&gt;%
+  select(Clinton, Sanders, TotalVotesD) %&gt;%
+  colSums()
+
+D &lt;- (D[&quot;Clinton&quot;] + D[&quot;Sanders&quot;]) / D[&quot;TotalVotesD&quot;]
+
+# Cruz and Trump as percent of total
+R &lt;- tex.results %&gt;%
+  select(Cruz, Trump, TotalVotesR) %&gt;%
+  colSums()
+
+R &lt;- (R[&quot;Cruz&quot;] + R[&quot;Trump&quot;]) / R[&quot;TotalVotesR&quot;]</code></pre>
+<p>As it turned out, <strong>Clinton and Sanders accounted for 98.4%</strong> of the vote within the Democratic primary, while <strong>Cruz and Trump accounted for 70.5%</strong> of the vote within the Republican primary.</p>
+</div>
+<div id="runner-ups" class="section level3">
+<h3>Runner Ups</h3>
+<p>Sanders and Clinton were the only runner-up candidates in the Democratic primary. In the Republican primary, however, Marco Rubio did manage to place second on 6 occasion, which happened in Brazos, Dallas, El Paso, Kenedy, Travis, and Webb counties.</p>
+<pre class="r"><code>plots$zscore$R +
+  facet_grid(~RunnerUp) +
+  labs(title = &quot;Z-Score: Cruz vs Trump&quot;,
+       subtitle = &quot;Faceted by Runner Up Candidate&quot;)</code></pre>
+<p><img src="../../../../post/texasprimary2016_update_with_zscores_files/figure-html/marco-1.png" width="672" /></p>
+<p>Rubio managed to place second place to Cruz on 5 occasions and placed second to Trump on 1 occasions. This offers one reason why data points in the <code>Cruz vs Trump</code> graph stray so further from one another than they do in the <code>Clinton vs Sanders</code> graph.</p>
+</div>
+</div>
+
+          </div>
+        </div>
+        <div class="pagination">
+          <a class="btn previous " href="../../../../2016/12/20/plotting-the-el-nino-southern-oscillation-and-lower-tropospheric-temperature-anomalies/"> Prev</a>  
+          <a class="btn next " href="../../../../2016/11/28/mysql-lahman-database/"> Next</a> 
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer">
+  
+  <p>Powered by <a href="http://gohugo.io">Hugo</a>. This theme—Slim—is open sourced on <a href="https://github.com/zhe/hugo-theme-slim">Github</a>.</p>
+  
+</div>
+
+  </div>
+  <script src="../../../../js/slim.js"></script>
+  <script src="../../../../js/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+  
+</body>
+
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title> C&#43;&#43; Modify In-Place Operators in R &middot; Blog: A blog about R and other stuff </title>
+
+
+<link rel="stylesheet" href="../../../../css/slim.css">
+<link rel="stylesheet" href="../../../../css/highlight.min.css">
+<link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Source+Code+Pro' rel='stylesheet' type='text/css'>
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../../../../apple-touch-icon-144-precomposed.png">
+<link rel="shortcut icon" href="../../../../favicon.ico">
+
+
+<link href="" rel="alternate" type="application/rss+xml" title="Blog: A blog about R and other stuff" />
+
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+  <h1 class="site-title"><a href="../../../../">Blog: A blog about R and other stuff</a></h1>
+  <p class="site-tagline"></p>
+  <div class="nav">
+    <a class="nav-btn" href="#">
+      <span class="ci ci-burger"></span>
+    </a>
+    <ul class="nav-list">
+      
+      <li><a href="../../../../about/">About</a></li>
+      
+      <li><a href="../../../../packages/">Packages</a></li>
+      
+      <li><a href="../../../../projects/">Projects</a></li>
+       
+	  <li class="spacer">&ac;</li>
+  
+    </ul>
+  </div>
+</div>
+    <div class="content">
+      <div class="posts">
+        <div class="post">
+          <h2 class="post-title"><a href="../../../../2017/01/19/c---modify-in-place-operators-in-r/">C&#43;&#43; Modify In-Place Operators in R</a></h2>
+          <span class="post-date">Jan 19, 2017 </span>
+          <div class="post-content">
+            <!-- BLOGDOWN-HEAD -->
+<!-- /BLOGDOWN-HEAD -->
+
+<!-- BLOGDOWN-BODY-BEFORE -->
+<!-- /BLOGDOWN-BODY-BEFORE -->
+<p>I recently started the <a href="http://adv-r.had.co.nz/Rcpp.html">Rcpp chapter</a> in Hadley Wickham’s Advanced R. C++ has some similarities with R (<code>sprintf()</code> and <code>if else</code> syntax both come to mind) - afterall R is written in both native R and C, and C++ extends C with “classes”. Of course, there are many differences between C++ and R, such as scope, class, member functions, type declaration, etc.</p>
+<p>However, C++ has one thing that R currently does not have and is something that I believe can be implemented in R: the modify in-place operators:</p>
+<table>
+<thead>
+<tr class="header">
+<th>C++ Modify In-Place Operator</th>
+<th>Use</th>
+<th>Translation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>+=</code></td>
+<td><code>x += x[i]</code></td>
+<td><code>x = x + x[i]</code></td>
+</tr>
+<tr class="even">
+<td><code>-=</code></td>
+<td><code>x -= x[i]</code></td>
+<td><code>x = x - x[i]</code></td>
+</tr>
+<tr class="odd">
+<td><code>*=</code></td>
+<td><code>x *= x[i]</code></td>
+<td><code>x = x * x[i]</code></td>
+</tr>
+<tr class="even">
+<td><code>/=</code></td>
+<td><code>x /= x[i]</code></td>
+<td><code>x = x / x[i]</code></td>
+</tr>
+</tbody>
+</table>
+<p>As a “fun” activity, I decided to write R-equivalents for these operators.</p>
+<div id="a-simple-function" class="section level2">
+<h2>A simple function</h2>
+<p>Essentially, these C++ operators can be expressed as special infix operators in R: functions wrapped in <code>%%</code> and used in between two R objects. I decided to use <code>magrittr</code>’s compound assignment pipe-operator, <code>%&lt;&gt;%</code>, as a basis for these new operators - though, it’s probably not necessary.</p>
+<p>In order to reassign the new value to the original <code>lhs</code> argument’s name, I decided to use <code>assign()</code>.</p>
+<p>Here is my first-take:</p>
+<pre class="r"><code># Load magrittr
+library(magrittr)
+
+# Write the function
+`%+=%` &lt;- function(lhs, rhs) {
+    name &lt;- substitute(lhs)
+    lhs %&lt;&gt;% `+`(rhs)
+    assign(as.character(name), lhs, envir = parent.frame())
+}</code></pre>
+</div>
+<div id="an-efficient-function" class="section level2">
+<h2>An efficient function</h2>
+<div id="a-factory" class="section level3">
+<h3>A factory</h3>
+<p>Extending the above example to the remaining operators would require writing a function for each operator. Using a function factory, a factory (closure) for making new functions, would be a far more efficient approach:</p>
+<pre class="r"><code># Write a function factory
+make_compound_incrementer &lt;- function(fun) {
+  fun &lt;- match.fun(fun)
+  function(lhs, rhs) {
+    name &lt;- substitute(lhs)
+    lhs %&lt;&gt;% fun(rhs)
+    assign(as.character(name), lhs, envir = parent.frame())
+    }
+}</code></pre>
+<p>Now we’re talking.</p>
+</div>
+<div id="and-its-products" class="section level3">
+<h3>And it’s products</h3>
+<p>It is now just a matter of calling the function with the appropriate operator and then assigning that output to an appropriate name:</p>
+<pre class="r"><code># Create individual functions using the factory
+`%+=%` &lt;- make_compound_incrementer(&quot;+&quot;)
+`%-=%` &lt;- make_compound_incrementer(&quot;-&quot;)
+`%*=%` &lt;- make_compound_incrementer(&quot;*&quot;)
+`%/=%` &lt;- make_compound_incrementer(&quot;/&quot;)</code></pre>
+</div>
+</div>
+<div id="examples" class="section level2">
+<h2>Examples</h2>
+<div id="a-simple-rhs" class="section level3">
+<h3>A simple <code>rhs</code></h3>
+<p>Let’s try them out.</p>
+<pre class="r"><code># Use x
+x &lt;- 1:5
+
+# %+=%
+x %+=% 1
+x %+=% 1
+x %+=% 1
+x</code></pre>
+<pre><code>## [1] 4 5 6 7 8</code></pre>
+<pre class="r"><code># %-=%
+x %-=% 1
+x %-=% 1
+x %-=% 1
+x</code></pre>
+<pre><code>## [1] 1 2 3 4 5</code></pre>
+<pre class="r"><code># %*=%
+x %*=% 2
+x %*=% 2
+x %*=% 2
+x</code></pre>
+<pre><code>## [1]  8 16 24 32 40</code></pre>
+<pre class="r"><code># %/=%
+x %/=% 2
+x %/=% 2
+x %/=% 2
+x</code></pre>
+<pre><code>## [1] 1 2 3 4 5</code></pre>
+</div>
+<div id="a-more-verbose-rhs" class="section level3">
+<h3>A more verbose <code>rhs</code></h3>
+<p>More complex <code>rhs</code> expressions can be written with the use of a lambda expression (chains wrapped in <code>{}</code>). The following is just an example of such a chain, though not very useful in practice:</p>
+<pre class="r"><code>x &lt;- 1:5
+
+# The rhs (wrapped in {}) is a lambda expression with its own chain
+x %+=% {
+  x[2] %&gt;%
+    seq(., length.out = 5, by = .) %&gt;%
+    mean()
+}
+x</code></pre>
+<pre><code>## [1]  7  8  9 10 11</code></pre>
+</div>
+</div>
+<div id="possible-uses" class="section level2">
+<h2>Possible uses</h2>
+<div id="something-that-works" class="section level3">
+<h3>Something that works</h3>
+<p>The only real possible use for such operators would be the same use for such operators in C++: control flow.</p>
+<pre class="r"><code>x &lt;- 1:5
+out &lt;- rep(1, 5)
+
+# A very simple for loop that works
+for (i in seq_along(x)) {
+  out %*=% x[i]
+}
+
+out</code></pre>
+<pre><code>## [1] 120 120 120 120 120</code></pre>
+</div>
+<div id="something-that-does-not-work" class="section level3">
+<h3>Something that does not work</h3>
+<p>If the <code>lhs</code> in the above <code>for</code> loop is subsetted, we get both a warning message and an undesired result:</p>
+<pre class="r"><code>x &lt;- 1:5
+out &lt;- rep(1, 5)
+
+# A for loop which produces undesired results
+for (i in seq_along(x)) {
+  out[i] %*=% x[i]
+}</code></pre>
+<pre><code>## Warning in assign(as.character(name), lhs, envir = parent.frame()): only
+## the first element is used as variable name
+
+## Warning in assign(as.character(name), lhs, envir = parent.frame()): only
+## the first element is used as variable name
+
+## Warning in assign(as.character(name), lhs, envir = parent.frame()): only
+## the first element is used as variable name
+
+## Warning in assign(as.character(name), lhs, envir = parent.frame()): only
+## the first element is used as variable name
+
+## Warning in assign(as.character(name), lhs, envir = parent.frame()): only
+## the first element is used as variable name</code></pre>
+<pre class="r"><code>out</code></pre>
+<pre><code>## [1] 1 1 1 1 1</code></pre>
+<p>To fix this feature, off the top of my head, the infix operators would require some new steps:</p>
+<ol style="list-style-type: decimal">
+<li>Parsing the parse tree of the <code>lhs</code> for a subsetting function.</li>
+<li>Evaluating <code>i</code> and <code>lhs[i]</code>.</li>
+<li>Assigning the new value back into <code>lhs[i]</code></li>
+</ol>
+<p>However, that’s more than I want to cover and it’s a good stopping point.</p>
+</div>
+</div>
+
+          </div>
+        </div>
+        <div class="pagination">
+          <a class="btn previous " href="../../../../2017/02/21/texasprimary2016-economic-data---part-1/"> Prev</a>  
+          <a class="btn next " href="../../../../2016/12/20/plotting-the-el-nino-southern-oscillation-and-lower-tropospheric-temperature-anomalies/"> Next</a> 
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer">
+  
+  <p>Powered by <a href="http://gohugo.io">Hugo</a>. This theme—Slim—is open sourced on <a href="https://github.com/zhe/hugo-theme-slim">Github</a>.</p>
+  
+</div>
+
+  </div>
+  <script src="../../../../js/slim.js"></script>
+  <script src="../../../../js/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+  
+</body>
+
+</html>

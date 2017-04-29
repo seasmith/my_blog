@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Imports on Blog: A blog about R and other stuff</title>
+    <link>/tags/imports/</link>
+    <description>Recent content in Imports on Blog: A blog about R and other stuff</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 13 Apr 2017 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/imports/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>U.S. Refinery Imports From Saudi Arabia</title>
+      <link>/2017/04/13/u.s.-refinery-imports-from-saudi-arabia/</link>
+      <pubDate>Thu, 13 Apr 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/2017/04/13/u.s.-refinery-imports-from-saudi-arabia/</guid>
+      <description>In March, Reuters reported that Saudi Arabia would be reducing it’s March exports of oil to the U.S. by 300,000 barrels per day (bpd).
+In 2009, according to the U.S. Energy Information Administration, 39 refineries imported 973,704 bpd of oil from Saudi Arabia - accounting for 10% of US imports.
+However in 2016, 18 refineries imported 1,033,890 bpd from Saudi Arabia - accounting for 13% of US imports.
+From 2009-2016, 58 U.</description>
+    </item>
+    
+  </channel>
+</rss>

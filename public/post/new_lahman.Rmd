@@ -1,0 +1,112 @@
+---
+title       : ""
+author      : "Luke Smith"
+date        : ""
+description : ""
+tags        : [r, mysql, rmysql, lahman, baseball]
+---
+
+```{r login, echo=FALSE}
+library(DBI)
+db <- dbConnect(RMySQL::MySQL(), dbname = "lahman", user = "root", password = "0rac1e")
+```
+
+```{r login_show, eval=FALSE}
+library(DBI)
+library(RMySQL)
+db <- dbConnect(MySQL(), dbname = "lahman")
+```
+
+
+```{sql debuts_oldest,connection=db, output.var = "debuts_oldest"}
+SELECT MIN(birthDate), d.debut
+FROM (
+  SELECT playerID,
+    STR_TO_DATE(CONCAT(birthYear, '-',
+                       birthMonth, '-',
+                       birthDay),
+                '%Y-%m-%d') as birthDate,
+    debut
+  FROM Master
+  WHERE birthDay IS NOT NULL AND
+    birthMonth IS NOT NULL AND
+    birthYear IS NOT NULL AND
+    debut IS NOT NULL) as d
+GROUP BY YEAR(d.debut)
+ORDER BY birthDate;
+```
+
+```{sql debuts_youngest, connection=db, output.var = "debuts_youngest"}
+SELECT mm.playerID, mm.nameFirst, mm.nameLast, mm.birthDate, mm.debut,
+  MIN(mm.bd_diff)
+FROM (
+  SELECT *, 
+    STR_TO_DATE(CONCAT(birthYear, '-',
+                       birthMonth, '-',
+                       birthDay),
+                '%Y-%m-%d') as birthDate,
+    DATEDIFF(debut, STR_TO_DATE(CONCAT(birthYear, '-',
+                                       birthMonth, '-',
+                                       birthDay),
+                                '%Y-%m-%d')) as bd_diff
+  FROM Master as m
+  ) as mm
+WHERE mm.bd_diff IN
+  (
+  SELECT MIN(d.bd_diff) as bd_diff
+  FROM (
+  
+    SELECT *,
+      DATEDIFF(debut, STR_TO_DATE(CONCAT(birthYear, '-',
+                         birthMonth, '-',
+                         birthDay),
+                  '%Y-%m-%d')) as bd_diff
+    FROM Master
+    WHERE birthDay IS NOT NULL AND
+      birthMonth IS NOT NULL AND
+      birthYear IS NOT NULL AND
+      debut IS NOT NULL
+      
+      ) as d
+      
+  GROUP BY YEAR(d.debut)
+  
+  )
+GROUP BY YEAR(mm.debut);
+```
+
+```{r}
+library(dplyr)
+# debuts_oldest
+debuts_youngest %>% nrow()
+debuts_youngest
+```
+
+```{sql, connection=db, output.var="other"}
+SELECT YEAR(d.debut), MIN(d.bd_diff)
+FROM (
+  SELECT *, DATEDIFF(debut, STR_TO_DATE(CONCAT(birthYear, '-',
+                         birthMonth, '-',
+                         birthDay),
+                  '%Y-%m-%d')) as bd_diff
+  FROM Master
+  WHERE birthDay IS NOT NULL AND
+    birthMonth IS NOT NULL AND
+    birthYear IS NOT NULL AND
+    debut IS NOT NULL
+) as d
+GROUP BY YEAR(d.debut);
+```
+
+```{r}
+# other %>% tibble::as_tibble() %>% print(n = Inf)
+```
+
+## Section 1
+Season totals and league history totals for AB, H, and HR. 
+
+```sql
+SELECT yearID, sum(AB) as AB, sum(H), as H, sum(HR) as HR
+FROM batting
+GROUP BY yearID WITH ROLLUP;
+```

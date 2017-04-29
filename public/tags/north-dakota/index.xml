@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>North Dakota on Blog: A blog about R and other stuff</title>
+    <link>/tags/north-dakota/</link>
+    <description>Recent content in North Dakota on Blog: A blog about R and other stuff</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 22 Mar 2017 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/north-dakota/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Using ggraph to Visualize North Dakota Oil and Gas Data</title>
+      <link>/2017/03/22/using-ggraph-to-visualize-north-dakota-oil-and-gas-data/</link>
+      <pubDate>Wed, 22 Mar 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/2017/03/22/using-ggraph-to-visualize-north-dakota-oil-and-gas-data/</guid>
+      <description>The above network graph was produced using ggraph (grammar of graphs), which recently hit CRAN. The graph shows the relationships between rig companies (large red font) and operating companies (small blue font) in North Dakota. The data are from October 2016 to present.
+Each line between rig company and operator represents an individual rig. As you can see, some operators employ more than one unique rig from the same company.</description>
+    </item>
+    
+  </channel>
+</rss>

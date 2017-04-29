@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Rmysql on Blog: A blog about R and other stuff</title>
+    <link>/tags/rmysql/</link>
+    <description>Recent content in Rmysql on Blog: A blog about R and other stuff</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 28 Nov 2016 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/rmysql/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>MySQL Lahman Database</title>
+      <link>/2016/11/28/mysql-lahman-database/</link>
+      <pubDate>Mon, 28 Nov 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/2016/11/28/mysql-lahman-database/</guid>
+      <description>Shortly before the start of the 2016 World Series, I imported the Lahman baseball database into MySQL and built a few interesting statistics out of it. There is a Lahman dataset that comes with the dplyr package but I figured it would be good practice to explore the dataset with SQL and R.
+Here’s how I went about my cursory glance.
+Connect to databaseI used the DBI and RMySQL packages to connect to the Lahman database from R.</description>
+    </item>
+    
+  </channel>
+</rss>

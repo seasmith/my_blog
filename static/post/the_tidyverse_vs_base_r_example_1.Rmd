@@ -1,0 +1,120 @@
+---
+title : "The tidyverse vs base R: Example 1"
+author: "Luke Smith"
+date  : "05-02-2017"
+description: "Bring order to a chaotic universe."
+tags: [r, tidyverse, base R, data wrangling]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+I have now finished the first three sections of Hadley Wickham's _[R for Data Science][r4ds]_.
+
+The book is great. It shows how the [tidverse][tidyverse], Wickham's collection of data analysis packages, brings order to a chaotic (messy) universe, as far as data analysis with single-table datasets is concerned.
+
+I would like to show you why this is true in the example below.
+
+[r4ds]: http://r4ds.had.co.nz/
+[tidyverse]: http://tidyverse.org/
+
+
+
+## The tidyverse at work
+### tidyr: an example
+Transforming data into long format (converting columns to key-value pairs) is a common data wrangling task that is made quite simple with `gather()` from the [`tidyr`][tidyr] package.
+
+Here is the data I will be working with:
+
+[tidyr]: http://tidyr.tidyverse.org/
+
+```{r data_long_format, message=FALSE}
+# Load and attach 'tidyr' with 'tidyverse'
+library(tidyverse)
+
+# Load in data
+load("~/R/TexasPrimary2016/Data/FRED/FRED.RData")
+
+# The intact, tidy data
+print(FRED)
+```
+
+<br>
+
+This is how data is converted to long format with `gather()`:
+
+```{r long_format1, message=FALSE}
+# Data in long format
+FRED_long <- FRED %>% gather(... = -CountyName)
+print(FRED_long)
+```
+
+<br>
+
+The resulting data frame created key-value pairs alongside the table's primary key (`CountyName`).
+
+With the data in this format, you can something like the following:
+
+```{r plot_long_format1}
+FRED_long %>%
+  ggplot(aes(value)) +
+  facet_wrap(~key, ncol = 2, scales = "free") +
+  geom_density() 
+```
+
+
+<br>
+
+#### Benchmarking
+You might be asking yourself: is the `tidyr` version faster than base R?
+
+Here is a timed comparison of the `tidyr` version versus _my_ base R solution:
+
+```{r benchmarking_tidyr}
+library(microbenchmark)
+
+# Head to head comparison
+res <- microbenchmark(
+  # base R
+  base_R = {
+    non_pk   <- FRED[ ,-grep("CountyName", names(FRED))]
+    n        <- dim(non_pk)
+    key      <- vapply(names(non_pk), rep, character(n[1]), times = n[1])
+    value    <- unlist(non_pk)
+    FRED_long <- data.frame(CountyName = rep(FRED$CountyName, n[2]),
+                           key = as.character(key),
+                           value = value,
+                           row.names = NULL)
+    },
+  # tidyverse
+  tidyr = {
+    FRED_long <- FRED %>% gather(... = -CountyName)
+    }
+  )
+```
+
+<br>
+
+And the winner is....
+
+```{r winner}
+print(res)
+autoplot(res)
+```
+
+`tidyr`!
+
+It beats base R twice:
+
+  1. `tidyr` was computationally faster:  it executed faster than base R (on average).
+  2. `tidyr` was cognitively faster than base R: it took less time to write the `tidyr` code than the base R code.
+
+Think of it this way:
+  
+  1. By executing `tidyr::gather()`, you are probably saving a mere `r capture.output(r <- print(res)); round(abs(r$mean[1] - r$mean[2]), 2)` milliseconds with a `r round(object.size(FRED)/1000, 0)` KB object.
+  2. By creating the code with `tidyr`, you are saving 2-3 minutes contrasted with using base R - regardless of the size of the data.
+
+<br>
+<br>

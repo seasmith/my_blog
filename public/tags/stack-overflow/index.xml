@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Stack Overflow on Blog: A blog about R and other stuff</title>
+    <link>/tags/stack-overflow/</link>
+    <description>Recent content in Stack Overflow on Blog: A blog about R and other stuff</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 07 Nov 2016 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/stack-overflow/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Using StackOverflow data to find the top 25 R users to follow</title>
+      <link>/2016/11/07/using-stackoverflow-data-to-find-the-top-25-r-users-to-follow/</link>
+      <pubDate>Mon, 07 Nov 2016 00:00:00 +0000</pubDate>
+      
+      <guid>/2016/11/07/using-stackoverflow-data-to-find-the-top-25-r-users-to-follow/</guid>
+      <description>I created a data.Stackexchange query to filter the top 25 users by votes and their website. The query only looks at the r tag, returns the gross number of votes, not net, and filters out users who do not have a website. It’s not a perfect filter or technique, but it is both a start and an idea.
+top25 &amp;lt;- read.csv(&amp;quot;~/R/seasmith.github.io/posts/reference/top25_r_users.csv&amp;quot;)# htmlTable::htmlTable(top25, align = c(&amp;quot;l&amp;quot;, &amp;quot;r&amp;quot;, &amp;quot;r&amp;quot;, &amp;quot;l&amp;quot;), margin.left = &amp;quot;2px&amp;quot;)knitr::kable(top25, align = c(&amp;quot;l&amp;quot;, &amp;quot;l&amp;quot;, &amp;quot;r&amp;quot;, &amp;quot;l&amp;quot;))DisplayNameIdtotalVotesWebsiteUrlDirk Eddelbuettel14330516506http://dirk.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title> MySQL Lahman Database &middot; Blog: A blog about R and other stuff </title>
+
+
+<link rel="stylesheet" href="../../../../css/slim.css">
+<link rel="stylesheet" href="../../../../css/highlight.min.css">
+<link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Source+Code+Pro' rel='stylesheet' type='text/css'>
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../../../../apple-touch-icon-144-precomposed.png">
+<link rel="shortcut icon" href="../../../../favicon.ico">
+
+
+<link href="" rel="alternate" type="application/rss+xml" title="Blog: A blog about R and other stuff" />
+
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+  <h1 class="site-title"><a href="../../../../">Blog: A blog about R and other stuff</a></h1>
+  <p class="site-tagline"></p>
+  <div class="nav">
+    <a class="nav-btn" href="#">
+      <span class="ci ci-burger"></span>
+    </a>
+    <ul class="nav-list">
+      
+      <li><a href="../../../../about/">About</a></li>
+      
+      <li><a href="../../../../packages/">Packages</a></li>
+      
+      <li><a href="../../../../projects/">Projects</a></li>
+       
+	  <li class="spacer">&ac;</li>
+  
+    </ul>
+  </div>
+</div>
+    <div class="content">
+      <div class="posts">
+        <div class="post">
+          <h2 class="post-title"><a href="../../../../2016/11/28/mysql-lahman-database/">MySQL Lahman Database</a></h2>
+          <span class="post-date">Nov 28, 2016 </span>
+          <div class="post-content">
+            <!-- BLOGDOWN-HEAD -->
+<!-- /BLOGDOWN-HEAD -->
+
+<!-- BLOGDOWN-BODY-BEFORE -->
+<!-- /BLOGDOWN-BODY-BEFORE -->
+<p>Shortly before the start of the 2016 World Series, I imported the Lahman baseball database into MySQL and built a few interesting statistics out of it. There is a Lahman dataset that comes with the <code>dplyr</code> package but I figured it would be good practice to explore the dataset with SQL and R.</p>
+<p>Here’s how I went about my cursory glance.</p>
+<div id="connect-to-database" class="section level2">
+<h2>Connect to database</h2>
+<p>I used the <code>DBI</code> and <code>RMySQL</code> packages to connect to the Lahman database from R.</p>
+<pre class="r"><code>library(DBI)
+library(RMySQL)
+db &lt;- dbConnect(MySQL(), dbname = &quot;lahman&quot;)</code></pre>
+</div>
+<div id="generating-stats-with-sql" class="section level2">
+<h2>Generating stats with SQL</h2>
+<p>I then set the <code>knitr</code> language engine to SQL for the following code chunks. I then generated some SQL statements to take an intitial look at the dataset.</p>
+<div id="more-than-2000-regular-season-hits-with-no-hits-while-appearing-in-the-postseason" class="section level4">
+<h4>More than 2000 regular season hits with NO hits while appearing in the postseason</h4>
+<pre class="sql"><code>SELECT tmin.playerID, tmin.H_total as H_regular, ptmax.H_total as H_post
+FROM (
+      SELECT t.playerID, t.H_total
+      FROM (
+          SELECT playerID, sum(H) as H_total
+          FROM batting
+          GROUP BY playerID) as t
+      WHERE t.H_total &gt;= 2000
+    ) as tmin
+INNER JOIN (
+    SELECT pt.playerID, pt.H_total
+    FROM (
+        SELECT playerID, sum(H) as H_total
+        FROM battingpost
+        GROUP BY playerID) as pt
+    WHERE pt.H_total = 0
+    ) as ptmax
+ON tmin.playerID = ptmax.playerID
+ORDER BY H_regular DESC;</code></pre>
+<div class="knitsql-table">
+<table>
+<thead>
+<tr class="header">
+<th align="left">playerID</th>
+<th align="right">H_regular</th>
+<th align="right">H_post</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">willibi01</td>
+<td align="right">2711</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">averiea01</td>
+<td align="right">2017</td>
+<td align="right">0</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="more-than-2000-regular-season-hits-with-no-postseason-ab" class="section level4">
+<h4>More than 2000 regular season hits with NO postseason AB</h4>
+<pre class="sql"><code>SELECT tmin.playerID, tmin.H_total
+FROM (
+      SELECT t.playerID, t.H_total
+      FROM (
+          SELECT playerID, sum(H) as H_total
+          FROM batting
+          GROUP BY playerID
+          ) as t
+      WHERE t.H_total &gt;= 2000
+    ) as tmin
+LEFT JOIN battingpost as bp
+ON tmin.playerID = bp.playerID
+WHERE bp.playerID IS NULL
+ORDER BY tmin.H_total DESC;</code></pre>
+<div class="knitsql-table">
+<table>
+<thead>
+<tr class="header">
+<th align="left">playerID</th>
+<th align="right">H_total</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">applilu01</td>
+<td align="right">2749</td>
+</tr>
+<tr class="even">
+<td align="left">bankser01</td>
+<td align="right">2583</td>
+</tr>
+<tr class="odd">
+<td align="left">bellbu01</td>
+<td align="right">2514</td>
+</tr>
+<tr class="even">
+<td align="left">vernomi01</td>
+<td align="right">2495</td>
+</tr>
+<tr class="odd">
+<td align="left">torrejo01</td>
+<td align="right">2342</td>
+</tr>
+<tr class="even">
+<td align="left">santoro01</td>
+<td align="right">2254</td>
+</tr>
+<tr class="odd">
+<td align="left">kellge01</td>
+<td align="right">2054</td>
+</tr>
+<tr class="even">
+<td align="left">johnsbo01</td>
+<td align="right">2051</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="most-postseason-ab-without-a-hit" class="section level4">
+<h4>Most postseason AB without a hit</h4>
+<pre class="sql"><code>SELECT pt.playerID, pt.AB_total, pt.H_total
+FROM (
+    SELECT playerID, sum(AB) as AB_total, sum(H) as H_total
+    FROM battingpost
+    GROUP BY playerID
+    ) as pt
+WHERE pt.AB_total &gt; 10 AND pt.H_total = 0
+ORDER BY pt.AB_total DESC
+LIMIT 10;</code></pre>
+<div class="knitsql-table">
+<table>
+<thead>
+<tr class="header">
+<th align="left">playerID</th>
+<th align="right">AB_total</th>
+<th align="right">H_total</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">earnsge01</td>
+<td align="right">22</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">sullibi03</td>
+<td align="right">21</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">freylo01</td>
+<td align="right">20</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">reussje01</td>
+<td align="right">19</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">bergewa01</td>
+<td align="right">18</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">brookto01</td>
+<td align="right">18</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">bumgama01</td>
+<td align="right">18</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">grovele01</td>
+<td align="right">18</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">tebeapa01</td>
+<td align="right">18</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">tudorjo01</td>
+<td align="right">17</td>
+<td align="right">0</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="lowest-ba-while-hitting-30-or-more-hr" class="section level4">
+<h4>Lowest BA while hitting 30 or more HR</h4>
+<pre class="sql"><code>SELECT playerID, yearID, teamID, HR, H/AB as BA
+FROM batting
+WHERE HR &gt;= 30
+ORDER BY BA ASC
+LIMIT 10;</code></pre>
+<div class="knitsql-table">
+<table>
+<thead>
+<tr class="header">
+<th align="left">playerID</th>
+<th align="right">yearID</th>
+<th align="left">teamID</th>
+<th align="right">HR</th>
+<th align="right">BA</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">reynoma01</td>
+<td align="right">2010</td>
+<td align="left">ARI</td>
+<td align="right">32</td>
+<td align="right">0.1984</td>
+</tr>
+<tr class="even">
+<td align="left">kingmda01</td>
+<td align="right">1982</td>
+<td align="left">NYN</td>
+<td align="right">37</td>
+<td align="right">0.2037</td>
+</tr>
+<tr class="odd">
+<td align="left">dunnad01</td>
+<td align="right">2012</td>
+<td align="left">CHA</td>
+<td align="right">41</td>
+<td align="right">0.2041</td>
+</tr>
+<tr class="even">
+<td align="left">kingmda01</td>
+<td align="right">1986</td>
+<td align="left">OAK</td>
+<td align="right">35</td>
+<td align="right">0.2103</td>
+</tr>
+<tr class="odd">
+<td align="left">kittlro01</td>
+<td align="right">1984</td>
+<td align="left">CHA</td>
+<td align="right">32</td>
+<td align="right">0.2146</td>
+</tr>
+<tr class="even">
+<td align="left">thomago01</td>
+<td align="right">1985</td>
+<td align="left">SEA</td>
+<td align="right">32</td>
+<td align="right">0.2149</td>
+</tr>
+<tr class="odd">
+<td align="left">valenjo03</td>
+<td align="right">2004</td>
+<td align="left">CHA</td>
+<td align="right">30</td>
+<td align="right">0.2156</td>
+</tr>
+<tr class="even">
+<td align="left">armasto01</td>
+<td align="right">1983</td>
+<td align="left">BOS</td>
+<td align="right">36</td>
+<td align="right">0.2178</td>
+</tr>
+<tr class="odd">
+<td align="left">dunnad01</td>
+<td align="right">2013</td>
+<td align="left">CHA</td>
+<td align="right">34</td>
+<td align="right">0.2190</td>
+</tr>
+<tr class="even">
+<td align="left">reynoma01</td>
+<td align="right">2011</td>
+<td align="left">BAL</td>
+<td align="right">37</td>
+<td align="right">0.2210</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr />
+</div>
+</div>
+<div id="generating-statistics-with-r" class="section level2">
+<h2>Generating statistics with R</h2>
+<p>I couldn’t resist importing some of the datasets into R. Afterall, I am not as saavy with SQL as I am with R. I decided also to focus on generating one statistic, for now.</p>
+<div id="consecutive-30-or-more-hr-seasons" class="section level4">
+<h4>Consecutive 30 or more HR seasons</h4>
+<div id="one-part-sql" class="section level6">
+<h6><strong>One part SQL</strong></h6>
+<p>First, using SQL, I need to grab the data from the database for players that have hit 30 or more HR’s.</p>
+<pre class="sql"><code>SELECT playerID,
+       yearID, 
+       count(yearID) as stint,
+       sum(G) as G,
+       sum(AB) as AB,
+       sum(R) as R,
+       sum(H) as H,
+       sum(2B) as 2B,
+       sum(3B) as 3B,
+       sum(HR) as HR,
+       sum(RBI) as RBI,
+       sum(SB) as SB,
+       sum(CS) as CS,
+       sum(BB) as BB,
+       sum(SO) as SO,
+       sum(IBB) as IBB,
+       sum(HBP) as HBP,
+       sum(SH) as SH,
+       sum(SF) as SF,
+       sum(GIDP) as GIDP
+FROM batting
+WHERE playerID IN
+    (SELECT DISTINCT b.playerID
+     FROM 
+        (SELECT playerID, yearID, sum(HR) as HR
+         FROM batting
+         GROUP BY playerID, yearID) as b
+     WHERE b.HR &gt;= 30)
+GROUP BY playerID, yearID;</code></pre>
+</div>
+<div id="three-parts-r-part-i" class="section level6">
+<h6><strong>Three parts R: Part I</strong></h6>
+<p>First thing I did with R was to generate the necessary conditions and splits in order to aggregate the data. I then added two columns: <em>(1)</em> to reflect the number of players which meet the condition <code>&gt;= 30</code> HR and <em>(2)</em> to indicate the number of HR per player for each year.</p>
+<pre class="r"><code>library(magrittr)
+library(plyr)
+library(ggplot2)
+
+# Filter data for &gt;= 30 HR. Find consecutive seasons of &gt;= 30 HR.
+HR.min     &lt;- (batting$HR &gt;= 30) %&gt;% which
+HR.strk    &lt;- split(batting[HR.min, ], cumsum(c(1, diff(HR.min) != 1)))
+HR.min.agg &lt;- ldply(HR.strk)
+
+# Add results by year
+HR.year.agg   &lt;- aggregate(. ~ yearID, FUN = sum, data = HR.min.agg[, -c(1:2, 4)])
+HR.year.split &lt;- split(HR.min.agg, HR.min.agg$yearID)
+
+# Add columns: numPlayers, HRperPlayer
+HR.year.agg$numPlayers  &lt;- sapply(HR.year.split, nrow)
+HR.year.agg$HRperPlayer &lt;- HR.year.agg$HR/HR.year.agg$numPlayers</code></pre>
+</div>
+<div id="three-parts-r-part-ii" class="section level6">
+<h6><strong>Three parts R: Part II</strong></h6>
+<p>With the data above, I can plot the two new columns.</p>
+<pre class="r"><code># Plot data
+plots &lt;- list()
+plots$numPlayers  &lt;- ggplot(HR.year.agg, aes(yearID, numPlayers))
+plots$HRperPlayer &lt;- ggplot(HR.year.agg, aes(yearID, HRperPlayer))
+
+# View plots
+plots$numPlayers + geom_line() + ggtitle(&quot;Number of Players With 30 or More HR&#39;s in a Season by Year&quot;)</code></pre>
+<p><img src="../../../../post/mysql_lahman_database_files/figure-html/plots-1.png" width="672" /></p>
+<pre class="r"><code>plots$HRperPlayer + geom_line() + ggtitle(&quot;Average HR&#39;s per Player With 30 or More HR&#39;s in a Season by Year&quot;)</code></pre>
+<p><img src="../../../../post/mysql_lahman_database_files/figure-html/plots-2.png" width="672" /></p>
+</div>
+<div id="three-parts-r-part-iii" class="section level6">
+<h6><strong>Three parts R: Part III</strong></h6>
+<p>Finally, I decided to take a look at those players with at least 6 consecutive seasons of 30 or more HR’s. There were quite a few players I could not recognize, such as Jimmie Foxx and Eddie Mathews.</p>
+<pre class="r"><code># Sort streaks of &gt;= 30 HR
+HR.strk.count        &lt;- data.frame(playerID = sapply(HR.strk, function(x) x[[1]][1]))
+HR.strk.count$streak &lt;- sapply(HR.strk, nrow)
+HR.strk.count        &lt;- HR.strk.count[order(-HR.strk.count$streak), ]
+row.names(HR.strk.count) &lt;- NULL
+
+HR.strk.count[HR.strk.count$streak &gt;= 6, ]</code></pre>
+<pre><code>##     playerID streak
+## 1  bondsba01     13
+## 2  rodrial01     13
+## 3   foxxji01     12
+## 4  pujolal01     12
+## 5  delgaca01     10
+## 6   sosasa01     10
+## 7  gehrilo01      9
+## 8  matheed01      9
+## 9  palmera01      9
+## 10 ramirma02      9
+## 11 schmimi01      9
+## 12 thomeji01      9
+## 13 bagweje01      8
+## 14 belleal01      8
+## 15 mantlmi01      8
+## 16 piazzmi01      8
+## 17  ruthba01      8
+## 18 teixema01      8
+## 19 aaronha01      7
+## 20 cabremi01      7
+## 21  dunnad01      7
+## 22 mcgrifr01      7
+## 23 fieldpr01      6
+## 24 heltoto01      6
+## 25 howarry01      6
+## 26 killeha01      6
+## 27  mayswi01      6
+## 28 mccovwi01      6
+## 29 mcgwima01      6
+## 30 vaughmo01      6</code></pre>
+</div>
+</div>
+</div>
+
+          </div>
+        </div>
+        <div class="pagination">
+          <a class="btn previous " href="../../../../2016/12/12/texasprimary2016-z-scores/"> Prev</a>  
+          <a class="btn next " href="../../../../2016/11/21/texasprimary2016-update/"> Next</a> 
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer">
+  
+  <p>Powered by <a href="http://gohugo.io">Hugo</a>. This theme—Slim—is open sourced on <a href="https://github.com/zhe/hugo-theme-slim">Github</a>.</p>
+  
+</div>
+
+  </div>
+  <script src="../../../../js/slim.js"></script>
+  <script src="../../../../js/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+  
+</body>
+
+</html>
