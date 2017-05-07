@@ -85,10 +85,8 @@ g &lt;- ggloop(data = mtcars,
                                 y = c(hp:mpg, disp/hp),
                                 color = gear), 
             remap_xy = FALSE)
-g &lt;- g %L+% geom_point()</code></pre>
-<pre><code>## Warning in g %L+% geom_point(): The special infix operator `%L+%` will be
-## deprecated. Please use `+` as you would for &#39;ggplot2&#39;.</code></pre>
-<pre class="r"><code>g$color.gear$`x.mpg/cyl_y.disp/hp`  ## view one of the plots</code></pre>
+g &lt;- g %L+% geom_point()
+g$color.gear$`x.mpg/cyl_y.disp/hp`  ## view one of the plots</code></pre>
 <p><img src="../../../../post/ggloop_intro_files/figure-html/ex1-1.png" width="672" /></p>
 </div>
 
@@ -101,6 +99,24 @@ g &lt;- g %L+% geom_point()</code></pre>
       </div>
     </div>
     
+    <div id="disqus_thread"></div>
+  <script type="text/javascript">
+    
+    (function() {
+      
+      
+      if (window.location.hostname == "localhost")
+      return;
+      
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      var disqus_shortname = 'lksmth';
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+      <a href="http://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
     <div class="footer">
   
   <p>Powered by <a href="http://gohugo.io">Hugo</a>. This theme—Slim—is open sourced on <a href="https://github.com/zhe/hugo-theme-slim">Github</a>.</p>

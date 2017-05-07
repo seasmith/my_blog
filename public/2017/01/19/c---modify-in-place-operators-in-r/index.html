@@ -47,12 +47,7 @@
           <h2 class="post-title"><a href="../../../../2017/01/19/c---modify-in-place-operators-in-r/">C&#43;&#43; Modify In-Place Operators in R</a></h2>
           <span class="post-date">Jan 19, 2017 </span>
           <div class="post-content">
-            <!-- BLOGDOWN-HEAD -->
-<!-- /BLOGDOWN-HEAD -->
-
-<!-- BLOGDOWN-BODY-BEFORE -->
-<!-- /BLOGDOWN-BODY-BEFORE -->
-<p>I recently started the <a href="http://adv-r.had.co.nz/Rcpp.html">Rcpp chapter</a> in Hadley Wickham’s Advanced R. C++ has some similarities with R (<code>sprintf()</code> and <code>if else</code> syntax both come to mind) - afterall R is written in both native R and C, and C++ extends C with “classes”. Of course, there are many differences between C++ and R, such as scope, class, member functions, type declaration, etc.</p>
+            <p>I recently started the <a href="http://adv-r.had.co.nz/Rcpp.html">Rcpp chapter</a> in Hadley Wickham’s Advanced R. C++ has some similarities with R (<code>sprintf()</code> and <code>if else</code> syntax both come to mind) - afterall R is written in both native R and C, and C++ extends C with “classes”. Of course, there are many differences between C++ and R, such as scope, class, member functions, type declaration, etc.</p>
 <p>However, C++ has one thing that R currently does not have and is something that I believe can be implemented in R: the modify in-place operators:</p>
 <table>
 <thead>
@@ -236,6 +231,24 @@ for (i in seq_along(x)) {
       </div>
     </div>
     
+    <div id="disqus_thread"></div>
+  <script type="text/javascript">
+    
+    (function() {
+      
+      
+      if (window.location.hostname == "localhost")
+      return;
+      
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      var disqus_shortname = 'lksmth';
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+      <a href="http://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
     <div class="footer">
   
   <p>Powered by <a href="http://gohugo.io">Hugo</a>. This theme—Slim—is open sourced on <a href="https://github.com/zhe/hugo-theme-slim">Github</a>.</p>
