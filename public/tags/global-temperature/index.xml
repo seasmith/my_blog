@@ -13,10 +13,10 @@
     
     <item>
       <title>Plotting the El Nino Southern Oscillation and Lower Tropospheric Temperature Anomalies</title>
-      <link>/2016/12/20/plotting-the-el-nino-southern-oscillation-and-lower-tropospheric-temperature-anomalies/</link>
+      <link>/blog/ggplot2_enso_and_ltta/</link>
       <pubDate>Tue, 20 Dec 2016 00:00:00 +0000</pubDate>
       
-      <guid>/2016/12/20/plotting-the-el-nino-southern-oscillation-and-lower-tropospheric-temperature-anomalies/</guid>
+      <guid>/blog/ggplot2_enso_and_ltta/</guid>
       <description>One of the two largest El Niños on record came to an end this year. From late-2014 to mid-2016, a pool of tropical Pacific water sat 0.5° C above its 1980-2010 average (on a three month central moving average basis). Events such as that can have world wide effects on weather systems and ecosystems, such as droughts in southern Africa and coral bleaching in the Caribbean.
 There are two questions I have:</description>
     </item>

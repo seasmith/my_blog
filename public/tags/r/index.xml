@@ -6,17 +6,28 @@
     <description>Recent content in R on Blog: A blog about R and other stuff</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 13 Apr 2017 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 12 May 2017 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/r/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
+      <title>Re-imagining a Data Visualization: Good Schools, Affordable Homes (New York Times)</title>
+      <link>/blog/reimagining_a_graphic_money_race_and_success_new_york_times/</link>
+      <pubDate>Fri, 12 May 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/blog/reimagining_a_graphic_money_race_and_success_new_york_times/</guid>
+      <description>A few weeks ago, a Junk Charts post critical of the New York Times article, Good Schools, Affordable Homes: Finding Suburban Sweet Spots, provided a few recommendations and criticisms for improving the data visuals within the article.
+Here they are summarized:
+Add a legend to explain the differences in the size of the dots (population?)Explain the horizontal scale (x-axis = grad above or below national or state average?)Aggregate the data (by metro area and commute time)I decided to take the NYT data and plot it out in R while taking into account the considerations above, as best I can.</description>
+    </item>
+    
+    <item>
       <title>U.S. Refinery Imports From Saudi Arabia</title>
-      <link>/2017/04/13/u.s.-refinery-imports-from-saudi-arabia/</link>
+      <link>/blog/exploring_us_refinery_imports/</link>
       <pubDate>Thu, 13 Apr 2017 00:00:00 +0000</pubDate>
       
-      <guid>/2017/04/13/u.s.-refinery-imports-from-saudi-arabia/</guid>
+      <guid>/blog/exploring_us_refinery_imports/</guid>
       <description>In March, Reuters reported that Saudi Arabia would be reducing it’s March exports of oil to the U.S. by 300,000 barrels per day (bpd).
 In 2009, according to the U.S. Energy Information Administration, 39 refineries imported 973,704 bpd of oil from Saudi Arabia - accounting for 10% of US imports.
 However in 2016, 18 refineries imported 1,033,890 bpd from Saudi Arabia - accounting for 13% of US imports.
@@ -25,20 +36,20 @@ From 2009-2016, 58 U.</description>
     
     <item>
       <title>Using ggraph to Visualize North Dakota Oil and Gas Data</title>
-      <link>/2017/03/22/using-ggraph-to-visualize-north-dakota-oil-and-gas-data/</link>
+      <link>/blog/using_ggraph_to_visualize_north_dakota_oil_and_gas_data/</link>
       <pubDate>Wed, 22 Mar 2017 00:00:00 +0000</pubDate>
       
-      <guid>/2017/03/22/using-ggraph-to-visualize-north-dakota-oil-and-gas-data/</guid>
+      <guid>/blog/using_ggraph_to_visualize_north_dakota_oil_and_gas_data/</guid>
       <description>The above network graph was produced using ggraph (grammar of graphs), which recently hit CRAN. The graph shows the relationships between rig companies (large red font) and operating companies (small blue font) in North Dakota. The data are from October 2016 to present.
 Each line between rig company and operator represents an individual rig. As you can see, some operators employ more than one unique rig from the same company.</description>
     </item>
     
     <item>
       <title>TexasPrimary2016: Economic Data - Part 1</title>
-      <link>/2017/02/21/texasprimary2016-economic-data---part-1/</link>
+      <link>/blog/texasprimary2016_economic_data_part_1/</link>
       <pubDate>Tue, 21 Feb 2017 00:00:00 +0000</pubDate>
       
-      <guid>/2017/02/21/texasprimary2016-economic-data---part-1/</guid>
+      <guid>/blog/texasprimary2016_economic_data_part_1/</guid>
       <description>Here is a look at some of my exploratory graphs from my analysis of the 2016 Texas Presidential Primary economic data. The economic data comes from FRED (Federal Reserve Economic Data) and is actually from 2014.
 In this post, I’ll focus on plotting income data against population and unemployment data. In future posts I’ll explore the longer timeline of economic data - stretching back to the 1990’s.
 Examining the DataIf you want to know more about the dataset used in this post, you can jump down to the About section at the bottom fo the page.</description>
@@ -46,40 +57,40 @@ Examining the DataIf you want to know more about the dataset used in this post,
     
     <item>
       <title>C&#43;&#43; Modify In-Place Operators in R</title>
-      <link>/2017/01/19/c---modify-in-place-operators-in-r/</link>
+      <link>/blog/c&#43;&#43;_modify_in_place_operators_in_r/</link>
       <pubDate>Thu, 19 Jan 2017 00:00:00 +0000</pubDate>
       
-      <guid>/2017/01/19/c---modify-in-place-operators-in-r/</guid>
+      <guid>/blog/c&#43;&#43;_modify_in_place_operators_in_r/</guid>
       <description>I recently started the Rcpp chapter in Hadley Wickham’s Advanced R. C++ has some similarities with R (sprintf() and if else syntax both come to mind) - afterall R is written in both native R and C, and C++ extends C with “classes”. Of course, there are many differences between C++ and R, such as scope, class, member functions, type declaration, etc.
 However, C++ has one thing that R currently does not have and is something that I believe can be implemented in R: the modify in-place operators:</description>
     </item>
     
     <item>
       <title>Plotting the El Nino Southern Oscillation and Lower Tropospheric Temperature Anomalies</title>
-      <link>/2016/12/20/plotting-the-el-nino-southern-oscillation-and-lower-tropospheric-temperature-anomalies/</link>
+      <link>/blog/ggplot2_enso_and_ltta/</link>
       <pubDate>Tue, 20 Dec 2016 00:00:00 +0000</pubDate>
       
-      <guid>/2016/12/20/plotting-the-el-nino-southern-oscillation-and-lower-tropospheric-temperature-anomalies/</guid>
+      <guid>/blog/ggplot2_enso_and_ltta/</guid>
       <description>One of the two largest El Niños on record came to an end this year. From late-2014 to mid-2016, a pool of tropical Pacific water sat 0.5° C above its 1980-2010 average (on a three month central moving average basis). Events such as that can have world wide effects on weather systems and ecosystems, such as droughts in southern Africa and coral bleaching in the Caribbean.
 There are two questions I have:</description>
     </item>
     
     <item>
       <title>TexasPrimary2016: Z-Scores</title>
-      <link>/2016/12/12/texasprimary2016-z-scores/</link>
+      <link>/blog/texasprimary2016_update_with_zscores/</link>
       <pubDate>Mon, 12 Dec 2016 00:00:00 +0000</pubDate>
       
-      <guid>/2016/12/12/texasprimary2016-z-scores/</guid>
+      <guid>/blog/texasprimary2016_update_with_zscores/</guid>
       <description>Z-ScoreThe z-score () is an interesting stat which tells not only whether a value is above or below the mean but also tells how many standard deviations that value is above or below the mean.
 Calculating z-scoresUsing the tex.results data frame (candidate and party vote totals) and the rankR and rankD data frames (candidate rankings by party), I built two data frames to hold the per county z-score for each candidate - one for Republicans and one for Democrats.</description>
     </item>
     
     <item>
       <title>MySQL Lahman Database</title>
-      <link>/2016/11/28/mysql-lahman-database/</link>
+      <link>/blog/mysql_lahman_database/</link>
       <pubDate>Mon, 28 Nov 2016 00:00:00 +0000</pubDate>
       
-      <guid>/2016/11/28/mysql-lahman-database/</guid>
+      <guid>/blog/mysql_lahman_database/</guid>
       <description>Shortly before the start of the 2016 World Series, I imported the Lahman baseball database into MySQL and built a few interesting statistics out of it. There is a Lahman dataset that comes with the dplyr package but I figured it would be good practice to explore the dataset with SQL and R.
 Here’s how I went about my cursory glance.
 Connect to databaseI used the DBI and RMySQL packages to connect to the Lahman database from R.</description>
@@ -87,30 +98,30 @@ Connect to databaseI used the DBI and RMySQL packages to connect to the Lahman 
     
     <item>
       <title>TexasPrimary2016: Update</title>
-      <link>/2016/11/21/texasprimary2016-update/</link>
+      <link>/blog/texasprimary2016_update/</link>
       <pubDate>Mon, 21 Nov 2016 00:00:00 +0000</pubDate>
       
-      <guid>/2016/11/21/texasprimary2016-update/</guid>
+      <guid>/blog/texasprimary2016_update/</guid>
       <description>For the past six months I have not worked much on my TexasPrimary2016 project. Recently, since successfully submitting ggloop to CRAN, I have picked back up this project.
 So far, I have cleaned up the code - better variable names, placing common objects in lists, using better map colors, etc - and renamed some of the files I have been working on. I am planning to use the actual 2016 election data within the project, so I am considering a new name for the project.</description>
     </item>
     
     <item>
       <title>Using StackOverflow data to find the top 25 R users to follow</title>
-      <link>/2016/11/07/using-stackoverflow-data-to-find-the-top-25-r-users-to-follow/</link>
+      <link>/blog/using_stackoverflow_data_to_find_the_top_25_r_users_to_follow/</link>
       <pubDate>Mon, 07 Nov 2016 00:00:00 +0000</pubDate>
       
-      <guid>/2016/11/07/using-stackoverflow-data-to-find-the-top-25-r-users-to-follow/</guid>
+      <guid>/blog/using_stackoverflow_data_to_find_the_top_25_r_users_to_follow/</guid>
       <description>I created a data.Stackexchange query to filter the top 25 users by votes and their website. The query only looks at the r tag, returns the gross number of votes, not net, and filters out users who do not have a website. It’s not a perfect filter or technique, but it is both a start and an idea.
 top25 &amp;lt;- read.csv(&amp;quot;~/R/seasmith.github.io/posts/reference/top25_r_users.csv&amp;quot;)# htmlTable::htmlTable(top25, align = c(&amp;quot;l&amp;quot;, &amp;quot;r&amp;quot;, &amp;quot;r&amp;quot;, &amp;quot;l&amp;quot;), margin.left = &amp;quot;2px&amp;quot;)knitr::kable(top25, align = c(&amp;quot;l&amp;quot;, &amp;quot;l&amp;quot;, &amp;quot;r&amp;quot;, &amp;quot;l&amp;quot;))DisplayNameIdtotalVotesWebsiteUrlDirk Eddelbuettel14330516506http://dirk.</description>
     </item>
     
     <item>
       <title>ggloop: Intro</title>
-      <link>/2016/11/05/ggloop-intro/</link>
+      <link>/blog/ggloop_intro/</link>
       <pubDate>Sat, 05 Nov 2016 00:00:00 +0000</pubDate>
       
-      <guid>/2016/11/05/ggloop-intro/</guid>
+      <guid>/blog/ggloop_intro/</guid>
       <description>What is it?ggloop is a package which allows the user to construct multiple ggplot2 plots by passing vectors of aesthetics rather than single aesthetics. Users can pass x, y, and ... vectors to aes_loop(), which like aes(), is a nested function - which sits inside of ggloop(). The pairing, or remapping, behaviors of these vectors are determined by the remap_xy and remap_dots options.
 Some quick tipsNested lists or lists of ggplot2 plots can have features added to them by using the special l-plus operator - %L+%.</description>
     </item>

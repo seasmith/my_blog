@@ -13,10 +13,10 @@
     
     <item>
       <title>ggloop: Intro</title>
-      <link>/2016/11/05/ggloop-intro/</link>
+      <link>/blog/ggloop_intro/</link>
       <pubDate>Sat, 05 Nov 2016 00:00:00 +0000</pubDate>
       
-      <guid>/2016/11/05/ggloop-intro/</guid>
+      <guid>/blog/ggloop_intro/</guid>
       <description>What is it?ggloop is a package which allows the user to construct multiple ggplot2 plots by passing vectors of aesthetics rather than single aesthetics. Users can pass x, y, and ... vectors to aes_loop(), which like aes(), is a nested function - which sits inside of ggloop(). The pairing, or remapping, behaviors of these vectors are determined by the remap_xy and remap_dots options.
 Some quick tipsNested lists or lists of ggplot2 plots can have features added to them by using the special l-plus operator - %L+%.</description>
     </item>

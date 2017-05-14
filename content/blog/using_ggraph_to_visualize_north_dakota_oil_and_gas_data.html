@@ -1,0 +1,54 @@
+---
+title  : "Using ggraph to Visualize North Dakota Oil and Gas Data"
+author : "Luke Smith"
+date   : "2017-03-22"
+tags   : [r, graphs, network graphs, oil and gas, north dakota]
+---
+
+<!-- BLOGDOWN-HEAD -->
+<!-- /BLOGDOWN-HEAD -->
+
+<!-- BLOGDOWN-BODY-BEFORE -->
+<!-- /BLOGDOWN-BODY-BEFORE -->
+
+<p><img src="/post/using_ggraph_to_visualize_north_dakota_oil_and_gas_data_files/figure-html/rigs-1.png" width="960" /></p>
+<p>The above network graph was produced using <a href="https://github.com/thomasp85/ggraph">ggraph</a> (grammar of graphs), which recently hit CRAN. The graph shows the relationships between rig companies (large red font) and operating companies (small blue font) in North Dakota. The data are from October 2016 to present.</p>
+<p>Each line between rig company and operator represents an individual rig. As you can see, some operators employ more than one unique rig from the same company.</p>
+<p>In some rig companies, such a True, Raven, and Extreme, are employed by companies that do not employ any other rig company.</p>
+<div id="more-graphs" class="section level2">
+<h2>More graphs</h2>
+<p>Here are a few more graphs I’ve been able to create in the past week. These are really just rough drafts and could, honestly, use some touch-ups (better coloring scales, more descriptive legends, etc).</p>
+<div id="etc" class="section level3">
+<h3>Etc…</h3>
+<p>The graph below is similar to the graph above, except it shows the relationship between counties and operators.</p>
+<p>I’ve also substituted colored text for colored nodes and added a size mapping for the nodes.</p>
+<p><img src="/post/using_ggraph_to_visualize_north_dakota_oil_and_gas_data_files/figure-html/counties_1-1.png" width="960" /></p>
+<p><br></p>
+<p>Here, I’ve added a different coloring scheme for the nodes: each county gets its own color and the operators share the same color (with no accompanying text).</p>
+<p><img src="/post/using_ggraph_to_visualize_north_dakota_oil_and_gas_data_files/figure-html/unnamed-chunk-1-1.png" width="960" /></p>
+<p><br></p>
+<p>This next graph shows the same relationship as the above graph, except each link represents each well within a county for each operator.</p>
+<p><img src="/post/using_ggraph_to_visualize_north_dakota_oil_and_gas_data_files/figure-html/counties_2-1.png" width="960" /></p>
+<p><br></p>
+<p>Going back to the previous graphs that mapped the rig company to operator relationship, I can apply the same kind of fanning technique as above (where each line represents an individual well for each rig company-operator). I’ve also mapped the counties to the edge (line) color.</p>
+<p><img src="/post/using_ggraph_to_visualize_north_dakota_oil_and_gas_data_files/figure-html/unnamed-chunk-2-1.png" width="960" /></p>
+<p><br></p>
+<p>However, you can also create a graph that shows the unique relationships on a per county basis (for the above graph).</p>
+<p><img src="/post/using_ggraph_to_visualize_north_dakota_oil_and_gas_data_files/figure-html/unnamed-chunk-3-1.png" width="960" /></p>
+<p><br></p>
+<p>In all the above graphs, the rig company and operator nodes were never duplicated: there was always one rig company node and one operator node.</p>
+<p>Using a tree layout, you can display a top-down hierarchy between various data points.</p>
+<p>The graphs below have duplicated operator nodes. The county nodes however are not duplicated (so there is only one node for each county).</p>
+<p><img src="/post/using_ggraph_to_visualize_north_dakota_oil_and_gas_data_files/figure-html/unnamed-chunk-4-1.png" width="960" /><img src="/post/using_ggraph_to_visualize_north_dakota_oil_and_gas_data_files/figure-html/unnamed-chunk-4-2.png" width="960" /><img src="/post/using_ggraph_to_visualize_north_dakota_oil_and_gas_data_files/figure-html/unnamed-chunk-4-3.png" width="960" /></p>
+<p><br></p>
+<p>Dendrogram versions of the above three graphs.</p>
+<p><img src="/post/using_ggraph_to_visualize_north_dakota_oil_and_gas_data_files/figure-html/unnamed-chunk-5-1.png" width="960" /><img src="/post/using_ggraph_to_visualize_north_dakota_oil_and_gas_data_files/figure-html/unnamed-chunk-5-2.png" width="960" /></p>
+</div>
+</div>
+<div id="theres-more" class="section level2">
+<h2>There’s more</h2>
+<p>I have only been using the ggraph package (and creating network graphs in general) for the past couple weeks, but there is certainly more to it than what is displayed above. There is certainly more to network graphs than just plotting entity relationships.</p>
+<p>In addition to ggraph’s functionality, the igraph package, one of ggraph’s dependencies, offers functionality to create layouts and add attributes to graphs (such as degree, neighborhood size, etc).</p>
+<p>There are, also, many other graphing packages, such as: <a href="https://christophergandrud.github.io/networkD3/">networkD3</a> (for creating D3.js network graphs), <a href="http://sachaepskamp.com/qgraph">qgraph</a> (weighted graphical models), and <a href="https://github.com/rich-iannone/DiagrammeR">DiagrammeR</a> (graph and network visualization).</p>
+</div>
+

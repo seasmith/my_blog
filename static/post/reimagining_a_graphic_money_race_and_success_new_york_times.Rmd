@@ -1,0 +1,180 @@
+---
+title  : "Re-imagining a Data Visualization: Good Schools, Affordable Homes (New York Times)"
+author : "Luke Smith"
+date   : "2017-05-12"
+tags   : [r, school, economics, race, nyt, re-imagine]
+---
+
+
+```{r setup, include=FALSE}
+# ---- Library_Tidyverse_Setup
+library(plyr)
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo       =  FALSE)
+knitr::opts_chunk$set(fig.height = 8)
+knitr::opts_chunk$set(fig.width  = 8)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+
+
+# ---- Hooks_Setup
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+old_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Inline_Function_Setup
+# Provide a default value for a given condition
+il_condition_default <- function(x, cond, ret) {
+  
+  if (eval(substitute(cond)) == TRUE) return(ret) else return(x)
+  
+}
+
+# Rearrange the numeric base
+il_num_base <- function(x, current_base = 0, new_base = 0) {
+  
+  new_power <- current_base - new_base
+  
+  return(x * 10^new_power)
+  
+}
+
+# ---- Extra_Function_Setup
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+
+# ---- Color_Setup
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_green      <- "#008348"
+my_green2     <- "#1e6545"
+my_lightgreen <- "#00be68"
+my_darkgreen  <- "#00371e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+```
+
+```{r setup_import_data, include=FALSE}
+source("~/R/misc/nyt/money_race_and_success.R")
+```
+
+A few weeks ago, a [Junk Charts post](http://junkcharts.typepad.com/junk_charts/2017/04/sorting-out-whats-meaningful-and-whats-not.html) critical of the New York Times article, [Good Schools, Affordable Homes: Finding Suburban Sweet Spots](https://www.nytimes.com/interactive/2017/03/30/upshot/good-schools-affordable-homes-suburban-sweet-spots.html), provided a few recommendations and criticisms for improving the data visuals within the article.
+
+Here they are summarized:
+
+1. Add a legend to explain the differences in the size of the dots (population?)
+2. Explain the horizontal scale (x-axis = grad above or below national or state average?)
+3. Aggregate the data (by metro area and commute time)
+
+I decided to take the NYT data and plot it out in R while taking into account the considerations above, as best I can.
+
+### Imitating the Original Work
+
+```{r imitation_1}
+orig$schome + theme(legend.position = "top")
+```
+
+As you can see, the NYT dataset includes metro areas other than those mentioned in the article: Los Angeles, Seattle, Portland, and Washington D.C. I did my best to find a "central city" school district and plot that data as well.
+
+### Re-imagined
+I want to show you how the graph above would appear if it were faceted by whether the commute time were < 30 minutes or >= 30 minutes.
+
+```{r imitation_2, fig.height=14.5}
+orig$schome_alt1 + theme(legend.position = "top")
+```
+
+As you can see, I decided to plot all the data points in the background (sort of disregarding whether the x-axis is national scale or not).
+
+However, this does not reveal as much as I had anticipated.
+
+Before aggregating the data, I am going to run a very simple linear model (`price ~ grade`).
+
+```{r reinterpreted_1}
+orig$schome_model + theme(legend.position = "top")
+```
+
+That still doesn't quite show the relationship between commute time and relative grade.
+
+I went back to the point plot and added an extra facet: the commute time ranges.
+
+```{r reinterpreted_2, fig.width=9}
+ideas$price_and_grades + theme(legend.position = "top")
+```
+
+### Aggregated
+To aggregate each district's data:
+
+* I grouped by region and whether the commute was less than 30 minutes or not
+* Multiplied each district's data by it's residential population and then divide by the region's total residential population
+* Summed each grouping
+
+It looked something like this:
+
+```{r, eval=FALSE, echo=TRUE}
+data %>%
+  group_by(cbsa_title, `Commute Time`) %>%
+  summarize(Population = sum(total_population),
+            grade_mean = sum((gsmean_pool * total_population) / Population),
+            sale_price_mean = sum((median_sale_price_per_sqft * total_population) / Population))
+```
+
+```{r aggregated_1}
+ideas$agg_1 + theme(legend.position = "top")
+```
+
+### Conclusion
+I had to make a number of assumptions (or ignore certain things) to make the plots above.
+
+1. The size of the dots appears proportional to the population variable in the data set, and so I mapped the `total_population` variable to the dot size.
+2. The horizontal axis is some kind of relative grading scale. Sadly, the variable name did not help clarify much more.
+
+Despite my limitations, the above graphs now show the scale for dot size, state some information about the x-axis values, and, as a bonus, show all the data points in the background (gray). This, I believe would be a great idea if the grading scale were a national scale.
+
+```{r comments, echo=FALSE, eval=FALSE}
+I did however compare the variable name in the [Good Schools, Affordable Homes: Finding Suburban Sweet Spots](https://www.nytimes.com/interactive/2017/03/30/upshot/good-schools-affordable-homes-suburban-sweet-spots.html) dataset to the variable name from a previous, yet similar and related NYT article, [Money, Race and Success: How Your School District Compares](): while they are similar (same wording) the names are not the same. Therefore I can't make any definitive conclusions, and I could not find a similar named variable (so far) within the [source data set](https://purl.stanford.edu/db586ns4974).
+```

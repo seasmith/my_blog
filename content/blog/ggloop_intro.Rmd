@@ -1,0 +1,50 @@
+---
+title       : "ggloop: Intro"
+date        : "2016-11-05"
+author      : "Luke Smith"
+description : "A very short introduction to the ggloop package."
+tags        : [r, packages, plots]
+---
+___
+
+## What is it? 
+`ggloop` is a package which allows the user to construct multiple `ggplot2` plots by passing vectors of aesthetics rather than single aesthetics. Users can pass `x`, `y`, and `...` vectors to `aes_loop()`, which like `aes()`, is a nested function - which sits inside of `ggloop()`. The pairing, or remapping, behaviors of these vectors are determined by the `remap_xy` and `remap_dots` options.  
+
+### Some quick tips
+
+* Nested lists or lists of `ggplot2` plots can have features added to them by using the special l-plus operator - `%L+%`.
+* All vectors greater than length one which are passed to `x`, `y`, or `...` must be wrapped by `c()` and must not contain any nested `c()`.
+* `remap_xy` controls how the `x` and `y` vectors are paired
+    * `TRUE` = default; acts like `expand.grid()` but removes duplicates and unordered sets
+    * `FALSE` = mimics R's internal recycling method
+    * `NA` = leaves unpaired aesthetics unpaired (i.e. if `x` is one element longer than `y`, then the last mapping will have no `y` aesthetic)
+* `remap_dots` controls how the `...` arguments are paired
+    * `TRUE` = similar to `remap_xy = TRUE` but actually more like `expand.grid()`; for example, if two paired aesthetics (i.e. `color` and `size`) have the same variable (i.e. `gear`) then they will be paired (i.e. `colour <- gear; size <- gear`)
+    * `FALSE` = default; similar to `remap_xy = NA`; any unpaired aesthetics will be left unpaired.
+
+
+## Where to get it 
+
+
+`ggloop` can be downloaded from [CRAN](https://cran.r-project.org/package=ggloop) by using `install.packages("ggloop")` or it can be obtained from [GitHub](https://github.com/seasmith/ggloop) by using `devtools::instal_github("seasmith/ggloop")`.
+
+## Examples
+
+Create a list of xy plots.
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+library(ggloop)
+library(ggplot2)
+```
+
+```{r ex1}
+library(ggloop)
+library(ggplot2)
+
+g <- ggloop(data = mtcars, 
+            mappings = aes_loop(x = c(mpg:hp, mpg/cyl), 
+                                y = c(hp:mpg, disp/hp),
+                                color = gear), 
+            remap_xy = FALSE)
+g <- g %L+% geom_point()
+g$color.gear$`x.mpg/cyl_y.disp/hp`  ## view one of the plots
+```

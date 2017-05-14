@@ -2,52 +2,57 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
-    <loc>/2017/04/13/u.s.-refinery-imports-from-saudi-arabia/</loc>
+    <loc>/blog/reimagining_a_graphic_money_race_and_success_new_york_times/</loc>
+    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/blog/exploring_us_refinery_imports/</loc>
     <lastmod>2017-04-13T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>/2017/03/22/using-ggraph-to-visualize-north-dakota-oil-and-gas-data/</loc>
+    <loc>/blog/using_ggraph_to_visualize_north_dakota_oil_and_gas_data/</loc>
     <lastmod>2017-03-22T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>/2017/02/21/texasprimary2016-economic-data---part-1/</loc>
+    <loc>/blog/texasprimary2016_economic_data_part_1/</loc>
     <lastmod>2017-02-21T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>/2017/01/19/c---modify-in-place-operators-in-r/</loc>
+    <loc>/blog/c&#43;&#43;_modify_in_place_operators_in_r/</loc>
     <lastmod>2017-01-19T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>/2016/12/20/plotting-the-el-nino-southern-oscillation-and-lower-tropospheric-temperature-anomalies/</loc>
+    <loc>/blog/ggplot2_enso_and_ltta/</loc>
     <lastmod>2016-12-20T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>/2016/12/12/texasprimary2016-z-scores/</loc>
+    <loc>/blog/texasprimary2016_update_with_zscores/</loc>
     <lastmod>2016-12-12T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>/2016/11/28/mysql-lahman-database/</loc>
+    <loc>/blog/mysql_lahman_database/</loc>
     <lastmod>2016-11-28T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>/2016/11/21/texasprimary2016-update/</loc>
+    <loc>/blog/texasprimary2016_update/</loc>
     <lastmod>2016-11-21T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>/2016/11/07/using-stackoverflow-data-to-find-the-top-25-r-users-to-follow/</loc>
+    <loc>/blog/using_stackoverflow_data_to_find_the_top_25_r_users_to_follow/</loc>
     <lastmod>2016-11-07T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>/2016/11/05/ggloop-intro/</loc>
+    <loc>/blog/ggloop_intro/</loc>
     <lastmod>2016-11-05T00:00:00+00:00</lastmod>
   </url>
   
@@ -63,7 +68,13 @@
   
   <url>
     <loc>/</loc>
-    <lastmod>2017-04-13T00:00:00+00:00</lastmod>
+    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/blog/</loc>
+    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -81,6 +92,12 @@
   <url>
     <loc>/tags/climate/</loc>
     <lastmod>2016-12-20T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/economics/</loc>
+    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -139,6 +156,12 @@
   </url>
   
   <url>
+    <loc>/tags/nyt/</loc>
+    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>/tags/oil/</loc>
     <lastmod>2017-04-13T00:00:00+00:00</lastmod>
     <priority>0</priority>
@@ -179,12 +202,6 @@
   </url>
   
   <url>
-    <loc>/post/</loc>
-    <lastmod>2017-04-13T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>/tags/projects/</loc>
     <lastmod>2017-02-21T00:00:00+00:00</lastmod>
     <priority>0</priority>
@@ -192,7 +209,7 @@
   
   <url>
     <loc>/tags/r/</loc>
-    <lastmod>2017-04-13T00:00:00+00:00</lastmod>
+    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -201,8 +218,20 @@
   </url>
   
   <url>
+    <loc>/tags/race/</loc>
+    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>/tags/rcpp/</loc>
     <lastmod>2017-01-19T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/re-imagine/</loc>
+    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -215,6 +244,12 @@
   <url>
     <loc>/tags/saudi-arabia/</loc>
     <lastmod>2017-04-13T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/school/</loc>
+    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   

@@ -13,10 +13,10 @@
     
     <item>
       <title>U.S. Refinery Imports From Saudi Arabia</title>
-      <link>/2017/04/13/u.s.-refinery-imports-from-saudi-arabia/</link>
+      <link>/blog/exploring_us_refinery_imports/</link>
       <pubDate>Thu, 13 Apr 2017 00:00:00 +0000</pubDate>
       
-      <guid>/2017/04/13/u.s.-refinery-imports-from-saudi-arabia/</guid>
+      <guid>/blog/exploring_us_refinery_imports/</guid>
       <description>In March, Reuters reported that Saudi Arabia would be reducing it’s March exports of oil to the U.S. by 300,000 barrels per day (bpd).
 In 2009, according to the U.S. Energy Information Administration, 39 refineries imported 973,704 bpd of oil from Saudi Arabia - accounting for 10% of US imports.
 However in 2016, 18 refineries imported 1,033,890 bpd from Saudi Arabia - accounting for 13% of US imports.
@@ -25,10 +25,10 @@ From 2009-2016, 58 U.</description>
     
     <item>
       <title>Using ggraph to Visualize North Dakota Oil and Gas Data</title>
-      <link>/2017/03/22/using-ggraph-to-visualize-north-dakota-oil-and-gas-data/</link>
+      <link>/blog/using_ggraph_to_visualize_north_dakota_oil_and_gas_data/</link>
       <pubDate>Wed, 22 Mar 2017 00:00:00 +0000</pubDate>
       
-      <guid>/2017/03/22/using-ggraph-to-visualize-north-dakota-oil-and-gas-data/</guid>
+      <guid>/blog/using_ggraph_to_visualize_north_dakota_oil_and_gas_data/</guid>
       <description>The above network graph was produced using ggraph (grammar of graphs), which recently hit CRAN. The graph shows the relationships between rig companies (large red font) and operating companies (small blue font) in North Dakota. The data are from October 2016 to present.
 Each line between rig company and operator represents an individual rig. As you can see, some operators employ more than one unique rig from the same company.</description>
     </item>

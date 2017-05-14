@@ -13,10 +13,10 @@
     
     <item>
       <title>C&#43;&#43; Modify In-Place Operators in R</title>
-      <link>/2017/01/19/c---modify-in-place-operators-in-r/</link>
+      <link>/blog/c&#43;&#43;_modify_in_place_operators_in_r/</link>
       <pubDate>Thu, 19 Jan 2017 00:00:00 +0000</pubDate>
       
-      <guid>/2017/01/19/c---modify-in-place-operators-in-r/</guid>
+      <guid>/blog/c&#43;&#43;_modify_in_place_operators_in_r/</guid>
       <description>I recently started the Rcpp chapter in Hadley Wickham’s Advanced R. C++ has some similarities with R (sprintf() and if else syntax both come to mind) - afterall R is written in both native R and C, and C++ extends C with “classes”. Of course, there are many differences between C++ and R, such as scope, class, member functions, type declaration, etc.
 However, C++ has one thing that R currently does not have and is something that I believe can be implemented in R: the modify in-place operators:</description>
     </item>

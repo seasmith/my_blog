@@ -2,7 +2,8 @@ baseurl = "/"
 relativeurls = true
 languageCode = "en-us"
 title = "Blog: A blog about R and other stuff"
-theme = "hugo-theme-slim"
+description = ""
+theme = "kube"
 googleAnalytics = ""
 disqusShortname = "lksmth"
 ignoreFiles = ["\\.Rmd$", "_files$", "_cache$"]
@@ -10,6 +11,9 @@ ignoreFiles = ["\\.Rmd$", "_files$", "_cache$"]
 [permalinks]
     post = "/:year/:month/:day/:slug/"
 
+[[menu.main]]
+    name = "Blog"
+    url  = "/blog/"
 [[menu.main]]
     name = "About"
     url = "/about/"

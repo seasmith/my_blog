@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+  <meta name="generator" content="Hugo 0.20.4" />
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title> TexasPrimary2016: Economic Data - Part 1 </title>
+
+  
+  
+  
+  
+  
+  
+
+    
+
+  <meta name="author" content="Luke Smith">
+
+
+  <meta property="og:title" content="TexasPrimary2016: Economic Data - Part 1" />
+<meta property="og:description" content="Here is a look at some of my exploratory graphs from my analysis of the 2016 Texas Presidential Primary economic data. The economic data comes from FRED (Federal Reserve Economic Data) and is actually from 2014.
+In this post, I’ll focus on plotting income data against population and unemployment data. In future posts I’ll explore the longer timeline of economic data - stretching back to the 1990’s.
+Examining the DataIf you want to know more about the dataset used in this post, you can jump down to the About section at the bottom fo the page." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/blog/texasprimary2016_economic_data_part_1/" />
+
+
+
+<meta property="article:published_time" content="2017-02-21T00:00:00&#43;00:00"/>
+<meta property="article:modified_time" content="2017-02-21T00:00:00&#43;00:00"/>
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+  
+  
+  
+  
+  
+
+  <link rel="canonical" href="../../blog/texasprimary2016_economic_data_part_1/">  
+
+  <link rel="shortcut icon" type="image/png" href="data:image/png;base64,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RvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3EldwAAAAAAAJJjRvlaOwAAAAAAALXmk3Eld+D/AfhEhmLqHBsfAAAAAElFTkSuQmCC">
+
+
+  <link href="../../css/font.css" rel="stylesheet" type="text/css">
+  <link href="../../css/kube.min.css" rel="stylesheet" type="text/css">
+  <link href="../../css/kube.legenda.css" rel="stylesheet" type="text/css">
+  <link href="../../css/highlight.css" rel="stylesheet" type="text/css">
+  <link href="../../css/master.css" rel="stylesheet" type="text/css">
+  <link href="../../css/kube.demo.css" rel="stylesheet" type="text/css">
+
+ <link href="../../css/custom.css" rel="stylesheet" type="text/css">
+
+  <script src="../../js/jquery-2.1.4.min.js" type="text/javascript">
+  </script>
+
+  <script type="text/javascript" src="../../js/tocbot.min.js"></script>
+</head>
+
+
+<body class="page-kube">
+  <header> <div class="show-sm">
+    <div id="nav-toggle-box">
+      <div id="nav-toggle-brand">
+        <a href="../../">Kube</a>
+      </div><a data-component="toggleme" data-target="#top" href="#" id="nav-toggle"><i class="kube-menu"></i></a>
+    </div>
+  </div>
+  <div class="hide-sm" id="top">
+    <div id="top-brand">
+      <a href="../../" title="home">Kube</a>
+    </div>
+    <nav id="top-nav-main">
+      <ul>
+       
+       
+    <li><a href="../../about/" >About</a></li>
+    
+    <li><a href="../../blog/" >Blog</a></li>
+    
+    <li><a href="../../packages/" >Packages</a></li>
+    
+    <li><a href="../../projects/" >Projects</a></li>
+    
+      </ul>
+    </nav>
+    <nav id="top-nav-extra">
+      <ul>
+        <li>
+          <a href="../../account/">Account</a>
+        </li>
+      </ul>
+    </nav>
+  </div> </header>
+  <main>
+<div class="push-center" itemscope itemtype="http://schema.org/BlogPosting">
+    
+<meta itemprop="name" content="TexasPrimary2016: Economic Data - Part 1">
+<meta itemprop="description" content="Here is a look at some of my exploratory graphs from my analysis of the 2016 Texas Presidential Primary economic data. The economic data comes from FRED (Federal Reserve Economic Data) and is actually from 2014.
+In this post, I’ll focus on plotting income data against population and unemployment data. In future posts I’ll explore the longer timeline of economic data - stretching back to the 1990’s.
+Examining the DataIf you want to know more about the dataset used in this post, you can jump down to the About section at the bottom fo the page.">
+
+
+<meta itemprop="dateModified" content="2017-02-21T00:00:00&#43;00:00" />
+<meta itemprop="wordCount" content="817">
+
+
+
+<meta itemprop="keywords" content="baseball,c&#43;&#43;,climate,economics,el-nino,election-analysis,enso,global-temperature,graphs,imports,mysql,network-graphs,north-dakota,nyt,oil,oil-and-gas,oil-imports,packages,plots,political-analysis,projects,r,race,rcpp,re-imagine,rmysql,saudi-arabia,school,sql,stack-overflow,united-states," />
+
+<div id="hero">
+    <h1 itemprop="headline">  TexasPrimary2016: Economic Data - Part 1</h1>
+    
+<time class="post-time"><span class="icon">
+  <i class="fa fa-clock-o" aria-hidden="true"></i>
+</span>
+<span>4 minute read</span>
+<span class="icon">
+ <i class="fa fa-pencil" aria-hidden="true"></i>
+</span>
+
+  Published: <time datetime="2017-02-21T00:00:00&#43;00:00">21 Feb, 2017</time>
+
+</time>
+</div>
+<div id="post-box">
+<div id="post" itemprop="articleBody">
+    
+    <!-- BLOGDOWN-HEAD -->
+<!-- /BLOGDOWN-HEAD -->
+
+<!-- BLOGDOWN-BODY-BEFORE -->
+<!-- /BLOGDOWN-BODY-BEFORE -->
+
+<p>Here is a look at some of my exploratory graphs from my analysis of the 2016 Texas Presidential Primary economic data. The economic data comes from <a href="https://fred.stlouisfed.org/">FRED</a> (Federal Reserve Economic Data) and is actually from 2014.</p>
+<p>In this post, I’ll focus on plotting income data against population and unemployment data. In future posts I’ll explore the longer timeline of economic data - stretching back to the 1990’s.</p>
+<div id="examining-the-data" class="section level2">
+<h2>Examining the Data</h2>
+<p>If you want to know more about the dataset used in this post, you can jump down to the <a href="#about-the-data">About</a> section at the bottom fo the page. But here is how the data looks:</p>
+<pre class="r"><code>FRED</code></pre>
+<pre><code>## # A tibble: 254 × 5
+##    CountyName   UnRate ResPop  PCPI  EMHI
+##         &lt;chr&gt;    &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1    anderson 4.641667 57.742 31815 42471
+## 2     andrews 2.983333 17.457 54928 66878
+## 3    angelina 5.216667 87.875 37132 42128
+## 4     aransas 5.541667 24.933 43292 44551
+## 5      archer 4.508333  8.808 52139 58867
+## 6   armstrong 3.158333  1.948 43290 55177
+## 7    atascosa 4.925000 47.812 37172 52785
+## 8      austin 4.750000 28.994 46741 58792
+## 9      bailey 5.025000  6.960 44960 36821
+## 10    bandera 4.766667 20.916 40868 50107
+## # ... with 244 more rows</code></pre>
+<p>For this dataset, each column is a variable from 2014.</p>
+<ul>
+<li><code>CountyName</code> = Texas county (lower-case name)</li>
+<li><code>UnRate</code> = Unemployment Rate (%)</li>
+<li><code>ResPop</code> = Residential Population (1,000 persons)</li>
+<li><code>PCPI</code> = Per Capita Personal Income ($)</li>
+<li><code>EMHI</code> = Estimated Median Household Income ($)</li>
+</ul>
+</div>
+<div id="plotting-the-data" class="section level2">
+<h2>Plotting the Data</h2>
+<p>The code used to generate the plots below comes from the <a href="https://github.com/seasmith/TexasPrimary2016/blob/master/Code/FRED_plotData.R">~/Code/FRED_plotData.R</a> file.</p>
+<div id="boxplots" class="section level3">
+<h3>Boxplots</h3>
+<div id="basic" class="section level4">
+<h4>Basic</h4>
+<p>An unfaceted look at each variable.</p>
+<p><strong>NOTE:</strong> I added a log scale to the y-axis in the population boxplot below. This is because many of Texas’ counties have <em>small populations</em> (min = 87 in Loving County) while only a handful or so have <em>very large populations</em> (max = 4,447,577 in Harris County).</p>
+<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot1.2-1.png" width="672" /></p>
+<p><strong>Take-aways:</strong></p>
+<ol style="list-style-type: decimal">
+<li>We can see that household incomes (<code>EMHI</code>) are higher than per capita incomes (<code>PCPI</code>).</li>
+<li><code>PCPI</code> has a larger outlier than <code>EMHI</code>, perhaps because <code>PCPI</code> is a per capita (average) variable while <code>EMHI</code> is median variable.</li>
+</ol>
+</div>
+<div id="with-cuts" class="section level4">
+<h4>With Cuts</h4>
+<p>Cutting and grouping the population and unemployment data into nearly equal intervals (~32 counties each interval).</p>
+<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%205-1.png" width="864" /><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%205-2.png" width="864" /></p>
+<p><strong>Take-aways:</strong></p>
+<ol style="list-style-type: decimal">
+<li>First plot (population vs income)
+<ul>
+<li>Very large counties have higher median <code>EMHI</code> (household income) than small to large counties.</li>
+<li>Small to medium size counties tend to have larger median <code>PCPI</code> (personal income) than any other size county. For instance, <strong>Hansford County has a PCPI of $75,035 but a small population of 5,537 people</strong>.</li>
+<li>The above two observations could be due to lower employment:population ratios in rural areas (making <code>PCPI</code> higher for rural areas) and a higher a number of employed persons per household in urban areas (making <code>EMHI</code> higher for urban areas).</li>
+</ul></li>
+<li>Second plot (unemployment vs income)
+<ul>
+<li>There is an (obvious) inverse relationship between unemployment and income:</li>
+<li>The higher the unemployment rate, the lower the income.</li>
+<li>The lower the unemployment rate, the higher the income.</li>
+</ul></li>
+</ol>
+<div id="another-view" class="section level5">
+<h5>Another view</h5>
+<p>In the two sets of plots below, I’ve changed the groupings into facets - so each boxplot gets its own area.</p>
+<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%201-1.png" width="672" /><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%201-2.png" width="672" /></p>
+<p>And flipping the facets in <code>facet_grid()</code> produces an interesting view, as well.</p>
+<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%202-1.png" width="864" /><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%202-2.png" width="864" /></p>
+</div>
+</div>
+</div>
+<div id="density" class="section level3">
+<h3>Density</h3>
+<div id="basic-1" class="section level4">
+<h4>Basic</h4>
+<p>I’m going to leave out histograms for now and focus on histograms. An unfaceted look at each variable:</p>
+<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%206-1.png" width="672" /></p>
+<p><strong>Take-aways:</strong></p>
+<ul>
+<li>Both income variables are positively skewed (lean toward the left).</li>
+</ul>
+</div>
+<div id="with-cuts-1" class="section level4">
+<h4>With Cuts</h4>
+<p>I’ll take the cutting procedure from the boxplots and apply it to the density plots. This time though I’ll add two lines:</p>
+<ul>
+<li>median (solid)</li>
+<li>mean (dashed)</li>
+</ul>
+<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%207-1.png" width="864" /></p>
+<p><strong>Take-away:</strong></p>
+<ol style="list-style-type: decimal">
+<li>In the largest 32 counties, <code>EMHI</code> values are spread wide (kurtically flat) and they are weakly distributed more toward lower values (positively skewed), for the most part.</li>
+</ol>
+</div>
+<div id="other-views" class="section level4">
+<h4>Other views</h4>
+<div id="stacked" class="section level5">
+<h5>Stacked</h5>
+<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%208-1.png" width="864" /></p>
+<p><strong>Take-away:</strong></p>
+<ol style="list-style-type: decimal">
+<li>You can see a shift in the peaks of the various ranges. This is kind of like seeing a shift in the median of the ranges.</li>
+</ol>
+</div>
+<div id="filled" class="section level5">
+<h5>Filled</h5>
+<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%209-1.png" width="864" /></p>
+<p><strong>Take-away:</strong></p>
+<ol style="list-style-type: decimal">
+<li>The tail-end distributions stand out more when using the filled density plot.</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+<div id="about-the-data" class="section level2">
+<h2>About the Data</h2>
+<p>The data used in this post is a merger of two data sets:</p>
+<ul>
+<li><code>FRED_2012</code> = contains all income, population, unemployment, and education data</li>
+<li><code>FRED_2014</code> = contains all income, population, and unemployment data; does NOT contain education data</li>
+</ul>
+<p>I ended up merging the 2012 education data with the 2014 data.=, but did not use it for this post.</p>
+</div>
+<div id="getting-the-data" class="section level2">
+<h2>Getting the Data</h2>
+<div id="raw-data" class="section level3">
+<h3>Raw Data</h3>
+<p>Source files can be found in:</p>
+<ul>
+<li>~/Code/Fred_getdata.R</li>
+<li>~/Code/Fred_getdata2.R</li>
+<li>~/Code/Fred_getdata3.R</li>
+<li>~/Code/Fred_mergedata.R</li>
+</ul>
+<p>You can download the <code>.RData</code> files from <a href="https://github.com/seasmith/TexasPrimary2016/blob/master/Data/FRED/FRED_2014.RData">here</a> and <a href="https://github.com/seasmith/TexasPrimary2016/blob/master/Data/FRED/FRED_2012.RData">here</a>.</p>
+</div>
+<div id="filtered-data" class="section level3">
+<h3>Filtered Data</h3>
+<p>Here is how to merge the two data sets.</p>
+<pre class="r"><code># Filter Data -------------------------------------------------------------
+
+.FRED &lt;- FRED_2014 %&gt;%
+  select(CountyName,
+         UnRate,
+         ResPop,
+         PCPI,
+         BachDegree,
+         HSDegree,
+         EMHI)
+.FRED$BachDegree &lt;- FRED_2012$BachDegree  # replace 2014 education data w/ 2012
+.FRED$HSDegree   &lt;- FRED_2012$HSDegree    # replace 2014 education data w/ 2012</code></pre>
+</div>
+<div id="working-data-frame" class="section level3">
+<h3>Working Data Frame</h3>
+<p>And to keep things simple, for this post, I removed the education data.</p>
+<pre class="r"><code># Filter Out Education Data -----------------------------------------------
+
+FRED &lt;- .FRED %&gt;% select(-BachDegree, -HSDegree)</code></pre>
+</div>
+</div>
+
+
+
+</div>
+    <div class="">
+        <p>
+  Published
+  
+    
+      by <span itemprop="author">Luke Smith</span>
+    
+  
+  <time datetime="2017-02-21T00:00:00&#43;00:00">
+    21 Feb, 2017
+  </time>
+  
+  
+    and tagged <a href="../../tags/election-analysis/">election analysis</a>, <a href="../../tags/political-analysis/">political analysis</a>, <a href="../../tags/projects/">projects</a> and <a href="../../tags/r/">r</a>
+  
+  using <span itemprop="wordCount">817</span> words.
+</p>
+
+        
+  
+
+
+
+  <aside>
+    <heade><strong>Related Content</strong></header>
+    <hr>
+    <ul>
+      
+      
+        <li><a href="../../blog/reimagining_a_graphic_money_race_and_success_new_york_times/">Re-imagining a Data Visualization: Good Schools, Affordable Homes (New York Times)</a> &ndash; 3 minutes
+      
+        <li><a href="../../blog/exploring_us_refinery_imports/">U.S. Refinery Imports From Saudi Arabia</a> &ndash; 2 minutes
+      
+        <li><a href="../../blog/using_ggraph_to_visualize_north_dakota_oil_and_gas_data/">Using ggraph to Visualize North Dakota Oil and Gas Data</a> &ndash; 3 minutes
+      
+        <li><a href="../../blog/c&#43;&#43;_modify_in_place_operators_in_r/">C&#43;&#43; Modify In-Place Operators in R</a> &ndash; 4 minutes
+      
+        <li><a href="../../blog/ggplot2_enso_and_ltta/">Plotting the El Nino Southern Oscillation and Lower Tropospheric Temperature Anomalies</a> &ndash; 9 minutes
+      
+        <li><a href="../../blog/texasprimary2016_update_with_zscores/">TexasPrimary2016: Z-Scores</a> &ndash; 3 minutes
+      
+        <li><a href="../../blog/texasprimary2016_update/">TexasPrimary2016: Update</a> &ndash; 1 minutes
+      
+    </ul>
+  </aside>
+
+
+    </div>
+    
+    
+    <article>
+        <div id="disqus_thread"></div>
+<script type="text/javascript">
+    var disqus_shortname = 'lksmth';
+    var disqus_identifier = '\/blog\/texasprimary2016_economic_data_part_1\/';
+    var disqus_title = 'TexasPrimary2016: Economic Data - Part 1';
+    var disqus_url = '\/blog\/texasprimary2016_economic_data_part_1\/';
+
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </article>
+    
+    
+</div>
+</div>
+</main>
+  <footer>   <footer id="footer">
+    <nav>
+      <ul>
+        <li><span>Kube</span></li>
+        <li>
+          <a href="../../company/">Company</a>
+        </li>
+        <li>
+          <a href="../../blog/">Blog</a>
+        </li>
+          <li>
+          <a href="../../docs/">Docs</a>
+        </li>
+        <li>
+          <a href="http://twitter.com/">Give a shout-out on Twitter!</a>
+        </li>
+      </ul>
+    </nav>
+    <p>&copy; Licence MIT.</p>
+  </footer> </footer>
+
+
+  <script src="../../js/kube.js" type="text/javascript">
+  </script>
+  <script src="../../js/kube.legenda.js" type="text/javascript">
+  </script>
+  <script src="../../js/master.js" type="text/javascript">
+  </script>
+</body>
+
+</html>

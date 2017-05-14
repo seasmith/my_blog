@@ -13,10 +13,10 @@
     
     <item>
       <title>MySQL Lahman Database</title>
-      <link>/2016/11/28/mysql-lahman-database/</link>
+      <link>/blog/mysql_lahman_database/</link>
       <pubDate>Mon, 28 Nov 2016 00:00:00 +0000</pubDate>
       
-      <guid>/2016/11/28/mysql-lahman-database/</guid>
+      <guid>/blog/mysql_lahman_database/</guid>
       <description>Shortly before the start of the 2016 World Series, I imported the Lahman baseball database into MySQL and built a few interesting statistics out of it. There is a Lahman dataset that comes with the dplyr package but I figured it would be good practice to explore the dataset with SQL and R.
 Here’s how I went about my cursory glance.
 Connect to databaseI used the DBI and RMySQL packages to connect to the Lahman database from R.</description>
