@@ -1,0 +1,111 @@
+---
+title       : "North Dakota Oil and Gas"
+date        : "12-29-2016"
+author      : "Luke Smith"
+description : "A look at North Dakota oil and gas activity for the past 3 months."
+tags        : [r, north dakota, oil, gas, maps]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```js
+// scrape_techstars.js
+
+var webPage = require('webpage');
+var page = webPage.create();
+
+var fs = require('fs');
+var path = 'dmr.html'
+
+page.open('https://www.dmr.nd.gov/oilgas/mprindex.asp', function (status) {
+  var content = page.content;
+  fs.write(path,content,'w')
+  phantom.exit();
+});
+```
+
+```{r download}
+library(readxl)
+library(tibble)
+
+base <- "https://www.dmr.nd.gov"
+url <- "https://www.dmr.nd.gov/oilgas/mprindex.asp"
+# months <- c("2016_10")
+# ext <- ".xlsx"
+# 
+# urls <- file.path(base, paste0(months, ext))
+# 
+# dest <- file.path("reference", paste0(months, "_production", ext))
+# 
+# dfiles <- Map(download.file, list(urls), list(dest), mode = "wb")
+# 
+# xl <- lapply(dest, read_excel)
+dwnld <- system("phantomjs posts/staging/dmr_scraper.js")
+html <- "dmr.html" %>% read_html()
+html %>% html_nodes("#excelDiv") %>% html_nodes("a") %>% html_attr("href")
+
+# MORE CODE HERE
+```
+
+Some of the columns have missing data. These missing values can be summarized using the `naniar` package. The function `summarise_missingness()` will create a list of summaries. Two that will be focused on are `$table_missing_var` which creates a `table()`-like count of missing observations grouped by the number of variables, and `$summary_missing_var` which shows the number of missing observations in each variable.
+
+```{r missing}
+# devtools::install_github("njtierney/naniar")
+library(naniar)
+library(ggplot2)
+
+m <- xl %>% summarise_missingness()
+
+# - Missing counts grouped by number of missing variables
+m$table_missing_var
+# - Missing counts by variable
+m$summary_missing_var
+
+plots <- list()
+
+plots$missing_all <- xl %>%
+  shadow_df() %>%
+  gather(key = "key", value = "value") %>%
+    ggplot(aes(value)) +
+    geom_histogram(stat = "count")
+
+plots$missing_key <- xl %>%
+  shadow_df() %>%
+  gather(key = "key", value = "value") %>%
+    ggplot(aes(value)) +
+    geom_histogram(stat = "count") +
+    facet_wrap(~key)
+```
+
+```{r aggs}
+library(dplyr)
+prod <- list()
+
+prod$Company <- xl %>%
+  group_by(Company) %>%
+  summarize(Production = sum(Oil))
+
+prod$County <- xl %>%
+  group_by(County) %>%
+  summarize(Production = sum(Oil))
+
+prod$Company.County <- xl %>%
+  group_by(Company, County) %>%
+  summarize(Production = sum(Oil))
+```
+
+```{r graphs}
+library(tidyr)
+library(ggplot2)
+
+missing.production <- xl %>%
+  select(Company, County, FieldName, Pool, Oil, Gas) %>%
+  gather(-Company, -County, -FieldName, -Pool, key = "Type", value = "Production")
+
+plots$Production.County_missing <- missing.production %>%
+  ggplot(aes(County, Production)) +
+  geom_missing_point(alpha = 1/10) + facet_wrap(~Type)
+plots$Wells <- xl %>% ggplot(aes(Oil)) + geom_histogram()
+```

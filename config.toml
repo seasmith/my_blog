@@ -1,15 +1,12 @@
 baseurl = "/"
 relativeurls = true
 languageCode = "en-us"
-title = "Blog: A blog about R and other stuff"
-description = ""
+title = "Welcome"
+description = "Please checkout my website"
 theme = "kube"
 googleAnalytics = ""
 disqusShortname = "lksmth"
-ignoreFiles = ["\\.Rmd$", "_files$", "_cache$"]
-
-[permalinks]
-    post = "/:year/:month/:day/:slug/"
+ignoreFiles = ["\\.Rmd$", "\\.RData$", "_files$", "_cache$"]
 
 [[menu.main]]
     name = "Blog"
@@ -24,14 +21,19 @@ ignoreFiles = ["\\.Rmd$", "_files$", "_cache$"]
     name = "Packages"
     url = "/packages/"
 
-[params]
-    description = "A website built through Hugo and blogdown."
+[Params]
+    author = "Luke Smith"
+    github = "seasmith"
+    stackoverflow = "5228718"
+    twitter = "lksmth"
+    linkedin = "lksmth"
+    email = "lukedansmi@sbcglobal.net"
 
     # options for highlight.js (version, additional languages, and theme)
     highlightjsVersion = "9.10.0"
     highlightCDN = "//cdn.bootcss.com"
-    highlightjsLang = ["r", "yaml"]
-    highlightjsTheme = "github"
+    highlightjsLang = ["r", "yaml", "sql"]
+    highlightjsTheme = "hybrid"
 
     [params.logo]
     url = "logo.png"

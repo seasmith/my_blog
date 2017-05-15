@@ -1,0 +1,86 @@
+---
+title  : "The Decline and Fall of the World Series Winner"
+date   : "2017-02-25"
+author : "Luke Smith"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::read_chunk("~/R/misc/baseball/ws_analysis.R")
+
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_green      <- "#008348"
+my_green2     <- "#1e6545"
+my_lightgreen <- "#00be68"
+my_darkgreen  <- "#00371e"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+```
+
+## It's not like it use to be
+Take a look at the following chart which shows the regular season winning percentage of World Series winners from 1903 to 2015.
+
+```{r Load_Dependencies, include=FALSE}
+```
+```{r Make_Data, include=FALSE}
+```
+```{r Plot_WSWinner, echo=FALSE, message=FALSE}
+```
+```{r __Plot_WSWinner, echo=FALSE, message=FALSE}
+WS$Winner +
+  geom_point(size = 1.75) +
+  geom_line(size = 1) +
+  geom_smooth(se = FALSE) +
+  scale_y_continuous(minor_breaks = NULL) +
+  scale_x_continuous(minor_breaks = NULL) +
+  theme_minimal()
+```
+
+
+The decline in the regular-season winning percentage of World Series winner is also a trait of the loser, too.
+
+```{r Plot_WSLoser, echo=FALSE, message=FALSE}
+```
+```{r __Plot_WSLoser, echo=FALSE, message=FALSE}
+WS$Loser
+```
+
+```{r inline_calc1, include=FALSE}
+filt <- . %>%
+  group_by_(WSTeams2, cond = .) %>%
+  summarize(n = n()) %>%
+  filter(cond == TRUE) %>%
+  select(n) %>%
+  .[[1]]
+
+W    <- "Y > N"  %>% filt()
+L    <- "Y < N"  %>% filt()
+G    <- "Y != N" %>% filt()
+ties <- "Y == N" %>% filt()
+```
+
+The team with the better winning percentage has only a `r W`-`r L` record out of the `r G` World Series where one team had a greater winning percentage. In `r ties` games, both teams had identical winning percentages.
+
+In the color-coded chart below, you can see both the difference in winning percentages and where the eventual World Series winner (blue) and loser (red) stood.
+
+```{r Plot_WS_WL_Diff1, echo=FALSE, message=FALSE}
+```
+```{r __Plot_WS_WL_Diff1, echo=FALSE, message=FALSE}
+WS$Teams #+
+  # scale_y_continuous(minor_breaks = NULL) +
+  # scale_x_continuous(minor_breaks = NULL) +
+  # theme_minimal()
+```
+## Conclusion - if any
+
+There is probably a reason to all of the this (i.e. game rule changes, league expansion, changes in player contracts, etc). However, that will have to be left for another post.
+
+<br>
+<br>

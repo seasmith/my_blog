@@ -2,13 +2,14 @@
 <html lang="en-us">
 
 <head>
-  <meta name="generator" content="Hugo 0.20.4" />
+  <meta name="generator" content="Hugo 0.20.7" />
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title> TexasPrimary2016: Economic Data - Part 1 </title>
 
   
+  <meta name="description" content="Economic data behind the 2016 Texas presidential primary."> 
   
   
   
@@ -21,9 +22,7 @@
 
 
   <meta property="og:title" content="TexasPrimary2016: Economic Data - Part 1" />
-<meta property="og:description" content="Here is a look at some of my exploratory graphs from my analysis of the 2016 Texas Presidential Primary economic data. The economic data comes from FRED (Federal Reserve Economic Data) and is actually from 2014.
-In this post, I’ll focus on plotting income data against population and unemployment data. In future posts I’ll explore the longer timeline of economic data - stretching back to the 1990’s.
-Examining the DataIf you want to know more about the dataset used in this post, you can jump down to the About section at the bottom fo the page." />
+<meta property="og:description" content="Economic data behind the 2016 Texas presidential primary." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/blog/texasprimary2016_economic_data_part_1/" />
 
@@ -112,9 +111,7 @@ Examining the DataIf you want to know more about the dataset used in this post,
 <div class="push-center" itemscope itemtype="http://schema.org/BlogPosting">
     
 <meta itemprop="name" content="TexasPrimary2016: Economic Data - Part 1">
-<meta itemprop="description" content="Here is a look at some of my exploratory graphs from my analysis of the 2016 Texas Presidential Primary economic data. The economic data comes from FRED (Federal Reserve Economic Data) and is actually from 2014.
-In this post, I’ll focus on plotting income data against population and unemployment data. In future posts I’ll explore the longer timeline of economic data - stretching back to the 1990’s.
-Examining the DataIf you want to know more about the dataset used in this post, you can jump down to the About section at the bottom fo the page.">
+<meta itemprop="description" content="Economic data behind the 2016 Texas presidential primary.">
 
 
 <meta itemprop="dateModified" content="2017-02-21T00:00:00&#43;00:00" />
@@ -122,11 +119,13 @@ Examining the DataIf you want to know more about the dataset used in this post,
 
 
 
-<meta itemprop="keywords" content="baseball,c&#43;&#43;,climate,economics,el-nino,election-analysis,enso,global-temperature,graphs,imports,mysql,network-graphs,north-dakota,nyt,oil,oil-and-gas,oil-imports,packages,plots,political-analysis,projects,r,race,rcpp,re-imagine,rmysql,saudi-arabia,school,sql,stack-overflow,united-states," />
+<meta itemprop="keywords" content="baseball,c&#43;&#43;,climate,el-nino,election-analysis,enso,global-temperature,graphs,imports,mysql,network-graphs,north-dakota,oil,oil-and-gas,oil-imports,packages,plots,political-analysis,projects,r,rcpp,rmysql,saudi-arabia,sql,stack-overflow,united-states," />
 
 <div id="hero">
     <h1 itemprop="headline">  TexasPrimary2016: Economic Data - Part 1</h1>
     
+<blockquote itemprop="description">Economic data behind the 2016 Texas presidential primary.</blockquote>
+
 <time class="post-time"><span class="icon">
   <i class="fa fa-clock-o" aria-hidden="true"></i>
 </span>
@@ -345,8 +344,6 @@ FRED &lt;- .FRED %&gt;% select(-BachDegree, -HSDegree)</code></pre>
     <ul>
       
       
-        <li><a href="../../blog/reimagining_a_graphic_money_race_and_success_new_york_times/">Re-imagining a Data Visualization: Good Schools, Affordable Homes (New York Times)</a> &ndash; 3 minutes
-      
         <li><a href="../../blog/exploring_us_refinery_imports/">U.S. Refinery Imports From Saudi Arabia</a> &ndash; 2 minutes
       
         <li><a href="../../blog/using_ggraph_to_visualize_north_dakota_oil_and_gas_data/">Using ggraph to Visualize North Dakota Oil and Gas Data</a> &ndash; 3 minutes
@@ -359,6 +356,8 @@ FRED &lt;- .FRED %&gt;% select(-BachDegree, -HSDegree)</code></pre>
       
         <li><a href="../../blog/texasprimary2016_update/">TexasPrimary2016: Update</a> &ndash; 1 minutes
       
+        <li><a href="../../blog/using_stackoverflow_data_to_find_the_top_25_r_users_to_follow/">Using StackOverflow data to find the top 25 R users to follow</a> &ndash; 1 minutes
+      
     </ul>
   </aside>
 
@@ -369,19 +368,22 @@ FRED &lt;- .FRED %&gt;% select(-BachDegree, -HSDegree)</code></pre>
     <article>
         <div id="disqus_thread"></div>
 <script type="text/javascript">
-    var disqus_shortname = 'lksmth';
-    var disqus_identifier = '\/blog\/texasprimary2016_economic_data_part_1\/';
-    var disqus_title = 'TexasPrimary2016: Economic Data - Part 1';
-    var disqus_url = '\/blog\/texasprimary2016_economic_data_part_1\/';
 
-    (function() {
-        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-    })();
+(function() {
+    
+    
+    if (window.location.hostname == "localhost")
+        return;
+
+    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+    var disqus_shortname = 'lksmth';
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+})();
 </script>
 <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+<a href="http://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
     </article>
     
     
@@ -393,21 +395,22 @@ FRED &lt;- .FRED %&gt;% select(-BachDegree, -HSDegree)</code></pre>
       <ul>
         <li><span>Kube</span></li>
         <li>
-          <a href="../../company/">Company</a>
+          <a href="https://github.com/seasmith">GitHub</a>
         </li>
         <li>
-          <a href="../../blog/">Blog</a>
-        </li>
-          <li>
-          <a href="../../docs/">Docs</a>
+          <a href="https://stackoverflow.com/users/5228718">Stack Overflow</a>
         </li>
         <li>
-          <a href="http://twitter.com/">Give a shout-out on Twitter!</a>
+          <a href="http://twitter.com/lksmth">Twitter</a>
+        </li>
+        <li>
+          <a href="https://linkedin.com/in/lksmth">LinkedIn</a>
         </li>
       </ul>
     </nav>
     <p>&copy; Licence MIT.</p>
-  </footer> </footer>
+  </footer>
+ </footer>
 
 
   <script src="../../js/kube.js" type="text/javascript">

@@ -2,11 +2,6 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
-    <loc>/blog/reimagining_a_graphic_money_race_and_success_new_york_times/</loc>
-    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
     <loc>/blog/exploring_us_refinery_imports/</loc>
     <lastmod>2017-04-13T00:00:00+00:00</lastmod>
   </url>
@@ -67,14 +62,8 @@
   </url>
   
   <url>
-    <loc>/</loc>
-    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>/blog/</loc>
-    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
+    <lastmod>2017-04-13T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -92,12 +81,6 @@
   <url>
     <loc>/tags/climate/</loc>
     <lastmod>2016-12-20T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/economics/</loc>
-    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -156,12 +139,6 @@
   </url>
   
   <url>
-    <loc>/tags/nyt/</loc>
-    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>/tags/oil/</loc>
     <lastmod>2017-04-13T00:00:00+00:00</lastmod>
     <priority>0</priority>
@@ -209,7 +186,7 @@
   
   <url>
     <loc>/tags/r/</loc>
-    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
+    <lastmod>2017-04-13T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -218,20 +195,8 @@
   </url>
   
   <url>
-    <loc>/tags/race/</loc>
-    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>/tags/rcpp/</loc>
     <lastmod>2017-01-19T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/re-imagine/</loc>
-    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -244,12 +209,6 @@
   <url>
     <loc>/tags/saudi-arabia/</loc>
     <lastmod>2017-04-13T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/school/</loc>
-    <lastmod>2017-05-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -273,6 +232,12 @@
   
   <url>
     <loc>/tags/united-states/</loc>
+    <lastmod>2017-04-13T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/</loc>
     <lastmod>2017-04-13T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
