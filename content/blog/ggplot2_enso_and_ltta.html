@@ -157,7 +157,7 @@ dist$histogram +
   labs(title = &quot;Lower Tropospheric Temperature Anomaly (LTTA) &amp; 
 ENSO Anomaly (SSTA)&quot;,
        subtitle = &quot;Distribution (Histogram)&quot;)</code></pre>
-<p><img src="/post/ggplot2_enso_and_ltta_files/figure-html/histodensity-1.png" width="672" /><img src="/post/ggplot2_enso_and_ltta_files/figure-html/histodensity-2.png" width="672" /></p>
+<p><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/histodensity-1.png" width="672" /><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/histodensity-2.png" width="672" /></p>
 <p>There appears a slightly larger distribution of positive anomalies for both LTTA (mean = 0.022) and SSTA (mean = 0.059).</p>
 </div>
 <div id="boxplots" class="section level4">
@@ -198,7 +198,7 @@ box$LTTA.SSTA_binw.25 + labs(title = &quot;Boxplot: LTTA ~ SSTA&quot;,
                            subtitle = &quot;Binwidth = 0.25&quot;)
 box$LTTA.SSTA_inter20 + labs(title = &quot;Boxplot: LTTA ~ SSTA&quot;,
                            subtitle = &quot;Bins = 20&quot;)</code></pre>
-<p><img src="/post/ggplot2_enso_and_ltta_files/figure-html/boxes-1.png" width="672" /><img src="/post/ggplot2_enso_and_ltta_files/figure-html/boxes-2.png" width="672" /><img src="/post/ggplot2_enso_and_ltta_files/figure-html/boxes-3.png" width="672" /><img src="/post/ggplot2_enso_and_ltta_files/figure-html/boxes-4.png" width="672" /></p>
+<p><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/boxes-1.png" width="672" /><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/boxes-2.png" width="672" /><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/boxes-3.png" width="672" /><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/boxes-4.png" width="672" /></p>
 <p>From the second set of boxplots it looks like there is a correlation between positive LTTA values and positive SSTA values. The seems especially true for LTTA values above 0.5°C.</p>
 <p>Having looked at all of these distribution plots, I feel it is time to move on to a line graph, where I can map one variable as <code>x</code> and the other as <code>color</code>.</p>
 </div>
@@ -232,7 +232,7 @@ line$LTTA_color.SSTA
 
 # - View: SSTA (color = LTTA)
 line$SSTA_color.LTTA</code></pre>
-<p><img src="/post/ggplot2_enso_and_ltta_files/figure-html/line1-1.png" width="672" /><img src="/post/ggplot2_enso_and_ltta_files/figure-html/line1-2.png" width="672" /></p>
+<p><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/line1-1.png" width="672" /><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/line1-2.png" width="672" /></p>
 <div id="a-lagging-relationship" class="section level4">
 <h4>A lagging relationship</h4>
 <p>The one thing that stands out to me is that LTTA peaks 4 months after an SSTA peak. That is to say - SSTA is a leading indicator or, in other words, changes in LTTA lag changes in SSTA by 4 months.</p>
@@ -308,7 +308,7 @@ line$SSTA.lag4_color.LTTA +
              size        = 1,
              show.legend = TRUE)</code></pre>
 <pre><code>## Warning: Removed 4 rows containing missing values (geom_path).</code></pre>
-<p><img src="/post/ggplot2_enso_and_ltta_files/figure-html/line2-1.png" width="672" /><img src="/post/ggplot2_enso_and_ltta_files/figure-html/line2-2.png" width="672" /></p>
+<p><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/line2-1.png" width="672" /><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/line2-2.png" width="672" /></p>
 </div>
 </div>
 <div id="boxplots-revisited" class="section level3">
@@ -351,7 +351,7 @@ box$SSTA.lag4.LTTA_binw.5 + labs(title = &quot;Boxplot: SSTA.lag4 ~ LTTA&quot;,
 <pre class="r"><code>box$LTTA.SSTA.lag4_inter20 + labs(title = &quot;Boxplot: LTTA ~ SSTA.lag4&quot;,
                            subtitle = &quot;Interval = 20&quot;)</code></pre>
 <pre><code>## Warning: Removed 4 rows containing non-finite values (stat_boxplot).</code></pre>
-<p><img src="/post/ggplot2_enso_and_ltta_files/figure-html/boxes2-1.png" width="672" /><img src="/post/ggplot2_enso_and_ltta_files/figure-html/boxes2-2.png" width="672" /><img src="/post/ggplot2_enso_and_ltta_files/figure-html/boxes2-3.png" width="672" /><img src="/post/ggplot2_enso_and_ltta_files/figure-html/boxes2-4.png" width="672" /></p>
+<p><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/boxes2-1.png" width="672" /><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/boxes2-2.png" width="672" /><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/boxes2-3.png" width="672" /><img src="/blog/ggplot2_enso_and_ltta_files/figure-html/boxes2-4.png" width="672" /></p>
 </div>
 </div>
 <div id="conclusion" class="section level2">

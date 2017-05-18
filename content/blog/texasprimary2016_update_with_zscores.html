@@ -14,7 +14,7 @@ tags   : [r, projects, election analysis, political analysis]
 
 <div id="z-score" class="section level2">
 <h2>Z-Score</h2>
-<p>The z-score (<img src="/post/http://chart.apis.google.com/chart?cht=tx&chl=%5Cfrac%7Bx%20-%20%5Cbar%7Bx%7D%7D%7Bsd%7D">) is an interesting stat which tells not only whether a value is above or below the mean but also tells how many standard deviations that value is above or below the mean.</p>
+<p>The z-score (<img src="/blog/http://chart.apis.google.com/chart?cht=tx&chl=%5Cfrac%7Bx%20-%20%5Cbar%7Bx%7D%7D%7Bsd%7D">) is an interesting stat which tells not only whether a value is above or below the mean but also tells how many standard deviations that value is above or below the mean.</p>
 <div id="calculating-z-scores" class="section level3">
 <h3>Calculating z-scores</h3>
 <p>Using the <code>tex.results</code> data frame (candidate and party vote totals) and the <code>rankR</code> and <code>rankD</code> data frames (candidate rankings by party), I built two data frames to hold the per county z-score for each candidate - one for Republicans and one for Democrats.</p>
@@ -99,9 +99,9 @@ plots$zscore$D &lt;- ggplot(stats$zscores$D,
 
 # View the plots
 plots$zscore$R + labs(title = &quot;Z-Score: Cruz vs Trump&quot;)</code></pre>
-<p><img src="/post/texasprimary2016_update_with_zscores_files/figure-html/plots.zscore-1.png" width="672" /></p>
+<p><img src="/blog/texasprimary2016_update_with_zscores_files/figure-html/plots.zscore-1.png" width="672" /></p>
 <pre class="r"><code>plots$zscore$D + labs(title = &quot;Z-Score: Clinton vs Sanders&quot;)</code></pre>
-<p><img src="/post/texasprimary2016_update_with_zscores_files/figure-html/plots.zscore-2.png" width="672" /></p>
+<p><img src="/blog/texasprimary2016_update_with_zscores_files/figure-html/plots.zscore-2.png" width="672" /></p>
 <div id="comparison" class="section level3">
 <h3>Comparison</h3>
 <p>Looking at the two graphs, what stands out the most to me is the <em>tightness</em> in the <code>Clinton vs Sanders</code> line compared to the <code>Cruz vs Trump</code> line. It could be due to distortion in the x/y scales, but I figure that it is more likely due to Clinton and Sanders accounting for a higher percent of total votes within their party than Cruz or Trump accounted for within their party.</p>
@@ -127,7 +127,7 @@ R &lt;- (R[&quot;Cruz&quot;] + R[&quot;Trump&quot;]) / R[&quot;TotalVotesR&quot;
   facet_grid(~RunnerUp) +
   labs(title = &quot;Z-Score: Cruz vs Trump&quot;,
        subtitle = &quot;Faceted by Runner Up Candidate&quot;)</code></pre>
-<p><img src="/post/texasprimary2016_update_with_zscores_files/figure-html/marco-1.png" width="672" /></p>
+<p><img src="/blog/texasprimary2016_update_with_zscores_files/figure-html/marco-1.png" width="672" /></p>
 <p>Rubio managed to place second place to Cruz on 5 occasions and placed second to Trump on 1 occasions. This offers one reason why data points in the <code>Cruz vs Trump</code> graph stray so further from one another than they do in the <code>Clinton vs Sanders</code> graph.</p>
 </div>
 </div>

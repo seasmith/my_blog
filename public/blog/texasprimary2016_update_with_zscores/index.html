@@ -83,7 +83,7 @@
   </div>
   <div class="hide-sm" id="top">
     <div id="top-brand">
-      <a href="../../" title="home">Kube</a>
+      <a href="../../" title="home">Home</a>
     </div>
     <nav id="top-nav-main">
       <ul>
@@ -106,7 +106,8 @@
         </li>
       </ul>
     </nav>
-  </div> </header>
+  </div>
+ </header>
   <main>
 <div class="push-center" itemscope itemtype="http://schema.org/BlogPosting">
     
@@ -119,7 +120,7 @@
 
 
 
-<meta itemprop="keywords" content="baseball,c&#43;&#43;,climate,el-nino,election-analysis,enso,global-temperature,graphs,imports,mysql,network-graphs,north-dakota,oil,oil-and-gas,oil-imports,packages,plots,political-analysis,projects,r,rcpp,rmysql,saudi-arabia,sql,stack-overflow,united-states," />
+<meta itemprop="keywords" content="baseball,c&#43;&#43;,climate,economics,el-nino,election-analysis,enso,global-temperature,graphs,imports,mysql,network-graphs,north-dakota,nyt,oil,oil-and-gas,oil-imports,packages,plots,political-analysis,projects,r,race,rcpp,re-imagine,rmysql,saudi-arabia,school,sql,stack-overflow,united-states," />
 
 <div id="hero">
     <h1 itemprop="headline">  TexasPrimary2016: Z-Scores</h1>
@@ -149,7 +150,7 @@
 
 <div id="z-score" class="section level2">
 <h2>Z-Score</h2>
-<p>The z-score (<img src="../../post/http://chart.apis.google.com/chart?cht=tx&chl=%5Cfrac%7Bx%20-%20%5Cbar%7Bx%7D%7D%7Bsd%7D">) is an interesting stat which tells not only whether a value is above or below the mean but also tells how many standard deviations that value is above or below the mean.</p>
+<p>The z-score (<img src="../../blog/http://chart.apis.google.com/chart?cht=tx&chl=%5Cfrac%7Bx%20-%20%5Cbar%7Bx%7D%7D%7Bsd%7D">) is an interesting stat which tells not only whether a value is above or below the mean but also tells how many standard deviations that value is above or below the mean.</p>
 <div id="calculating-z-scores" class="section level3">
 <h3>Calculating z-scores</h3>
 <p>Using the <code>tex.results</code> data frame (candidate and party vote totals) and the <code>rankR</code> and <code>rankD</code> data frames (candidate rankings by party), I built two data frames to hold the per county z-score for each candidate - one for Republicans and one for Democrats.</p>
@@ -234,9 +235,9 @@ plots$zscore$D &lt;- ggplot(stats$zscores$D,
 
 # View the plots
 plots$zscore$R + labs(title = &quot;Z-Score: Cruz vs Trump&quot;)</code></pre>
-<p><img src="../../post/texasprimary2016_update_with_zscores_files/figure-html/plots.zscore-1.png" width="672" /></p>
+<p><img src="../../blog/texasprimary2016_update_with_zscores_files/figure-html/plots.zscore-1.png" width="672" /></p>
 <pre class="r"><code>plots$zscore$D + labs(title = &quot;Z-Score: Clinton vs Sanders&quot;)</code></pre>
-<p><img src="../../post/texasprimary2016_update_with_zscores_files/figure-html/plots.zscore-2.png" width="672" /></p>
+<p><img src="../../blog/texasprimary2016_update_with_zscores_files/figure-html/plots.zscore-2.png" width="672" /></p>
 <div id="comparison" class="section level3">
 <h3>Comparison</h3>
 <p>Looking at the two graphs, what stands out the most to me is the <em>tightness</em> in the <code>Clinton vs Sanders</code> line compared to the <code>Cruz vs Trump</code> line. It could be due to distortion in the x/y scales, but I figure that it is more likely due to Clinton and Sanders accounting for a higher percent of total votes within their party than Cruz or Trump accounted for within their party.</p>
@@ -262,7 +263,7 @@ R &lt;- (R[&quot;Cruz&quot;] + R[&quot;Trump&quot;]) / R[&quot;TotalVotesR&quot;
   facet_grid(~RunnerUp) +
   labs(title = &quot;Z-Score: Cruz vs Trump&quot;,
        subtitle = &quot;Faceted by Runner Up Candidate&quot;)</code></pre>
-<p><img src="../../post/texasprimary2016_update_with_zscores_files/figure-html/marco-1.png" width="672" /></p>
+<p><img src="../../blog/texasprimary2016_update_with_zscores_files/figure-html/marco-1.png" width="672" /></p>
 <p>Rubio managed to place second place to Cruz on 5 occasions and placed second to Trump on 1 occasions. This offers one reason why data points in the <code>Cruz vs Trump</code> graph stray so further from one another than they do in the <code>Clinton vs Sanders</code> graph.</p>
 </div>
 </div>
@@ -298,6 +299,8 @@ R &lt;- (R[&quot;Cruz&quot;] + R[&quot;Trump&quot;]) / R[&quot;TotalVotesR&quot;
     <ul>
       
       
+        <li><a href="../../blog/reimagining_a_graphic_money_race_and_success_new_york_times/">Re-imagining a Data Visualization: Good Schools, Affordable Homes (New York Times)</a> &ndash; 3 minutes
+      
         <li><a href="../../blog/exploring_us_refinery_imports/">U.S. Refinery Imports From Saudi Arabia</a> &ndash; 2 minutes
       
         <li><a href="../../blog/using_ggraph_to_visualize_north_dakota_oil_and_gas_data/">Using ggraph to Visualize North Dakota Oil and Gas Data</a> &ndash; 3 minutes
@@ -309,8 +312,6 @@ R &lt;- (R[&quot;Cruz&quot;] + R[&quot;Trump&quot;]) / R[&quot;TotalVotesR&quot;
         <li><a href="../../blog/ggplot2_enso_and_ltta/">Plotting the El Nino Southern Oscillation and Lower Tropospheric Temperature Anomalies</a> &ndash; 9 minutes
       
         <li><a href="../../blog/texasprimary2016_update/">TexasPrimary2016: Update</a> &ndash; 1 minutes
-      
-        <li><a href="../../blog/using_stackoverflow_data_to_find_the_top_25_r_users_to_follow/">Using StackOverflow data to find the top 25 R users to follow</a> &ndash; 1 minutes
       
     </ul>
   </aside>
@@ -347,7 +348,7 @@ R &lt;- (R[&quot;Cruz&quot;] + R[&quot;Trump&quot;]) / R[&quot;TotalVotesR&quot;
   <footer>   <footer id="footer">
     <nav>
       <ul>
-        <li><span>Kube</span></li>
+        <li><span>Where to find me:</span></li>
         <li>
           <a href="https://github.com/seasmith">GitHub</a>
         </li>

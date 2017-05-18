@@ -6,10 +6,20 @@
     <description>Recent content in Blogs on Welcome</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 13 Apr 2017 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 18 May 2017 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/blog/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Re-imagining a Data Visualization: Good Schools, Affordable Homes (New York Times)</title>
+      <link>/blog/reimagining_a_graphic_money_race_and_success_new_york_times/</link>
+      <pubDate>Thu, 18 May 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/blog/reimagining_a_graphic_money_race_and_success_new_york_times/</guid>
+      <description>Last month, a Junk Charts post critical of the New York Times article, Good Schools, Affordable Homes: Finding Suburban Sweet Spots, provided a few recommendations and criticisms for improving the data visuals within the article:
+Add a legend to explain the differences in the size of the dots (population?)Explain the horizontal scale (x-axis = grade above or below national or state average?)Aggregate the data (by metro area and commute time)I decided to take the NYT data and plot it, while taking into account the considerations above, as best I can.</description>
+    </item>
     
     <item>
       <title>U.S. Refinery Imports From Saudi Arabia</title>

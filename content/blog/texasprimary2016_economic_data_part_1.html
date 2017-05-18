@@ -50,7 +50,7 @@ tags   : [r, projects, election analysis, political analysis]
 <h4>Basic</h4>
 <p>An unfaceted look at each variable.</p>
 <p><strong>NOTE:</strong> I added a log scale to the y-axis in the population boxplot below. This is because many of Texas’ counties have <em>small populations</em> (min = 87 in Loving County) while only a handful or so have <em>very large populations</em> (max = 4,447,577 in Harris County).</p>
-<p><img src="/post/texasprimary2016_economic_data_part_1_files/figure-html/Plot1.2-1.png" width="672" /></p>
+<p><img src="/blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot1.2-1.png" width="672" /></p>
 <p><strong>Take-aways:</strong></p>
 <ol style="list-style-type: decimal">
 <li>We can see that household incomes (<code>EMHI</code>) are higher than per capita incomes (<code>PCPI</code>).</li>
@@ -60,7 +60,7 @@ tags   : [r, projects, election analysis, political analysis]
 <div id="with-cuts" class="section level4">
 <h4>With Cuts</h4>
 <p>Cutting and grouping the population and unemployment data into nearly equal intervals (~32 counties each interval).</p>
-<p><img src="/post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%205-1.png" width="864" /><img src="/post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%205-2.png" width="864" /></p>
+<p><img src="/blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%205-1.png" width="864" /><img src="/blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%205-2.png" width="864" /></p>
 <p><strong>Take-aways:</strong></p>
 <ol style="list-style-type: decimal">
 <li>First plot (population vs income)
@@ -79,9 +79,9 @@ tags   : [r, projects, election analysis, political analysis]
 <div id="another-view" class="section level5">
 <h5>Another view</h5>
 <p>In the two sets of plots below, I’ve changed the groupings into facets - so each boxplot gets its own area.</p>
-<p><img src="/post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%201-1.png" width="672" /><img src="/post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%201-2.png" width="672" /></p>
+<p><img src="/blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%201-1.png" width="672" /><img src="/blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%201-2.png" width="672" /></p>
 <p>And flipping the facets in <code>facet_grid()</code> produces an interesting view, as well.</p>
-<p><img src="/post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%202-1.png" width="864" /><img src="/post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%202-2.png" width="864" /></p>
+<p><img src="/blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%202-1.png" width="864" /><img src="/blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%202-2.png" width="864" /></p>
 </div>
 </div>
 </div>
@@ -90,7 +90,7 @@ tags   : [r, projects, election analysis, political analysis]
 <div id="basic-1" class="section level4">
 <h4>Basic</h4>
 <p>I’m going to leave out histograms for now and focus on histograms. An unfaceted look at each variable:</p>
-<p><img src="/post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%206-1.png" width="672" /></p>
+<p><img src="/blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%206-1.png" width="672" /></p>
 <p><strong>Take-aways:</strong></p>
 <ul>
 <li>Both income variables are positively skewed (lean toward the left).</li>
@@ -103,7 +103,7 @@ tags   : [r, projects, election analysis, political analysis]
 <li>median (solid)</li>
 <li>mean (dashed)</li>
 </ul>
-<p><img src="/post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%207-1.png" width="864" /></p>
+<p><img src="/blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%207-1.png" width="864" /></p>
 <p><strong>Take-away:</strong></p>
 <ol style="list-style-type: decimal">
 <li>In the largest 32 counties, <code>EMHI</code> values are spread wide (kurtically flat) and they are weakly distributed more toward lower values (positively skewed), for the most part.</li>
@@ -113,7 +113,7 @@ tags   : [r, projects, election analysis, political analysis]
 <h4>Other views</h4>
 <div id="stacked" class="section level5">
 <h5>Stacked</h5>
-<p><img src="/post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%208-1.png" width="864" /></p>
+<p><img src="/blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%208-1.png" width="864" /></p>
 <p><strong>Take-away:</strong></p>
 <ol style="list-style-type: decimal">
 <li>You can see a shift in the peaks of the various ranges. This is kind of like seeing a shift in the median of the ranges.</li>
@@ -121,7 +121,7 @@ tags   : [r, projects, election analysis, political analysis]
 </div>
 <div id="filled" class="section level5">
 <h5>Filled</h5>
-<p><img src="/post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%209-1.png" width="864" /></p>
+<p><img src="/blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%209-1.png" width="864" /></p>
 <p><strong>Take-away:</strong></p>
 <ol style="list-style-type: decimal">
 <li>The tail-end distributions stand out more when using the filled density plot.</li>

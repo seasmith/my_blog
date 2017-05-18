@@ -83,7 +83,7 @@
   </div>
   <div class="hide-sm" id="top">
     <div id="top-brand">
-      <a href="../../" title="home">Kube</a>
+      <a href="../../" title="home">Home</a>
     </div>
     <nav id="top-nav-main">
       <ul>
@@ -106,7 +106,8 @@
         </li>
       </ul>
     </nav>
-  </div> </header>
+  </div>
+ </header>
   <main>
 <div class="push-center" itemscope itemtype="http://schema.org/BlogPosting">
     
@@ -119,7 +120,7 @@
 
 
 
-<meta itemprop="keywords" content="baseball,c&#43;&#43;,climate,el-nino,election-analysis,enso,global-temperature,graphs,imports,mysql,network-graphs,north-dakota,oil,oil-and-gas,oil-imports,packages,plots,political-analysis,projects,r,rcpp,rmysql,saudi-arabia,sql,stack-overflow,united-states," />
+<meta itemprop="keywords" content="baseball,c&#43;&#43;,climate,economics,el-nino,election-analysis,enso,global-temperature,graphs,imports,mysql,network-graphs,north-dakota,nyt,oil,oil-and-gas,oil-imports,packages,plots,political-analysis,projects,r,race,rcpp,re-imagine,rmysql,saudi-arabia,school,sql,stack-overflow,united-states," />
 
 <div id="hero">
     <h1 itemprop="headline">  TexasPrimary2016: Economic Data - Part 1</h1>
@@ -185,7 +186,7 @@
 <h4>Basic</h4>
 <p>An unfaceted look at each variable.</p>
 <p><strong>NOTE:</strong> I added a log scale to the y-axis in the population boxplot below. This is because many of Texas’ counties have <em>small populations</em> (min = 87 in Loving County) while only a handful or so have <em>very large populations</em> (max = 4,447,577 in Harris County).</p>
-<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot1.2-1.png" width="672" /></p>
+<p><img src="../../blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot1.2-1.png" width="672" /></p>
 <p><strong>Take-aways:</strong></p>
 <ol style="list-style-type: decimal">
 <li>We can see that household incomes (<code>EMHI</code>) are higher than per capita incomes (<code>PCPI</code>).</li>
@@ -195,7 +196,7 @@
 <div id="with-cuts" class="section level4">
 <h4>With Cuts</h4>
 <p>Cutting and grouping the population and unemployment data into nearly equal intervals (~32 counties each interval).</p>
-<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%205-1.png" width="864" /><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%205-2.png" width="864" /></p>
+<p><img src="../../blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%205-1.png" width="864" /><img src="../../blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%205-2.png" width="864" /></p>
 <p><strong>Take-aways:</strong></p>
 <ol style="list-style-type: decimal">
 <li>First plot (population vs income)
@@ -214,9 +215,9 @@
 <div id="another-view" class="section level5">
 <h5>Another view</h5>
 <p>In the two sets of plots below, I’ve changed the groupings into facets - so each boxplot gets its own area.</p>
-<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%201-1.png" width="672" /><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%201-2.png" width="672" /></p>
+<p><img src="../../blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%201-1.png" width="672" /><img src="../../blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%201-2.png" width="672" /></p>
 <p>And flipping the facets in <code>facet_grid()</code> produces an interesting view, as well.</p>
-<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%202-1.png" width="864" /><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%202-2.png" width="864" /></p>
+<p><img src="../../blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%202-1.png" width="864" /><img src="../../blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%20extra%202-2.png" width="864" /></p>
 </div>
 </div>
 </div>
@@ -225,7 +226,7 @@
 <div id="basic-1" class="section level4">
 <h4>Basic</h4>
 <p>I’m going to leave out histograms for now and focus on histograms. An unfaceted look at each variable:</p>
-<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%206-1.png" width="672" /></p>
+<p><img src="../../blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%206-1.png" width="672" /></p>
 <p><strong>Take-aways:</strong></p>
 <ul>
 <li>Both income variables are positively skewed (lean toward the left).</li>
@@ -238,7 +239,7 @@
 <li>median (solid)</li>
 <li>mean (dashed)</li>
 </ul>
-<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%207-1.png" width="864" /></p>
+<p><img src="../../blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%207-1.png" width="864" /></p>
 <p><strong>Take-away:</strong></p>
 <ol style="list-style-type: decimal">
 <li>In the largest 32 counties, <code>EMHI</code> values are spread wide (kurtically flat) and they are weakly distributed more toward lower values (positively skewed), for the most part.</li>
@@ -248,7 +249,7 @@
 <h4>Other views</h4>
 <div id="stacked" class="section level5">
 <h5>Stacked</h5>
-<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%208-1.png" width="864" /></p>
+<p><img src="../../blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%208-1.png" width="864" /></p>
 <p><strong>Take-away:</strong></p>
 <ol style="list-style-type: decimal">
 <li>You can see a shift in the peaks of the various ranges. This is kind of like seeing a shift in the median of the ranges.</li>
@@ -256,7 +257,7 @@
 </div>
 <div id="filled" class="section level5">
 <h5>Filled</h5>
-<p><img src="../../post/texasprimary2016_economic_data_part_1_files/figure-html/Plot%209-1.png" width="864" /></p>
+<p><img src="../../blog/texasprimary2016_economic_data_part_1_files/figure-html/Plot%209-1.png" width="864" /></p>
 <p><strong>Take-away:</strong></p>
 <ol style="list-style-type: decimal">
 <li>The tail-end distributions stand out more when using the filled density plot.</li>
@@ -344,6 +345,8 @@ FRED &lt;- .FRED %&gt;% select(-BachDegree, -HSDegree)</code></pre>
     <ul>
       
       
+        <li><a href="../../blog/reimagining_a_graphic_money_race_and_success_new_york_times/">Re-imagining a Data Visualization: Good Schools, Affordable Homes (New York Times)</a> &ndash; 3 minutes
+      
         <li><a href="../../blog/exploring_us_refinery_imports/">U.S. Refinery Imports From Saudi Arabia</a> &ndash; 2 minutes
       
         <li><a href="../../blog/using_ggraph_to_visualize_north_dakota_oil_and_gas_data/">Using ggraph to Visualize North Dakota Oil and Gas Data</a> &ndash; 3 minutes
@@ -355,8 +358,6 @@ FRED &lt;- .FRED %&gt;% select(-BachDegree, -HSDegree)</code></pre>
         <li><a href="../../blog/texasprimary2016_update_with_zscores/">TexasPrimary2016: Z-Scores</a> &ndash; 3 minutes
       
         <li><a href="../../blog/texasprimary2016_update/">TexasPrimary2016: Update</a> &ndash; 1 minutes
-      
-        <li><a href="../../blog/using_stackoverflow_data_to_find_the_top_25_r_users_to_follow/">Using StackOverflow data to find the top 25 R users to follow</a> &ndash; 1 minutes
       
     </ul>
   </aside>
@@ -393,7 +394,7 @@ FRED &lt;- .FRED %&gt;% select(-BachDegree, -HSDegree)</code></pre>
   <footer>   <footer id="footer">
     <nav>
       <ul>
-        <li><span>Kube</span></li>
+        <li><span>Where to find me:</span></li>
         <li>
           <a href="https://github.com/seasmith">GitHub</a>
         </li>
