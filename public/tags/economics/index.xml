@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Economics on Blog: A blog about R and other stuff</title>
+    <title>Economics on Welcome</title>
     <link>/tags/economics/</link>
-    <description>Recent content in Economics on Blog: A blog about R and other stuff</description>
+    <description>Recent content in Economics on Welcome</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 12 May 2017 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 18 May 2017 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/economics/index.xml" rel="self" type="application/rss+xml" />
     
@@ -14,12 +14,11 @@
     <item>
       <title>Re-imagining a Data Visualization: Good Schools, Affordable Homes (New York Times)</title>
       <link>/blog/reimagining_a_graphic_money_race_and_success_new_york_times/</link>
-      <pubDate>Fri, 12 May 2017 00:00:00 +0000</pubDate>
+      <pubDate>Thu, 18 May 2017 00:00:00 +0000</pubDate>
       
       <guid>/blog/reimagining_a_graphic_money_race_and_success_new_york_times/</guid>
-      <description>A few weeks ago, a Junk Charts post critical of the New York Times article, Good Schools, Affordable Homes: Finding Suburban Sweet Spots, provided a few recommendations and criticisms for improving the data visuals within the article.
-Here they are summarized:
-Add a legend to explain the differences in the size of the dots (population?)Explain the horizontal scale (x-axis = grad above or below national or state average?)Aggregate the data (by metro area and commute time)I decided to take the NYT data and plot it out in R while taking into account the considerations above, as best I can.</description>
+      <description>Last month, a Junk Charts post critical of the New York Times article, Good Schools, Affordable Homes: Finding Suburban Sweet Spots, provided a few recommendations and criticisms for improving the data visuals within the article:
+Add a legend to explain the differences in the size of the dots (population?)Explain the horizontal scale (x-axis = grade above or below national or state average?)Aggregate the data (by metro area and commute time)I decided to take the NYT data and plot it, while taking into account the considerations above, as best I can.</description>
     </item>
     
   </channel>
