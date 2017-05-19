@@ -1,8 +1,8 @@
 baseurl = "/"
 relativeurls = true
 languageCode = "en-us"
-title = "Welcome"
 description = "Please checkout my website"
+title = "Welcome"
 theme = "kube"
 googleAnalytics = ""
 disqusShortname = "lksmth"
