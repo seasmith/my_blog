@@ -1,0 +1,39 @@
+---
+title  : "North Dakota Horizontal Oil Well Production"
+author : "Luke Smith"
+date   : "2017-07-20"
+tags   : [r, oil and gas, north dakota]
+description: "Sifting through North Dakota oil production data, and some EIA shape files."
+---
+
+
+
+<p>From March 29, 1986 to June 19, 2017, a total of 11,826 horizontal oil and gas wells were completed in North Dakota <a href="#horiz_data">[1]</a>. These wells have produced 2.10 billion barrels of oil in North Dakota.</p>
+<p><img src="/blog/north_dakota_horizontal_oil_well_production_files/figure-html/plot_summary_bars-1.png" width="672" /></p>
+<div id="fields" class="section level3">
+<h3>Fields</h3>
+<p>Of the 593 fields listed by the North Dakota Department of Natural Resources <a href="#of_data">[2]</a>, only 344 (58.0%) have any oil production data from horizontal wells.</p>
+<p>In fact, just two fields, the Parshall and Sanish, account for 13.5% percent of the total production.</p>
+<p><img src="/blog/north_dakota_horizontal_oil_well_production_files/figure-html/plot_summary_map-1.png" width="672" /></p>
+<p>More than a majority of the production (57.1%) comes from the top 10% of fields. Many of these fields, like the Parshall and Sanish, are among the eastern-most producing fields.</p>
+<p><img src="/blog/north_dakota_horizontal_oil_well_production_files/figure-html/field_summary_maps-1.png" width="672" /></p>
+<p><img src="../../blog/north_dakota_horizontal_oil_well_production_files/figure-html/percents.png" width="672"></p>
+</div>
+<div id="formations" class="section level3">
+<h3>Formations</h3>
+<p>Two formations have accounted for 98.2% of the cumulative oil production: the Middle Bakken (1,438 million barrels) and Three Forks (622 million barrels).</p>
+<p><img src="/blog/north_dakota_horizontal_oil_well_production_files/figure-html/plot_production_bar-1.png" width="672" /></p>
+<p>Similar to the overall trend for North Dakota, the heart of the Middle Bakken and the Three Forks lies within the eastern-most fields.</p>
+<p><img src="/blog/north_dakota_horizontal_oil_well_production_files/figure-html/plot_map_field_by_id-1.png" width="672" /></p>
+<p>This production center lies in close proximity to a geological structure - a fold known as the Nesson anticline.</p>
+<p><img src="/blog/north_dakota_horizontal_oil_well_production_files/figure-html/overlay_maps_2-1.png" width="672" /></p>
+<div id="data" class="section level4">
+<h4>Data</h4>
+<ol style="list-style-type: decimal">
+<li><span id="horiz_data"><a href="https://www.dmr.nd.gov/oilgas/bakkenwells.asp">Horizontal oil and gas data</a> (North Dakota Department of Natural Resources)</span></li>
+<li><span id="of_data"><a href="https://www.dmr.nd.gov/OaGIMS/downLoadShapeFiles.asp">North Dakota oil field map</a> (North Dakota Department of Natural Resources)</span></li>
+<li><span id="state_map"><a href="https://gishubdata.nd.gov/dataset/state-border">North Dakota state map</a> (North Dakota GIS Hub Data Portal)</span></li>
+<li><span id="eia_maps"><a href="https://www.eia.gov/maps/layer_info-m.php">Bakken contour map</a> (Energy Information Administration)</span></li>
+</ol>
+</div>
+</div>
