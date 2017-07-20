@@ -310,7 +310,7 @@ var {
   opacity: .6;
   font-style: normal; }
 
-mark, code, samp, kbd {
+mark, samp, kbd {
   position: relative;
   top: -1px;
   padding: 4px 4px 2px 4px;
@@ -319,7 +319,14 @@ mark, code, samp, kbd {
   color: rgba(49, 52, 57, 0.85); }
 
 code {
-  background: #e0e1e1; }
+  position: relative;
+  top: -1px;
+  padding: 4px 4px 2px 4px;
+  display: inline-block;
+  line-height: 1;
+  border-radius: 3px;
+  color: #f03c69;
+  background: black; }
 
 mark {
   background: #f7ba45; }
@@ -362,7 +369,7 @@ pre code {
   white-space: pre-wrap; }
 
 pre {
-  padding: 1rem; }
+  padding: 0px; }
 
 figcaption {
   opacity: .6; }

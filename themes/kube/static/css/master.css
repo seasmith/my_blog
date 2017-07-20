@@ -216,8 +216,8 @@ h1, h2, h3, h4, h5, h6 {
         text-decoration: underline; }
 
 #hero {
-  padding-top: 48px;
-  padding-bottom: 56px;
+  padding-top: 24px;
+  padding-bottom: 24px;
   text-align: center; }
   #hero h1 {
     max-width: 880px;
@@ -761,8 +761,8 @@ body.page-account #hero {
 #posts {
   list-style: none;
   margin: auto;
-  margin-top: 48px;
-  margin-bottom: 128px;
+  margin-top: 24px;
+  margin-bottom: 24px;
   max-width: 680px;
   text-align: center; }
 
@@ -1028,7 +1028,7 @@ tr.border-none td {
 #footer {
   display: flex;
   border-top: 1px solid #eee;
-  margin: 104px 0;
+  margin: 24px 0;
   padding: 0 28px;
   padding-top: 24px;
   font-size: 13px;

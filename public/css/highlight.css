@@ -1,1 +1,136 @@
-.hljs{display:block;overflow-x:auto;padding:0.5em;background:#F0F0F0}.hljs,.hljs-subst{color:#444}.hljs-comment{color:#888888}.hljs-keyword,.hljs-attribute,.hljs-selector-tag,.hljs-meta-keyword,.hljs-doctag,.hljs-name{font-weight:bold}.hljs-type,.hljs-string,.hljs-number,.hljs-selector-id,.hljs-selector-class,.hljs-quote,.hljs-template-tag,.hljs-deletion{color:#880000}.hljs-title,.hljs-section{color:#880000;font-weight:bold}.hljs-regexp,.hljs-symbol,.hljs-variable,.hljs-template-variable,.hljs-link,.hljs-selector-attr,.hljs-selector-pseudo{color:#BC6060}.hljs-literal{color:#78A960}.hljs-built_in,.hljs-bullet,.hljs-code,.hljs-addition{color:#397300}.hljs-meta{color:#1f7199}.hljs-meta-string{color:#4d99bf}.hljs-emphasis{font-style:italic}.hljs-strong{font-weight:bold}
+.r code, .r pre {
+color:#fdce93;
+background-color:#3f3f3f;
+}
+
+.r .hll {
+background-color:#222;
+}
+
+.r .err {
+color:#e37170;
+background-color:#3d3535;
+}
+
+.r .k {
+color:#f0dfaf;
+}
+
+.r .p {
+color:#41706f;
+}
+
+.r .cs {
+color:#cd0000;
+font-weight:700;
+}
+
+.r .gd {
+color:#cd0000;
+}
+
+.r .ge {
+color:#ccc;
+font-style:italic;
+}
+
+.r .gr {
+color:red;
+}
+
+.r .go {
+color:gray;
+}
+
+.r .gs {
+color:#ccc;
+font-weight:700;
+}
+
+.r .gu {
+color:purple;
+font-weight:700;
+}
+
+.r .gt {
+color:#0040D0;
+}
+
+.r .kc {
+color:#dca3a3;
+}
+
+.r .kd {
+color:#ffff86;
+}
+
+.r .kn {
+color:#dfaf8f;
+font-weight:700;
+}
+
+.r .kp {
+color:#cdcf99;
+}
+
+.r .kr {
+color:#cdcd00;
+}
+
+.r .ni {
+color:#c28182;
+}
+
+.r .ne {
+color:#c3bf9f;
+font-weight:700;
+}
+
+.r .nn {
+color:#8fbede;
+}
+
+.r .vi {
+color:#ffffc7;
+}
+
+.r .c,.preview-zenburn .r .g,.preview-zenburn .r .cm,.preview-zenburn .r .cp,.preview-zenburn .r .c1 {
+color:#7f9f7f;
+}
+
+.r .l,.preview-zenburn .r .x,.preview-zenburn .r .no,.preview-zenburn .r .nd,.preview-zenburn .r .nl,.preview-zenburn .r .nx,.preview-zenburn .r .py,.preview-zenburn .r .w {
+color:#ccc;
+}
+
+.r .n,.preview-zenburn .r .nv,.preview-zenburn .r .vg {
+color:#dcdccc;
+}
+
+.r .o,.preview-zenburn .r .ow {
+color:#f0efd0;
+}
+
+.r .gh,.preview-zenburn .r .gp {
+color:#dcdccc;
+font-weight:700;
+}
+
+.r .gi,.preview-zenburn .r .kt {
+color:#00cd00;
+}
+
+.r .ld,.preview-zenburn .r .s,.preview-zenburn .r .sb,.preview-zenburn .r .sc,.preview-zenburn .r .sd,.preview-zenburn .r .s2,.preview-zenburn .r .se,.preview-zenburn .r .sh,.preview-zenburn .r .si,.preview-zenburn .r .sx,.preview-zenburn .r .sr,.preview-zenburn .r .s1,.preview-zenburn .r .ss {
+color:#cc9393;
+}
+
+.r .m,.preview-zenburn .r .mf,.preview-zenburn .r .mh,.preview-zenburn .r .mi,.preview-zenburn .r .mo,.preview-zenburn .r .il {
+color:#8cd0d3;
+}
+
+.r .na,.preview-zenburn .r .nt {
+color:#9ac39f;
+}
+
+.r .nb,.preview-zenburn .r .nc,.preview-zenburn .r .nf,.preview-zenburn .r .bp,.preview-zenburn .r .vc {
+color:#efef8f;
+}
