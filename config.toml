@@ -1,9 +1,9 @@
 baseurl = "/"
 relativeurls = true
 languageCode = "en-us"
-description = "Please checkout my website"
 title = "Welcome"
 theme = "kube"
+description = "Hello, and welcome to my website."
 googleAnalytics = ""
 disqusShortname = "lksmth"
 ignoreFiles = ["\\.Rmd$", "\\.RData$", "_files$", "_cache$"]
@@ -28,12 +28,7 @@ ignoreFiles = ["\\.Rmd$", "\\.RData$", "_files$", "_cache$"]
     twitter = "lksmth"
     linkedin = "lksmth"
     email = "lukedansmi@sbcglobal.net"
-
-    # options for highlight.js (version, additional languages, and theme)
-    highlightjsVersion = "9.10.0"
-    highlightCDN = "//cdn.bootcss.com"
-    highlightjsLang = ["r", "yaml", "sql"]
-    highlightjsTheme = "hybrid"
+    RSSLink = "/index.xml"
 
     [params.logo]
     url = "logo.png"
