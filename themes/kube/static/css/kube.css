@@ -31,6 +31,17 @@ img,
 video {
   height: auto; }
 
+/*
+  Center images that have knitr width
+  less than 7, if so desired.
+  2017-07-22
+*/
+
+.imgcentered {
+  display: block;
+  margin-left: auto;
+  margin-right: auto; }
+
 svg {
   max-height: 100%; }
 
