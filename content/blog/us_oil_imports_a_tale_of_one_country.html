@@ -1,0 +1,59 @@
+---
+title  : "US Oil Imports: A Tale of One Country"
+author : "Luke Smith"
+date   : "2017-09-14"
+tags   : [r, oil, oil and gas, imports, canada, united states]
+description: "Three years since the price decline oil imports are rising again - but primarily from one country."
+---
+
+<script src="/rmarkdown-libs/htmlwidgets/htmlwidgets.js"></script>
+<script src="/rmarkdown-libs/d3/d3.min.js"></script>
+<script src="/rmarkdown-libs/sankey/sankey.js"></script>
+<script src="/rmarkdown-libs/sankeyNetwork-binding/sankeyNetwork.js"></script>
+
+
+<p>Three years ago oil prices were in the $90’s. They now move between the $40’s and $50’s.</p>
+<p>US oil production was on the rise three years ago, and it continued to rise for one year after the initial price decline, reaching 9.4 million barells per day (mbpd) in 2015.</p>
+<p>In 2016, oil production dropped to 8.8 mbpd, and production through the first six months of 2017 has averaged nearly 9.1 mbpd - still 300,000 barells per day (bpd) below its 2015 mark.</p>
+<p>With no dip in US consumption, oil imports have filled the void.</p>
+<p><img src="/blog/us_oil_imports_a_tale_of_one_country_files/figure-html/plot_summary-1.png" width="672" /></p>
+<!-- The price decline had an impact on US imports, by reducing domestic production. -->
+<p>During both the boom and bust in the US oil industry, one country’s exports to the US faired far better than all others: Canada.</p>
+<p>Investment in oil sands and new pipelines paid off, leading to a multi-million barrel per day increase of Canada’s most exported crude type: heavy sour.</p>
+<!-- Not all oil types were affected during those years when drillers raced to secure lucrative acreage in ultra-low permeable plays. -->
+<!-- Nor have all oil types experienced a rebound since the US slowdown. -->
+<p><img src="/blog/us_oil_imports_a_tale_of_one_country_files/figure-html/plot_by_type_by_name-1.png" width="672" /></p>
+<!-- Heavy crudes weathered the storm and have managed to become a larger share of the US oil import market. It's the lighter types which have taken the brunt of the impact. -->
+<p>The exports to the US most affected during the US oil boom were light-crude - the same type of oil produced in many of the US’s most sought after shale formations.</p>
+<p>This has lead to a massive drop of in US exports for countries like Nigeria, but has left Canada unscathed.</p>
+<p>Though major heavy-crude exporters like Venezuela and Mexico saw their exports to the US decline over the 2009-2017 time period.</p>
+<p>For that, they can thank Canada, whose 2017 US exports have been 72% heavy-crude.</p>
+<!-- From 2009-2016, US heavy crude imports went from -->
+<!-- 3.99 -->
+<!-- mbpd to -->
+<!-- 4.57 -->
+<!-- mbpd - a -->
+<!-- 15% -->
+<!-- increase. Though medium crude imports went from -->
+<!-- 3.33 -->
+<!-- mbpd to -->
+<!-- 2.44 -->
+<!-- mbpd over the same time period. -->
+<div id="us-oil-imports-2009-2017" class="section level3">
+<h3>US Oil Imports: 2009 &amp; 2017</h3>
+<div id="imports-by-type-and-country-listed-individually-are-the-top-10-us-import-sources-with-the-remaing-countries-grouped-under-all-others" class="section level4">
+<h4>Imports by type and country (listed individually are the top 10 US import sources, with the remaing countries grouped under “All Others”)</h4>
+<div id="htmlwidget-1" style="width:672px;height:336px;" class="sankeyNetwork html-widget"></div>
+<script type="application/json" data-for="htmlwidget-1">{"x":{"links":{"source":[0,0,0,0,0,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,1,2,3,4,5],"target":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,7,8,10,12,13,14,6,7,8,9,11,12,13,14,6,7,8,9,11,12,13,14,6,7,8,9,15,10,11,12,13,14,16,16,16,16,16],"value":[3702000,283375.342465753,446632.876712329,1564594.52054795,3325224.65753425,38797.2602739726,1063024.65753425,199802.739726027,173076.712328767,32526.0273972603,950084.931506849,6136.98630136986,24279.4520547945,892800,63742.4657534247,2093.15068493151,8383.56164383562,3780.82191780822,1810.95890410959,26920.5479452055,1142.46575342466,119764.383561644,1441.09589041096,328.767123287671,131120.547945205,12600,96624.6575342466,9863.01369863014,72701.3698630137,165041.095890411,19673.9726027397,1969.86301369863,961.643835616438,455153.424657534,4342.46575342466,54117.8082191781,329038.356164384,527090.410958904,22345.2054794521,1364.38356164384,440304.109589041,133632.876712329,7126.02739726027,314646.575342466,846646.575342466,202934.246575342,321471.232876712,176643.835616438,73747.9452054795,790632.876712329,500095.890410959]},"nodes":{"name":["Imports\n2009","Heavy Sour","Heavy Sweet","Light Sour","Light Sweet","Medium","Angola","Canada","Colombia","Ecuador","Kuwait","Mexico","Nigeria","Saudi Arabia","Venezuela","Iraq","All Others"],"group":["total","type","type","type","type","type","operator","operator","operator","operator","operator","operator","operator","operator","operator","operator","operator"]},"options":{"NodeID":"name","NodeGroup":"id","LinkGroup":null,"colourScale":"d3.scaleOrdinal(['#4c7093', '#e15c39', '#008348'])","fontSize":16,"fontFamily":"Open Sans","nodeWidth":20,"nodePadding":10,"units":"bpd","margin":{"top":null,"right":null,"bottom":null,"left":null},"iterations":32,"sinksRight":true}},"evals":[],"jsHooks":[]}</script>
+<div id="htmlwidget-2" style="width:672px;height:291.605600289437px;" class="sankeyNetwork html-widget"></div>
+<script type="application/json" data-for="htmlwidget-2">{"x":{"links":{"source":[0,0,0,0,0,1,1,1,1,1,1,1,1,1,2,2,2,2,3,3,3,4,4,4,4,5,5,5,5,5,5,5,5,5,5,1,2,3,4,5],"target":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,6,9,12,14,6,12,13,15,6,12,13,15,6,7,8,9,10,11,12,13,14,16,16,16,16,16],"value":[4478259.66850829,400071.82320442,391696.132596685,542966.850828729,2344220.99447514,2238872.9281768,314281.767955801,212038.674033149,271530.386740331,6077.34806629834,605662.983425414,55.2486187845304,110486.187845304,623712.70718232,251823.20441989,12690.6077348066,11033.1491712707,61320.4419889503,208823.20441989,5524.86187845304,161121.546961326,24303.8674033149,99878.453038674,230983.425414365,5767.95580110497,66563.5359116022,656088.397790055,33939.226519337,4110.49723756906,310674.033149171,161552.486187845,4143.64640883978,41701.6574585635,907298.342541436,18574.5856353591,95541.4364640884,63204.4198895028,16226.5193370166,182033.149171271,139574.585635359]},"nodes":{"name":["Imports\n2017 (Through June)","Heavy Sour","Heavy Sweet","Light Sour","Light Sweet","Medium","Canada","Colombia","Ecuador","Iraq","Kuwait","Mexico","Nigeria","Saudi Arabia","Venezuela","Angola","All Others"],"group":["total","type","type","type","type","type","operator","operator","operator","operator","operator","operator","operator","operator","operator","operator","operator"]},"options":{"NodeID":"name","NodeGroup":"id","LinkGroup":null,"colourScale":"d3.scaleOrdinal(['#4c7093', '#e15c39', '#008348'])","fontSize":16,"fontFamily":"Open Sans","nodeWidth":20,"nodePadding":10,"units":"bpd","margin":{"top":null,"right":null,"bottom":null,"left":null},"iterations":32,"sinksRight":true}},"evals":[],"jsHooks":[]}</script>
+<p>From 2009 to 2017 (through June), Canada increased its total exports to the US from 1.9 mbpd, to 3.5 mbpd - a 78% increase.</p>
+<p>Canda hasn’t merely just made strides against its individual competitors, it has left them behind. And it threatens to leap over them - all of them.</p>
+<p>The margin between Canada’s US exports and the rest of the world’s US exports has shrunk from 5.4 mbpd in 2009 to its current level of 1.2 mbpd in 2017.</p>
+<p><img src="/blog/us_oil_imports_a_tale_of_one_country_files/figure-html/plot_slope_chart-1.png" width="672" /></p>
+<p>Canada’s rise and Mexico’s decline in US oil exports may very well give the northern neighbor an extra bit of leverage in ongoing talks concerning the re-negotiation of the North American Free Trade Agreement (NAFTA).</p>
+<p>Regardless, perhaps, of the outcome of the NAFTA re-negotions, the <a href="https://www.reuters.com/article/us-usa-pipeline-keystone-idUSKBN16U25E">approval of the Keystone XL pipeline</a> and <a href="http://www.oilsandsmagazine.com/projects/crude-oil-liquids-pipelines">other pipeline projects</a> almost certainly means that Canada will continue to dominate the US oil import scene for decades to come.</p>
+<!-- ### US Oil Imports: 2017 -->
+<!-- #### By type and split into "Top 10" countries and "All Others" -->
+</div>
+</div>
