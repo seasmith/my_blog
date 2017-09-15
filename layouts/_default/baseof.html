@@ -20,7 +20,8 @@
 
     {{ partial "meta/name-author" . }}
   {{ template "_internal/opengraph.html" . }}
-  {{ partial "meta/ogimage" . }}
+  {{ partial "meta/twitter-card" . }}
+  {{ partial "meta/og-image" . }}
   <!-- Site verification -->
   {{ if .IsHome }} {{ partial "site-verification" . }} {{ end }}
   <!-- add googleAnalytics in config.toml -->
