@@ -1,0 +1,923 @@
+---
+title  : "North Dakota Horizontal Oil Well Production"
+author : "Luke Smith"
+date   : "2017-07-20"
+tags   : [r, oil and gas, north dakota]
+description: "Sifting through North Dakota oil production data, and some EIA shape files."
+---
+  
+```{r setup, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(plyr)
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+library(glue)
+
+# ---- Library_ploting_Setup
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+old_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- Hooks_Setup
+orig_inline <- knit_hooks$get("inline")
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Inline_Function_Setup
+# Provide a default value for a given condition
+il_condition_default <- function(x, cond, ret) {
+  
+  if (eval(substitute(cond)) == TRUE) return(ret) else return(x)
+  
+}
+
+# Rearrange the numeric base
+il_num_base <- function(x, current_base = 0, new_base = 0) {
+  
+  new_power <- current_base - new_base
+  
+  return(x * 10^new_power)
+  
+}
+
+
+
+# ---- Extra_Function_Setup
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+
+
+# ---- Color_Setup
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+# my_verylight_red <- 
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_lightgreen <- "#198f5a"
+my_lightgreen_2 <- "#329b6c"
+my_lightgreen_3 <- "#4ca87e"
+my_lightgreen_4 <- "#66b491"
+my_verylight_green   <- "#e5f2ec"
+my_verylight_green_2 <- "#cce6da"
+my_verylight_green_3 <- "#b2d9c8"
+my_green      <- "#008348"
+my_green_2    <- "#007540"
+my_green_3    <- "#006839"
+my_green_4    <- "#005b32"
+my_green_5    <- "#004e2b"
+my_green_6    <- "#004124"
+my_darkgreen   <- "#00341c"
+my_darkgreen_2 <- "#002715"
+my_darkgreen_3 <- "#001a0e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+```
+```{r setup_extra, include=FALSE}
+library(sf)
+library(viridis)
+library(grid)
+library(gtable)
+library(extrafont)
+loadfonts("win")
+
+my_percent <- function(x, i = 1) {
+  sprintf(sprintf("%s%s%s", "%.", i, "f%%"), x * 100)
+}
+
+is_outlier <- function(x, iqr_multiple = 1.5, section = c("both", "upper", "lower")) {
+  qnt <- quantile(x)
+  iqr <- qnt[4] - qnt[2]
+  
+  max_range <- qnt[4] + (iqr_multiple * iqr)
+  min_range <- qnt[2] - (iqr_multiple * iqr)
+  
+  if (any(section == "both")) return(x > max_range | x < min_range)
+  else if (any(section == "upper")) return(x > max_range)
+  else return(x < min_range)
+}
+
+```
+```{r setup_source, include=FALSE}
+source("~/R/misc/oil/North_Dakota/analysis_production.R")
+```
+
+From
+`r range(prod$Completion_Date, na.rm = TRUE)[1] %>% stamp("March 1, 1999")(.)`
+to 
+`r range(prod$Completion_Date, na.rm = TRUE)[2] %>% stamp("March 1, 1999")(.)`, 
+a total of 
+`r length(unique(prod$File_No))`
+horizontal oil and gas wells were completed in North Dakota [[1]](#horiz_data).
+These wells have produced 
+`r (sum(prod$Cum_Oil) / 10^9) %>% round(2) %>% sprintf("%.2f", .)` 
+billion barrels of oil in North Dakota.
+
+
+```{r plot_summary_bars, fig.height=5.5}
+grid.arrange(bar$comp_by_year +
+               theme(text = element_text(family = "Lato", size = 14),
+                     plot.margin = unit(c(0, 5, 0, 0), "mm")),
+             bar$by_date$Cum_Oil_year +
+               labs(title = "Oil Production by\nCompletion Year") +
+               theme(text = element_text(family = "Lato", size = 14),
+                     plot.margin = unit(c(0, 0, 0, 5), "mm")),
+             ncol = 2)
+
+```
+
+
+```{r setup_restore_inline, include=FALSE}
+# knitr::knit_hooks$set(inline = orig_inline)
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(paste(as.character(x), collapse = ", ")) else
+      return(x)
+})
+```
+
+### Fields
+
+Of the
+`r nrow(n_fields)`
+fields listed by the North Dakota Department of Natural Resources [[2]](#of_data), only
+`r glue("{nrow(n_prod_fields)} ({my_percent(n_fields_percent)})")`
+have any oil production data from horizontal wells.
+
+
+```{r top_2f, include=FALSE}
+top_2f <- prod_field_by_id %>%
+    group_by(Field) %>%
+    summarize(Oil = sum(Oil)) %>%
+    mutate(rnk = dplyr::min_rank(-Oil)) %>%
+    filter(rnk <= 2)
+```
+
+
+In fact, just two fields, the
+`r top_2f$Field %>% gsub("_", " ", .) %>% stringi::stri_trans_totitle() %>% knitr::combine_words()`,
+account for
+`r (sum(top_2f$Oil) / sum(prod$Cum_Oil)) %>% my_percent()`
+percent of the total production.
+
+
+```{r plot_data, include=FALSE}
+plot_data <- prod %>%
+  group_by(Field) %>%
+  summarize(Cum_Oil = sum(Cum_Oil, na.rm = TRUE)) %>%
+  arrange(desc(Cum_Oil)) %>%
+  mutate(Percent     = (Cum_Oil / sum(Cum_Oil)),
+         Cum_Percent = cumsum(Percent),
+         Rank = 1:n())
+
+half    <- plot_data %>% filter(Rank <= n() / 2)  %>% filter(Rank == max(Rank))
+quarter <- plot_data %>% filter(Rank <= n() / 4)  %>% filter(Rank == max(Rank))
+ten     <- plot_data %>% filter(Rank <= n() / 10) %>% filter(Rank == max(Rank))
+
+quarts <- bind_rows(half, quarter, ten)
+quarts$quartile <- c("50%", "Top\n 25%", "Top\n 10%")
+
+
+top_fields <- tibble::tibble(x = c(-102.450, -102.175),
+                             y = c(48.100, 48.075),
+                             xend = c(-101.900, -101.800),
+                             yend = c(47.750, 47.900),
+                             name = c("Sanish", "Parshall"))
+
+top_2_summary_sf <- plot_data %>%
+    mutate(ymax = cumsum(Cum_Oil),
+           ymin = lag(ymax, 1L, 0),
+           name = case_when(
+               Field == "PARSHALL" ~ "Parshall",
+               Field == "SANISH"   ~ "Sanish",
+               TRUE                ~ "Other"
+           )) %>%
+    mutate(grouping = case_when(
+        Rank == 1 ~ "Top_2",
+        Rank == 2 ~ "Top_2",
+        between(Rank, 3, 34)   ~ "Top 10%",
+        between(Rank, 35, 86)  ~ "Top 10-25%",
+        between(Rank, 87, 172) ~ "Top 25-50%",
+        TRUE                   ~ "Bottom 50%")) %>%
+    mutate(grouping = factor(grouping, levels = c("Top_2",
+                                                  "Top 10%",
+                                                  "Top 10-25%",
+                                                  "Top 25-50%",
+                                                  "Bottom 50%"))) %>%
+    left_join(of, by = c("Field" = "name"))
+
+top_2_summary_sf_2 <- plot_data %>%
+    mutate(ymax = cumsum(Cum_Oil),
+           ymin = lag(ymax, 1L, 0),
+           name = case_when(
+               Field == "PARSHALL" ~ "Parshall",
+               Field == "SANISH"   ~ "Sanish",
+               TRUE                ~ "Other"
+           )) %>%
+    mutate(grouping = case_when(
+        Rank == 1 ~ "Sanish",
+        Rank == 2 ~ "Parshall",
+        TRUE      ~ "Other")) %>%
+    mutate(grouping = factor(grouping, levels = c("Sanish",
+                                                  "Parshall",
+                                                  "Other"))) %>%
+    full_join(of, by = c("Field" = "name"))
+
+field_summary_sf <- plot_data %>%
+    mutate(ymax = cumsum(Cum_Oil),
+           ymin = lag(ymax, 1L, 0)) %>%
+    mutate(grouping = case_when(
+        between(Rank, 1, 34)   ~ "Top 10%",
+        between(Rank, 35, 86)  ~ "Top 10-25%",
+        between(Rank, 87, 172) ~ "Top 25-50%",
+        TRUE                   ~ "Bottom 50%")) %>%
+    full_join(of, ., by = c("name" = "Field")) %>%
+    # mutate(grouping = if_else(is.na(grouping), "No_Production", grouping)) %>%
+    mutate(grouping = factor(grouping, levels = c("Top 10%",
+                                                  "Top 10-25%",
+                                                  "Top 25-50%",
+                                                  "Bottom 50%")))
+
+field_summary_dissolved_sf <- field_summary_sf %>%
+    split(.$grouping) %>%
+    lapply(st_union) %>%
+    lapply(st_sf) %>%
+    Reduce(rbind, .)
+
+names(field_summary_dissolved_sf)[1] <- "geometry"
+attr(field_summary_dissolved_sf, "sf_column") <- "geometry"
+
+field_summary_dissolved_sf$grouping <- factor(c("Top 10%",
+                                                "Top 10-25%",
+                                                "Top 25-50%",
+                                                "Bottom 50%"),
+                                              levels = c("Top 10%",
+                                                         "Top 10-25%",
+                                                         "Top 25-50%",
+                                                         "Bottom 50%"))
+```
+```{r build_plot_summary_map, include=FALSE}
+## -- Summary_Maps
+
+of_layout <- nd %>%
+  ggplot() +
+  geom_sf(fill = "#00000000") +
+  geom_sf(data = of, fill = "#c6bdc9", color = "#382d3c") +
+  geom_sf(data = filter(of, grepl("SANISH", name)),
+          fill = "#5a4860",
+          color = "#382d3c",
+          size = 0.8) +
+  geom_sf(data = filter(of, grepl("PARSHALL", name)),
+          fill = "#8d7a93",
+          color = "#382d3c",
+          size = 0.8) +
+  geom_curve(aes(x = -102.45, y = 48.10, xend = -101.90, yend = 47.75),
+             arrow = arrow(length = unit(0.03, "npc"), ends = "first"),
+             color = "#0b090c") +
+  geom_curve(aes(x = -102.175, y = 48.075, xend = -101.80, yend = 47.90),
+             arrow = arrow(length = unit(0.03, "npc"), ends = "first"),
+             color = "#0b090c") +
+  geom_text(data = filter(top_fields, name == "Parshall"),
+            mapping = aes(x = xend, y = yend, label = name),
+            nudge_x = 0.395) +
+  geom_text(data = filter(top_fields, name == "Sanish"),
+            mapping = aes(x = xend, y = yend, label = name),
+            nudge_x = 0.360) +
+  labs(title = "North Dakota Oil Fields") +
+  theme_void() +
+  theme(text = element_text(family = "Lato", size = 14))
+
+of_layout_2 <- nd %>%
+    ggplot() +
+    geom_sf(fill = "#00000000") +
+    geom_sf(data = top_2_summary_sf_2,
+            mapping = aes(fill = grouping)) +
+    geom_curve(aes(x = -102.45, y = 48.10, xend = -101.90, yend = 47.75),
+               arrow = arrow(length = unit(0.03, "npc"), ends = "first"),
+               color = "#0b090c") +
+    geom_curve(aes(x = -102.175, y = 48.075, xend = -101.80, yend = 47.90),
+               arrow = arrow(length = unit(0.03, "npc"), ends = "first"),
+               color = "#0b090c") +
+    geom_text(data = filter(top_fields, name == "Parshall"),
+              mapping = aes(x = xend, y = yend, label = name),
+              nudge_x = 0.395) +
+    geom_text(data = filter(top_fields, name == "Sanish"),
+              mapping = aes(x = xend, y = yend, label = name),
+              nudge_x = 0.360) +
+    labs(title = "North Dakota Oil Fields") +
+    scale_fill_manual("",
+                    values = c("#5a4860", "#8d7a93", "#c6bdc9"),
+                    na.value = "gray10") +
+    guides(fill = FALSE) +
+    theme_void() +
+    theme(text = element_text(family = "Lato", size = 14))
+
+
+of_groupings <- nd %>%
+    ggplot() +
+    geom_sf(fill = "#00000000") +
+    geom_sf(data = of, fill = "#e2dee4", color = "#382d3c") +
+    geom_sf(data = st_sf(field_summary_sf),
+            mapping = aes(fill = grouping, color = grouping)) +
+    scale_fill_manual(values = colorRampPalette(c("#2d2430", "#a99cae"))(length(unique(field_summary_sf$grouping))), na.value = "gray10") +
+    scale_color_manual(values = colorRampPalette(c("#2d2430", "#a99cae"))(length(unique(field_summary_sf$grouping))), na.value = "gray10") +
+    facet_wrap(~grouping) +
+    labs(title = "North Dakota Oil Fields") +
+    theme_void() +
+    theme(text = element_text(family = "Lato", size = 14))
+
+
+## -- Donuts
+donut_summary <- plot_data %>%
+    mutate(ymax = cumsum(Cum_Oil),
+           ymin = lag(ymax, 1L, 0),
+           name = case_when(
+               Field == "PARSHALL" ~ "Parshall",
+               Field == "SANISH"   ~ "Sanish",
+               TRUE                ~ "Other"
+               )) %>%
+    mutate(name = factor(name, levels = c("Sanish", "Parshall", "Other"))) %>%
+    group_by(name) %>%
+    summarize(Oil = sum(Cum_Oil),
+              Percent = sum(Percent)) %>%
+    mutate(ymin = cumsum(Oil),
+           ymax = lag(ymin, 1L, 0))
+
+
+of_donut_nested <-  donut_summary %>%
+  add_row() %>%
+  ggplot() +
+  geom_rect(aes(fill = name, ymin = ymin, ymax = ymax, xmin = 1, xmax = 2)) +
+  geom_text(data = filter(donut_summary, name == "Sanish"),
+            mapping = aes(x = 2.75,
+                          y = ymax,
+                          label = my_percent(Percent)),
+            nudge_y = 100000000) +
+  geom_text(data = filter(donut_summary, name == "Parshall"),
+            mapping = aes(x = 3.25,
+                          y = ymax,
+                          label = my_percent(Percent)),
+            nudge_y = 200000000) +
+  geom_text(data = filter(donut_summary, name == "Other"),
+            mapping = aes(x = 3.25,
+                          y = ymax,
+                          label = my_percent(Percent)),
+            nudge_y = 500000000) +
+  coord_polar(theta = "y") +
+  xlim(c(0, 4)) +
+  scale_fill_manual("",
+                    values = c("#5a4860", "#8d7a93", "#c6bdc9"),
+                    na.value = "gray10") +
+  theme_void() +
+  theme(text = element_text(family = "Lato", size = 14))
+
+
+ofl <- ggplot_gtable(ggplot_build(of_layout_2))
+ofd <- ggplot_gtable(ggplot_build(of_donut_nested))
+```
+```{r plot_summary_map, fig.height=4}
+grid.newpage()
+
+grid.draw(ofl)
+
+vwp_1 <- viewport(x = unit(0.60, "npc"),
+                  y = unit(0.25, "npc"),
+                  width  = unit(0.5, "npc"),
+                  height = unit(0.5, "npc"))
+
+pushViewport(vwp_1)
+
+grid.draw(ofd)
+
+upViewport()
+
+vwp_2 <- viewport(x = unit(0.65, "npc"),
+                  y = unit(0.45, "npc"),
+                  width = unit(0.5, "npc"),
+                  height = unit(0.1, "npc"))
+
+pushViewport(vwp_2)
+
+grid.text("Percent of Total Production", gp = gpar(fontface = "bold"))
+```
+
+
+
+More than a majority of the production
+`r glue::glue("({my_percent(quarts$Cum_Percent[quarts$quartile == 'Top\n 10%'])})")`
+comes from the top 10% of fields. Many of these fields, like the
+`r top_2f$Field %>% gsub("_", " ", .) %>% stringi::stri_trans_totitle() %>% knitr::combine_words()`,
+are among the eastern-most producing fields.
+
+
+```{r field_summary_maps, fig.height=4}
+# field_summary_map_0 <- field_summary_dissolved_sf %>%
+#     ggplot() +
+#     geom_sf(data = nd, fill = "#00000000") +
+#     geom_sf(data = of, fill = "#00000000") +
+#     geom_sf(aes(fill = grouping, color = grouping)) +
+#     scale_fill_manual("Rank",
+#                       values = colorRampPalette(c("#2d2430", "#a99cae"))(length(unique(field_summary_dissolved_sf$grouping)))) +
+#     scale_color_manual("Rank",
+#                        values = colorRampPalette(c("#0b090c", "#7f6a86"))(length(unique(field_summary_dissolved_sf$grouping)))) +
+#     labs(title = "") +
+#     guides(color = FALSE) +
+#     theme_void()
+# 
+# 
+field_summary_map_1 <- field_summary_sf %>%
+    filter(!is.na(grouping)) %>%
+    ggplot() +
+    geom_sf(data = of_2, color = "gray70", fill = "gray70") +
+    geom_sf(aes(fill = grouping, color = grouping)) +
+    geom_sf(data = nd, fill = "#00000000") +
+    scale_fill_manual("Rank",
+                      values = colorRampPalette(c("#2d2430", "#a99cae"))(length(unique(field_summary_dissolved_sf$grouping)))) +
+    scale_color_manual("Rank",
+                       values = colorRampPalette(c("#0b090c", "#7f6a86"))(length(unique(field_summary_dissolved_sf$grouping)))) +
+    labs(title = "North Dakota's Top Producing Regions") +
+    guides(color = FALSE) +
+    facet_wrap(~grouping) +
+    theme_void() +
+    theme(text = element_text(family = "Lato", size = 14))
+
+field_summary_map_1
+# 
+# field_summary_map_2 <- nd %>%
+#     ggplot() +
+#     geom_sf(data = of,
+#             fill = "gray70", color = "#00000000") +
+#     geom_sf(data = top_2_summary_sf,
+#             mapping = aes(fill = grouping, color = grouping)) +
+#     geom_sf(fill = "#00000000") +
+#     scale_fill_manual("Rank",
+#                       values = colorRampPalette(c("#2d2430", "#a99cae"))(length(unique(top_2_summary_sf$grouping)))) +
+#     scale_color_manual("Rank",
+#                        values = colorRampPalette(c("#2d2430", "#a99cae"))(length(unique(top_2_summary_sf$grouping)))) +
+#     theme_void()
+# 
+# field_summary_map_3 <- nd %>%
+#     ggplot() +
+#     geom_sf(data = of,
+#             fill = "#f0eef1") +
+#     geom_sf(data = top_2_summary_sf,
+#             mapping = aes(fill = fct_rev(grouping), color = fct_rev(grouping)), size = 1) +
+#     geom_sf(fill = "#00000000") +
+#     scale_fill_manual("Rank",
+#                       values = colorRampPalette(c("#a99cae", "#2d2430"))(length(unique(top_2_summary_sf$grouping)))) +
+#     scale_color_manual("Rank",
+#                        values = colorRampPalette(c("#7f6a86", "#0b090c"))(length(unique(top_2_summary_sf$grouping)))) +
+#     theme_void()
+```
+```{r build_plot_percent, include=FALSE, fig.width=9}
+cum_percent <- plot_data %>%
+    ggplot() +
+    geom_col(aes(Rank, Cum_Percent),
+              color = "#8d7a93") +
+    geom_vline(data = quarts, aes(xintercept = Rank), lty = "dashed") +
+    geom_text(data    = quarts[1,],
+              mapping = aes(x = Rank, y = 0.90, label = quartile),
+              nudge_x = 20) +
+    geom_text(data    = quarts[2,],
+              mapping = aes(x = Rank, y = 0.73, label = quartile),
+              nudge_x = 23) +
+    geom_text(data    = quarts[3,],
+              mapping = aes(x = Rank, y = 0.50, label = quartile),
+              nudge_x = 23) +
+    labs(title = "Cumulative Share of Total
+Oil Production by Field",
+         subtitle = "North Dakota Horizontal-Wells",
+         x = "Field (Ordered by Percent of\nTotal Production)",
+         y = "Cumulative Percent of\nTotal Oil Production") +
+    scale_y_continuous(labels = percent,
+                       minor_breaks = NULL) +
+    scale_x_continuous(breaks = c(1, nrow(plot_data)), labels = c("Largest", "Smallest")) +
+    theme_minimal() +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          text = element_text(family = "Lato", size = 14))
+
+ind_percent <- plot_data %>%
+    ggplot() +
+    geom_col(aes(Rank, Percent), color = "#8d7a93") +
+    geom_vline(data = quarts, aes(xintercept = Rank), lty = "dashed") +
+    geom_text(data    = quarts[1,],
+              mapping = aes(x = Rank, y = 0.0035, label = quartile),
+              nudge_x = 20) +
+    geom_text(data    = quarts[2,],
+              mapping = aes(x = Rank, y = 0.0088, label = quartile),
+              nudge_x = 23) +
+    geom_text(data    = quarts[3,],
+              mapping = aes(x = Rank, y = 0.0125, label = quartile),
+              nudge_x = 23) +
+    labs(title = "Individual Share of Total Oil
+Production by Field",
+         subtitle = "North Dakota Horizontal-Wells",
+         x = "Field (Ordered by Percent of\nTotal Production)",
+         y = "Percent of Total Oil Production") +
+    scale_y_continuous(labels = percent,
+                       minor_breaks = NULL) +
+    scale_x_continuous(breaks = c(1, nrow(plot_data)), labels = c("Largest", "Smallest")) +
+    theme_minimal() +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          text = element_text(family = "Lato", size = 14))
+
+```
+```{r plot_percent, fig.height=4, fig.width=8}
+cum_percent <- cum_percent + theme(plot.margin = unit(c(0, 5, 0, 0), "mm"))
+ind_percent <- ind_percent + theme(plot.margin = unit(c(0, 5, 0, 5), "mm"))
+
+f_rm <- list()
+
+f_rm[[1]] <- file.remove("~/R/my_blog/content/blog/north_dakota_horizontal_oil_well_production_files/figure-html/Thumbs.db")
+f_rm[[2]] <- file.remove("~/R/my_blog/public/blog/north_dakota_horizontal_oil_well_production_files/figure-html/Thumbs.db")
+
+source("~/R/my_blog/content/blog/north_dakota_horizontal_oil_well_production_external_1.R")
+```
+
+<img src="../../blog/north_dakota_horizontal_oil_well_production_files/figure-html/percents.png" width="672">
+
+
+```{r inline_top_2}
+top_2 <- prod_field_by_id %>%
+  group_by(.id) %>%
+  summarize(Oil = sum(Oil)) %>%
+  mutate(rnk = dplyr::min_rank(-Oil)) %>%
+  filter(rnk <= 2)
+```
+
+### Formations
+
+
+Two formations have accounted for
+`r (sum(top_2$Oil) / sum(prod$Cum_Oil)) %>% my_percent()`
+of the cumulative oil production: the
+`r top_2$.id %>% gsub("_", " ", .) %>% paste0(" (", (top_2$Oil / 10^6) %>% round(0) %>% formatC(format = "d", big.mark = ","), " million barrels)") %>% knitr::combine_words()`.
+
+```{r plot_production_bar, fig.height=9}
+prod_tmp <- prod %>%
+  select(Completion_Date, .id, Cum_Oil) %>%
+  group_by(`Completion Year` = lubridate::year(Completion_Date), .id)
+
+p1 <- prod_tmp %>%
+  summarize(Completions = n()) %>%
+  ggplot() +
+  geom_bar(aes(x = `Completion Year`, y = Completions),
+           stat = "identity",
+           fill = my_blue) +
+  facet_wrap(~reorder(.id, -Completions, sum), ncol = 1) +
+  scale_x_continuous(minor_breaks = NULL) +
+  scale_y_continuous(breaks = c(0, 500, 1000),
+                     minor_breaks = NULL,
+                     labels = comma) +
+  labs(title = paste0("Number of Wells",
+                      "\nCompleted by Year",
+                      "\n")) +
+  theme_minimal() +
+  theme(text = element_text(family = "Lato", size = 14),
+        plot.margin = unit(c(0, 10, 0, 0), "mm"))
+
+p2 <- prod_tmp %>%
+  summarise(`Oil Production (Barrels)` = sum(Cum_Oil, na.rm = TRUE)) %>%
+  ggplot() +
+  geom_bar(aes(x = `Completion Year`, y = `Oil Production (Barrels)`),
+           stat = "identity",
+           fill = my_green) +
+  facet_wrap(~reorder(.id, -`Oil Production (Barrels)`, sum), ncol = 1) +
+  scale_x_continuous(minor_breaks = NULL) +
+  scale_y_continuous(breaks         = c(0, 100000000, 200000000),
+                       minor_breaks = NULL,
+                       labels       = comma) +
+  labs(title = paste0("Cumulative Oil",
+                      "\nProduction by",
+                      "\nCompletion Year"),
+       y = paste0("Oil Production (Barrels)",
+                  "\n",
+                  "\n",
+                  "\n",
+                  "\n",
+                  "\n")) +
+  theme_minimal() +
+  theme(text = element_text(family = "Lato", size = 14),
+        plot.margin = unit(c(0, 0, 0, 10), "mm"))
+
+p1_grob <- ggplotGrob(p1)
+p2_grob <- ggplotGrob(p2)
+
+# find max width
+max_width <- grid::unit.pmin(p1_grob$widths[2:5], p2_grob$widths[2:5])
+
+# fit each to max width
+p1_grob$widths[2:5] <- as.list(max_width)
+p2_grob$widths[2:5] <- as.list(max_width)
+
+# find max height
+max_height <- grid::unit.pmax(p1_grob$heights[2:5], p2_grob$heights[2:5])
+
+# fit each to max height
+p1_grob$heights[2:5] <- as.list(max_height)
+p2_grob$heights[2:5] <- as.list(max_height)
+
+grid.arrange(p1_grob, p2_grob, ncol = 2)
+```
+```{r plot_production_bar_2, fig.height=9, include=FALSE}
+pp1 <- prod_tmp %>%
+  summarize(Completions = n()) %>%
+  ggplot() +
+  geom_bar(aes(x = `Completion Year`, y = Completions),
+           stat = "identity",
+           fill = my_blue) +
+  facet_wrap(~reorder(.id, -Completions, sum), ncol = 1) +
+  scale_x_continuous(minor_breaks = NULL) +
+  scale_y_continuous(minor_breaks = NULL, labels = comma) +
+  labs(title = "Number of Wells Completed by Year") +
+  theme_minimal() +
+  theme(text = element_text(family = "Lato", size = 14))
+
+pp2 <- prod_tmp %>%
+  summarise(`Oil Production (Barrels)` = sum(Cum_Oil, na.rm = TRUE)) %>%
+  ggplot() +
+  geom_bar(aes(x = `Completion Year`, y = `Oil Production (Barrels)`),
+           stat = "identity",
+           fill = my_green) +
+  facet_wrap(~reorder(.id, -`Oil Production (Barrels)`, sum), ncol = 1) +
+  scale_x_continuous(minor_breaks = NULL) +
+  scale_y_continuous(minor_breaks = NULL, labels = comma) +
+  labs(title = paste0("Cumulative Oil Production by",
+                      "\nCompletion Year")) +
+  theme_minimal() +
+  theme(text = element_text(family = "Lato", size = 14))
+
+grid.arrange(pp1, pp2, ncol = 2)
+```
+
+```{r setup_reset_inline, include=FALSE}
+knitr::knit_hooks$set(inline = old_inline)
+```
+
+
+Similar to the overall trend for North Dakota, the heart of the Middle Bakken and the Three Forks lies within the eastern-most fields.
+
+
+```{r plot_map_field_by_id}
+maps$prod_field_by_id +
+    labs(title    = "North Dakota Horizontal-Well Oil Production",
+         subtitle = "By Formation and by Field\n"#,
+#          caption  = "NOTE: The outlines drawn around the fields are EIA's estimate of
+# the extent of the Bakken and the Three Forks (Three Forks overlaps
+# and extends beyond the Bakken)"
+         ) +
+    theme(plot.caption = element_text(colour = "gray40", size = 8, hjust = 0),
+          text = element_text(family = "Lato", size = 14))
+```
+
+This production center lies in close proximity to a geological structure - a fold known as the Nesson anticline.
+
+
+```{r overlay_maps, fig.height=4, include=FALSE}
+grid.newpage()
+
+# Interp line for structure
+str_1 <- c(-102.57, 48, -102.75, 48.75) %>%
+  matrix(ncol = length(.) / 2, byrow = TRUE) %>%
+  st_linestring("XY")
+
+str_2 <- c(-102.95, 47.9, -102.88, 48.75) %>%
+  matrix(ncol = length(.) / 2, byrow = TRUE) %>%
+  st_linestring("XY")
+
+interp <- str_1 %>%
+  st_sfc(str_2) %>%
+  st_sf(geometry = .) %>%
+  st_set_crs(4326)
+
+p11 <- prod_field %>%
+    ggplot() +
+    geom_sf(aes(fill = Oil, color = Oil)) +
+    geom_sf(data = nd, fill = "#00000000") +
+    scale_fill_continuous("Oil (barrels)",
+                          labels = comma,
+                          low    = my_verylight_green_3,
+                          high   = my_green_6) +
+    scale_color_continuous(low = my_verylight_green_3,
+                           high = my_darkgreen) +
+    guides(color = FALSE) +
+    labs(title    = "North Dakota Cumulative Oil Production",
+         subtitle = "From 1986-2017\nBy Field") +
+    theme_void() +
+    theme(text = element_text(family = "Lato", size = 14))
+
+
+p2 <- nd %>%
+  ggplot() +
+  geom_sf(fill = "#00000000") +
+  geom_sf(data = bakken_basin, fill = "#00000000") +
+  geom_sf(aes(color = rev(ElevTop_ft)), bakken_elv, size = 1) +
+  geom_sf(data = interp, color = "white", size = 0.85) +
+  scale_color_gradient("Elvation of\nBakken Top (ft.)",
+                       low    = my_red,
+                       high   = "yellow",
+                       labels = comma) +
+  labs(title = "North Dakota Cumulative Oil Production",
+       subtitle = "From 1986-2017\nBy Field") +
+  theme_void() +
+  theme(text = element_text(family = "Lato", size = 14))
+
+g11 <- ggplot_gtable(ggplot_build(p11))
+g2  <- ggplot_gtable(ggplot_build(p2))
+
+maxWidth <- unit.pmax(g11$widths[2:5], g2$widths[2:5])
+
+g11$widths[2:5] <- as.list(maxWidth)
+g2$widths[2:5]  <- as.list(maxWidth)
+
+minWidths <- unit.pmin(g11$grobs[[which(g11$layout$name == "guide-box")]]$widths,
+                       g2$grobs[[which(g2$layout$name == "guide-box")]]$widths)
+
+g11$grobs[[which(g11$layout$name == "guide-box")]]$widths <- as.list(minWidths)
+g2$grobs[[which(g2$layout$name == "guide-box")]]$widths <- as.list(minWidths)
+
+minHeights <- unit.pmin(g11$grobs[[which(g11$layout$name == "guide-box")]]$heights,
+                        g2$grobs[[which(g2$layout$name == "guide-box")]]$heights)
+
+g11$grobs[[which(g11$layout$name == "guide-box")]]$heights <- as.list(minHeights)
+g2$grobs[[which(g2$layout$name == "guide-box")]]$heights <- as.list(minHeights)
+
+# -- Find panel and guide-box positions
+pp  <- c(subset(g11$layout, name == "panel", se = t:r))
+gbp <- c(subset(g11$layout, name == "guide-box", se = t:r))
+
+# -- Eliminate grid lines in the background of the elevation plot (on top)
+g11$grobs[[which(g11$layout$name == "panel")]][[4]][[1]] <- NULL
+g2$grobs[[which(g2$layout$name == "panel")]][[4]][[1]] <- NULL
+
+g <- gtable_add_grob(g11, g2$grobs[[which(g2$layout$name == "panel")]], pp$t, 
+                     pp$l, pp$b, pp$l)
+
+g <- gtable_add_grob(g,
+                     g2$grobs[[which(g2$layout$name == "guide-box")]],
+                     gbp$t, gbp$l, gbp$b, gbp$l, name = "guide-box-2")
+
+g$grobs[[which(g$layout$name == "guide-box")]]$layout$t[[1]] <- 2
+g$grobs[[which(g$layout$name == "guide-box")]]$layout$b[[1]] <- 2
+
+g$grobs[[which(g$layout$name == "guide-box-2")]]$layout$t[[1]] <- 4
+g$grobs[[which(g$layout$name == "guide-box-2")]]$layout$b[[1]] <- 4
+
+
+grid.draw(g)
+```
+```{r overlay_maps_2, fig.height=4}
+ant_line <- c(-103.0, 47.575, -101.1, 48.6) %>%
+  matrix(ncol = length(.) / 2, byrow = TRUE) %>%
+  st_linestring("XY") %>%
+  st_sfc() %>%
+  st_sf(geometry = .) %>%
+  st_set_crs(4326)
+
+ant_line_2 <- c(-103.0, 47.5, -101.0, 48.4) %>%
+  matrix(ncol = length(.) / 2, byrow = TRUE) %>%
+  st_linestring("XY") %>%
+  st_sfc() %>%
+  st_sf(geometry = .) %>%
+  st_set_crs(4326)
+
+
+ant_elv <- bakken_elv %>%
+  st_intersection(ant_line) %>%
+  as("Spatial") 
+
+ant_elv <- ant_elv %>%
+  attr("coords") %>%
+  as_tibble() %>%
+  bind_cols(as_tibble(ant_elv[["ElevTop_ft"]]))
+
+ant_elv_2 <- bakken_elv %>%
+  st_intersection(ant_line_2) %>%
+  as("Spatial")
+
+ant_elv_2 <- ant_elv_2 %>%
+  attr("coords") %>%
+  as_tibble() %>%
+  bind_cols(as_tibble(ant_elv_2[["ElevTop_ft"]]))
+
+
+of_prod_contour <- prod_field %>%
+  ggplot() +
+  geom_sf(aes(fill = Oil, color = Oil)) +
+  geom_sf(data = nd, fill = "#00000000") +
+  geom_sf(data = bakken_elv, color = "gray30") +
+  geom_sf(data = interp, color = my_red, size = 0.85) +
+  geom_text(data = ant_elv_2,
+            mapping = aes(x = coords.x1, y = coords.x2, label = paste(value, "ft.")),
+            angle   = -60,
+            nudge_x = 0.20,
+            nudge_y = -0.13,
+            size = 3.5) +
+  scale_fill_continuous("Oil (barrels)",
+                        labels = comma,
+                        low    = my_lightgreen_3,
+                        high   = my_darkgreen_2) +
+  scale_color_continuous(low  = my_lightgreen_2,
+                         high = my_darkgreen_3) +
+  guides(color = FALSE) +
+  labs(title    = paste0("North Dakota Cumulative Oil Production",
+                         "\nFrom Horizontal Wells"),
+       subtitle = "From 1986-2017\nBy Field",
+       caption  = paste("NOTE: Contour lines show",
+                        "the depth of the top of the Bakken,",
+                        "\nwhile the red lines show the orientation",
+                        "of the geologic structure.")) +
+  theme_void() +
+  theme(plot.caption = element_text(color = "gray40", size = 10, hjust = 0),
+        text = element_text(family = "Lato", size = 14))
+
+## -- Layout_and_Draw
+
+grid.newpage() 
+grid.draw(ggplot_gtable(ggplot_build(of_prod_contour)))
+
+vwp_3 <- viewport(x = unit(0.79, "npc"),
+                  y = unit(0.75, "npc"),
+                  width = unit(1, "npc"),
+                  height = unit(1, "npc"))
+
+pushViewport(vwp_3)
+
+l <- ggplot(data.frame(x = 1:2, y = 3:4)) +
+  geom_line(aes(x, y, color = factor("  Geological\n  Structure")), size = 1) +
+  scale_color_manual(name = NULL, values = my_red) +
+  guides(color = guide_legend(label.position = "top", label.hjust = 0)) +
+  theme_void() +
+  theme(text = element_text(family = "Lato", size = 14))
+
+l_grob <- ggplotGrob(l)
+
+lgnd <- l_grob$grobs[[which(l_grob$layout$name == "guide-box")]]
+
+grid.draw(lgnd)
+```
+
+
+#### Data
+
+1. <span id="horiz_data">[Horizontal oil and gas data][horiz_data] (North Dakota Department of Natural Resources)</span>
+2. <span id="of_data">[North Dakota oil field map][of_data] (North Dakota Department of Natural Resources)</span>
+3. <span id="state_map">[North Dakota state map][state_map] (North Dakota GIS Hub Data Portal)</span>
+4. <span id="eia_maps">[Bakken contour map][eia_maps] (Energy Information Administration)</span>
+
+
+[horiz_data]: https://www.dmr.nd.gov/oilgas/bakkenwells.asp
+[eia_maps]: https://www.eia.gov/maps/layer_info-m.php
+[state_map]: https://gishubdata.nd.gov/dataset/state-border
+[of_data]: https://www.dmr.nd.gov/OaGIMS/downLoadShapeFiles.asp
