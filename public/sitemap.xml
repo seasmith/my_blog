@@ -2,6 +2,11 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>/blog/getting_data_from_binary_excel_files_on_a_windows_machine/</loc>
+    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/blog/us_oil_imports_a_tale_of_one_country/</loc>
     <lastmod>2017-09-14T00:00:00+00:00</lastmod>
   </url>
@@ -78,7 +83,7 @@
   
   <url>
     <loc>/blog/</loc>
-    <lastmod>2017-09-14T00:00:00+00:00</lastmod>
+    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -130,6 +135,12 @@
   </url>
   
   <url>
+    <loc>/tags/excel/</loc>
+    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>/tags/global-temperature/</loc>
     <lastmod>2016-12-20T00:00:00+00:00</lastmod>
     <priority>0</priority>
@@ -138,6 +149,12 @@
   <url>
     <loc>/tags/graphs/</loc>
     <lastmod>2017-03-22T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/how-to/</loc>
+    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -219,7 +236,7 @@
   
   <url>
     <loc>/tags/r/</loc>
-    <lastmod>2017-09-14T00:00:00+00:00</lastmod>
+    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -288,8 +305,14 @@
   </url>
   
   <url>
+    <loc>/tags/vbs/</loc>
+    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>/</loc>
-    <lastmod>2017-09-14T00:00:00+00:00</lastmod>
+    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   

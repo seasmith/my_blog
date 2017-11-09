@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Vbs on Welcome</title>
+    <link>/tags/vbs/</link>
+    <description>Recent content in Vbs on Welcome</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 12 Oct 2017 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/vbs/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Getting data from binary Excel (xlsb) files on a Windows machine</title>
+      <link>/blog/getting_data_from_binary_excel_files_on_a_windows_machine/</link>
+      <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/blog/getting_data_from_binary_excel_files_on_a_windows_machine/</guid>
+      <description>This is a fairly simple macro written in VBScript which saves all worksheets in all workbooks in the same directory as the script.
+Dim xlDim fsoDim dirDim fDim wbDim shSet xl = CreateObject(&amp;quot;Excel.Application&amp;quot;)Set fso = CreateObject(&amp;quot;Scripting.FileSystemObject&amp;quot;)dir = fso.GetAbsolutePathName(&amp;quot;.&amp;quot;)With xl.Visible = False.DisplayAlerts = False.AskToUpdateLinks = False.AlertBeforeOverwriting = False.ScreenUpdating = FalseEnd WithFor Each f in fso.GetFolder(dir).FilesIf LCase(fso.</description>
+    </item>
+    
+  </channel>
+</rss>

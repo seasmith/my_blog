@@ -84,6 +84,15 @@
     </item>
     
     <item>
+      <title>Excel</title>
+      <link>/tags/excel/</link>
+      <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/excel/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>Global Temperature</title>
       <link>/tags/global-temperature/</link>
       <pubDate>Tue, 20 Dec 2016 00:00:00 +0000</pubDate>
@@ -98,6 +107,15 @@
       <pubDate>Wed, 22 Mar 2017 00:00:00 +0000</pubDate>
       
       <guid>/tags/graphs/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>How To</title>
+      <link>/tags/how-to/</link>
+      <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/how-to/</guid>
       <description></description>
     </item>
     
@@ -212,7 +230,7 @@
     <item>
       <title>R</title>
       <link>/tags/r/</link>
-      <pubDate>Thu, 14 Sep 2017 00:00:00 +0000</pubDate>
+      <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
       
       <guid>/tags/r/</guid>
       <description></description>
@@ -296,6 +314,15 @@
       <pubDate>Thu, 14 Sep 2017 00:00:00 +0000</pubDate>
       
       <guid>/tags/united-states/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Vbs</title>
+      <link>/tags/vbs/</link>
+      <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/vbs/</guid>
       <description></description>
     </item>
     

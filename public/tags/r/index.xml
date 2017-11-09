@@ -6,10 +6,20 @@
     <description>Recent content in R on Welcome</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 14 Sep 2017 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 12 Oct 2017 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/r/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Getting data from binary Excel (xlsb) files on a Windows machine</title>
+      <link>/blog/getting_data_from_binary_excel_files_on_a_windows_machine/</link>
+      <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/blog/getting_data_from_binary_excel_files_on_a_windows_machine/</guid>
+      <description>This is a fairly simple macro written in VBScript which saves all worksheets in all workbooks in the same directory as the script.
+Dim xlDim fsoDim dirDim fDim wbDim shSet xl = CreateObject(&amp;quot;Excel.Application&amp;quot;)Set fso = CreateObject(&amp;quot;Scripting.FileSystemObject&amp;quot;)dir = fso.GetAbsolutePathName(&amp;quot;.&amp;quot;)With xl.Visible = False.DisplayAlerts = False.AskToUpdateLinks = False.AlertBeforeOverwriting = False.ScreenUpdating = FalseEnd WithFor Each f in fso.GetFolder(dir).FilesIf LCase(fso.</description>
+    </item>
     
     <item>
       <title>US Oil Imports: A Tale of One Country</title>
