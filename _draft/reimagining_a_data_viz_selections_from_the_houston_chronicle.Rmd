@@ -1,0 +1,618 @@
+---
+title: "Re-imagining a Data Viz: Selections from the Houston Chronicle"
+author: "Luke Smith"
+date: "2017-09-29"
+tags: [r, poverty, houston, houston chronicle]
+description: "Recasting a decade of data from Sunnyside"
+---
+
+```{r setup_std, include=FALSE}
+# ---- Library_Tidyverse_Setup
+library(plyr)
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- R_Options_Setup
+orig_scipen <- getOption("scipen")
+options(scipen = 100)
+
+orig_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- knitr_Options_Setup
+orig_inline <- knit_hooks$get("inline")
+orig_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Hooks_Setup
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+
+
+
+# ---- Extra_Function_Setup
+# -- Control how percentages are formatted
+my_percent <- function(x, i = 1) {
+  sprintf(sprintf("%s%s%s", "%.", i, "f%%"), x * 100)
+}
+
+# -- Convert listified JSON data into a nested tibble
+to_tibble <- function(x) {
+  isdf  <- unname(which(unlist(map(x, is.data.frame))))
+  isndf <- seq_along(x)[-isdf]
+    
+  tbbl <- add_column(bind_cols(x[isndf]), x[isdf])
+    
+  names(tbbl)[isdf] <- names(x)[isdf]
+  names(tbbl)[isndf] <- names(x)[isndf]
+    
+  return(tbbl)
+}
+
+# -- Row bind a list into a tibble
+bind_list_rows <- function(list_rows) {
+  tibble::as_tibble(data.table::rbindlist(list_rows))
+}
+
+# -- Source and return only the .$value
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+
+
+# ---- Color_Setup ----
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+# my_verylight_red <- 
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_lightgreen <- "#198f5a"
+my_lightgreen_2 <- "#329b6c"
+my_lightgreen_3 <- "#4ca87e"
+my_lightgreen_4 <- "#66b491"
+my_verylight_green   <- "#e5f2ec"
+my_verylight_green_2 <- "#cce6da"
+my_verylight_green_3 <- "#b2d9c8"
+my_green      <- "#008348"
+my_green_2    <- "#007540"
+my_green_3    <- "#006839"
+my_green_4    <- "#005b32"
+my_green_5    <- "#004e2b"
+my_green_6    <- "#004124"
+my_darkgreen   <- "#00341c"
+my_darkgreen_2 <- "#002715"
+my_darkgreen_3 <- "#001a0e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+```
+
+```{r setup_extra, include=FALSE}
+library(cowplot)
+```
+
+```{r urls, include=FALSE}
+# Denied (series):
+#  http://www.houstonchronicle.com/Denied/
+#
+# Typhus making a comeback in Texas:
+#  http://www.houstonchronicle.com/news/health/article/Typhus-making-comeback-in-Texas-11732973.php&cmpid=twitter-premium
+#
+# Hope gros in Sunnyside with farm's first fall production:
+#  http://www.houstonchronicle.com/news/houston-texas/article/Hope-grows-in-Sunnyside-11732071.php?t=0a6c092bbc
+#
+# Who's most vulnerable to extreme temperatures:
+#  http://www.houstonchronicle.com/local/gray-matters/article/Who-s-most-vulnerable-to-extreme-temperatures-11739055.php&cmpid=twitter-premium
+# HIGHER ED Trump cited for dramatic decline in international student applications in Texas:
+#  http://www.houstonchronicle.com/news/houston-texas/houston/article/Trump-cited-for-dramatic-decline-in-international-11263509.php
+
+td <- tribble(
+  ~uni, ~`2013`, ~`2014`, ~`2015`, ~`2016`, ~`2017`,
+  "Angelo State University", 196, 216, 282, 328, 314,
+  "Lamar University", 971, 1777, 1861, 1278, 788,
+  "Midwestern State University", 568, 1007, 989, 801, 644,
+  "Prarie View A&M University", 204, 208, 260, 277, 366,
+  "Stephen F. Austin State University", 171, 216, 225, 158, 138
+)
+```
+
+```{r import_data, include=FALSE}
+# http://www.houstonchronicle.com/news/houston-texas/houston/article/Loss-of-jobs-business-puts-Sunnyside-in-peril-11226461.php#photo-13050632
+
+# From dput(readClipboard())
+sside <- c("Month\t2010\t2015",
+           "Residents with a Bachelor's degree\t4,412\t965", 
+           "Residents who own homes\t4,682\t4,527",
+           "Residents searching for work\t1,481\t2,319", 
+           "Population\t27,308\t26,580",
+           "Income below $25,000\t4,576\t5,062", 
+           "Households with no car\t2,205\t2,480",
+           "Households below poverty\t3,073\t3,198", 
+           "Households\t9,458\t9,445")
+```
+
+```{r clean_data, include=FALSE}
+sside <- do.call(rbind, lapply(stringi::stri_split(sside, regex = "\t"), rbind))
+
+nms <- sside[1, ]
+
+sside <- as.data.frame(sside, stringsAsFactors = FALSE, row.names = NULL)
+
+names(sside) <- sside[1, ]
+
+sside <- sside[-1, ]
+
+sside <- sside %>%
+  mutate(type = case_when(
+    grepl("Income below", Month) ~ "Household",
+    grepl("Household", Month)    ~ "Household",
+    Month == "Population"        ~ "Residential",
+    grepl("Resident", Month)     ~ "Residential"
+)) %>%
+  mutate(Month = case_when(
+    grepl("Income below", Month) ~ "Households with income below $25,000",
+    Month == "Population"        ~ "Residents",
+    TRUE                         ~ Month)) %>%
+  mutate_at(vars(`2010`, `2015`),
+            function(x) as.double(gsub(",", "", x))) %>%
+  mutate(Month = stringi::stri_replace(Month, "", regex = "^Residents "),
+         Month = stringi::stri_replace(Month, "", regex = "^Households "),
+         Month = stringi::stri_trans_totitle(Month, type = "sentence"))
+```
+
+In June of this year, the Houston Chronicle ran a story on the southside neighborhood of Sunnyside: [Prosperity to Poverty: Loss of jobs, business puts Sunnyside in peril][article]. Accompanying the article were data related to the economic situation unfolding in Sunnyside.
+
+[article]: http://www.houstonchronicle.com/news/houston-texas/houston/article/Loss-of-jobs-business-puts-Sunnyside-in-peril-11226461.php#photo-13050632
+
+The chart below has been modified by:
+
+  * Using a line instead of a bar to show the trend.
+  * Separating residential and household statistics into two rows.
+  * Changing all titles into positive statements, if not already - as in going from "no car" to "car", and from "below" to "above".
+  * Appending "..." to the titles to further show relationship between same-category statistics.
+
+```{r arrange_data_1, include=FALSE}
+sside1 <- sside %>%
+    filter(type == "Household") %>%
+    gather(... = c(-Month, -type)) %>%
+    group_by(key) %>%
+    mutate(value = if_else(Month != "Households",
+                           max(value) - value,
+                           value)) %>%
+    ungroup() %>%
+    spread(key, value) %>%
+    bind_rows(sside %>%
+                filter(type == "Residential"))
+
+sside2 <- sside1 %>%
+  mutate(Month = case_when(
+    Month == "With a bachelor's degree" ~ "...that have a bachelor's degree",
+    Month == "Who own homes" ~ "...that own a home",
+    Month == "Searching for work" ~ "...that are searching for work",
+    Month == "Residents" ~ "Residents...",
+    Month == "Below poverty" ~ "...that are above the poverty level",
+    Month == "With income below $25,000" ~ "...with an income above $25,000",
+    Month == "With no car" ~ "...that have a car",
+    Month == "Households" ~ "Households..."
+  ))
+  
+```
+
+```{r plot_data_1, fig.width=5, fig.height = 9, out.extra='class="imgcentered"'}
+rd <- sside2 %>%
+  gather(... = c(-Month, - type)) %>%
+  filter(type == "Residential") %>%
+  ggplot() +
+  geom_line(aes(key, value, group = Month), size = 1.25) +
+  facet_grid(. ~ reorder(Month, -value, sum), labeller = label_wrap_gen(12)) +
+  scale_y_continuous(minor_breaks = NULL,
+                     labels = comma) +
+  labs(x = "Year",
+       y = NULL) +
+  theme_minimal() +
+  theme(plot.margin = unit(c(0, 0, 1, 0), "lines"),
+        panel.spacing = unit(0, "mm"),
+        panel.grid.major.x = element_blank(),
+        text = element_text(family = "Lato", size = 14))
+
+hh <- sside2 %>%
+  gather(... = c(-Month, - type)) %>%
+  filter(type == "Household") %>%
+  ggplot() +
+  geom_line(aes(key, value, group = Month), size = 1.25) +
+  facet_grid(. ~ reorder(Month, -value, sum), labeller = label_wrap_gen(12)) +
+  scale_y_continuous(
+    # limits = c(0, 10000),
+    #                  breaks = c(0, 5000, 10000),
+    #                  minor_breaks = NULL,
+                     labels = comma) +
+  labs(x = "Year",
+       y = NULL) +
+  theme_minimal() +
+  theme(panel.spacing = unit(0, "mm"),
+        panel.grid.major.x = element_blank(), 
+        text = element_text(family = "Lato", size = 14))
+
+
+gridExtra::grid.arrange(rd, hh, ncol = 1)
+```
+<br>
+<br>
+
+```{r, fig.height=8}
+rd_left <- sside2 %>%
+  gather(... = c(-Month, - type)) %>%
+  filter(type == "Residential") %>%
+  filter(Month == "Residents...") %>%
+  ggplot() +
+  geom_line(aes(key, value, group = Month), size = 1.25, color = my_red) +
+  # geom_point(aes(key, value, group = Month), size = 3.25, color = my_red) +
+  facet_grid(. ~ reorder(Month, -value, sum), labeller = label_wrap_gen(12)) +
+  scale_y_continuous(minor_breaks = NULL,
+                     labels = comma) +
+  labs(x = NULL,
+       y = NULL) +
+  theme_minimal() +
+  theme(plot.margin = unit(c(0, 3, 1, 2), "lines"),
+        panel.grid.major.x = element_blank(),
+        axis.text = element_text(family = "Lato", size = 11),
+        text = element_text(family = "Lato", size = 18))
+
+hh_left <- sside2 %>%
+  gather(... = c(-Month, - type)) %>%
+  filter(type == "Household") %>%
+  filter(Month == "Households...") %>%
+  ggplot() +
+  geom_line(aes(key, value, group = Month), size = 1.25, color = my_red) +
+  # geom_point(aes(key, value, group = Month), size = 3.25, color = my_red) +
+  facet_grid(. ~ reorder(Month, -value, sum), labeller = label_wrap_gen(12)) +
+  scale_y_continuous(minor_breaks = NULL,
+                     labels = comma) +
+  labs(x = NULL,
+       y = NULL) +
+  theme_minimal() +
+  theme(plot.margin = unit(c(1, 3, 0, 2), "lines"),
+        panel.grid.major.x = element_blank(),
+        axis.text = element_text(family = "Lato", size = 11),
+        text = element_text(family = "Lato", size = 18))
+
+rd_right <- sside2 %>%
+  gather(... = c(-Month, - type)) %>%
+  filter(type == "Residential") %>%
+  filter(Month != "Residents...") %>%
+  group_by(Month) %>%
+  arrange(as.integer(key)) %>%
+  mutate(lag = case_when(
+      value - lag(value) > 0 ~ "blue",
+      value - lag(value) < 0 ~ "red")) %>%
+  mutate(lag = case_when(
+      is.na(lag) & value - lead(value) < 0 ~ "blue",
+      is.na(lag) & value - lead(value) > 0 ~ "red",
+      TRUE ~ lag
+  )) %>%
+  ungroup() %>%
+  ggplot() +
+  geom_line(aes(key, value, group = Month, color = lag), size = 1.25) +
+  # geom_point(aes(key, value, group = Month, color = lag), size = 3.25) +
+  facet_grid(. ~ reorder(Month, -value, sum), labeller = label_wrap_gen(12)) +
+  scale_y_continuous(minor_breaks = NULL,
+                     labels = comma) +
+  scale_color_manual(values = c(my_blue, my_red)) +
+  guides(color = FALSE) +
+  labs(x = NULL,
+       y = NULL) +
+  theme_minimal() +
+  theme(plot.margin = unit(c(0, 1, 1, 0), "lines"),
+        panel.grid.major.x = element_blank(),
+        axis.text = element_text(family = "Lato", size = 11),
+        text = element_text(family = "Lato", size = 14))
+
+hh_right <- sside2 %>%
+  gather(... = c(-Month, - type)) %>%
+  filter(type == "Household") %>%
+  filter(Month != "Households...") %>%
+  group_by(Month) %>%
+  arrange(as.integer(key)) %>%
+  mutate(lag = case_when(
+      value - lag(value) > 0 ~ "blue",
+      value - lag(value) < 0 ~ "red")) %>%
+  mutate(lag = case_when(
+      is.na(lag) & value - lead(value) < 0 ~ "blue",
+      is.na(lag) & value - lead(value) > 0 ~ "red",
+      TRUE ~ lag
+  )) %>%
+  ungroup() %>%
+  ggplot() +
+  geom_line(aes(key, value, group = Month, color = lag), size = 1.25) +
+  # geom_point(aes(key, value, group = Month, color = lag), size = 3.25) +
+  facet_grid(. ~ reorder(Month, -value, sum), labeller = label_wrap_gen(12)) +
+  scale_y_continuous(minor_breaks = NULL,
+                     labels = comma) +
+  scale_color_manual(values = c(my_red)) +
+  guides(color = FALSE) +
+  labs(x = NULL,
+       y = NULL) +
+  theme_minimal() +
+  theme(plot.margin = unit(c(1, 1, 0, 0), "lines"),
+        panel.grid.major.x = element_blank(), 
+        axis.text = element_text(family = "Lato", size = 11),
+        text = element_text(family = "Lato", size = 14))
+
+pg <- plot_grid(rd_left, rd_right, hh_left, hh_right, align = "hv",
+          nrow = 2
+          # labels = c("Residents...", "", "Households...", "")
+          )
+
+slate <- ggplot() +
+  geom_blank() +
+  labs(title = "Sunnyside has seen sunnier days.",
+       subtitle = paste0("Declines in education, home ownership, and household income",
+                         "\nmay be leading to population decline in the south Houston neighborhood."),
+       x = "Year", y = "Population") +
+  theme_minimal() +
+  theme(text = element_text(family = "Lato", size = 16))
+
+
+slate_grob <- ggplotGrob(slate)
+
+# Add grobs
+slate_grob$grobs[[which(slate_grob$layout$name == "panel")]] <- slate_grob$grobs[[which(slate_grob$layout$name == "panel")]] %>%
+  grid::addGrob(ggplotGrob(pg))
+
+# Plot!
+grid::grid.draw(slate_grob)
+
+```
+
+Continuing some of the same themes in the above chart, the next chart:
+
+  * Removes residential and household population totals, but ueses the label of each as plot titles.
+  * Shows percent change from 2010-2015, instead of the totals for each year.
+  * Uses vertically arranged bars that have been color-coded to reflect whether the statistic increased or decreased.
+
+```{r arrange_data_2, include=FALSE}
+sside3_rd <- sside1 %>%
+  filter(type == "Residential") %>%
+  mutate(percent_change = round((`2015` - `2010`) / `2010`, 3)) %>%
+  mutate(Month = case_when(
+    Month == "With a bachelor's degree" ~ "...have a bachelor's degree",
+    Month == "Who own homes" ~ "...own a home",
+    Month == "Searching for work" ~ "...are searching for work",
+    Month == "Residents" ~ "Residents that..."
+  ))
+
+sside3_hh <- sside1 %>%
+  filter(type == "Household") %>%
+  mutate(percent_change = round((`2015` - `2010`) / `2010`, 3)) %>%
+  mutate(Month = case_when(
+    Month == "Below poverty" ~ "...are above the poverty level",
+    Month == "With income below $25,000" ~ "...have an income above $25,000",
+    Month == "With no car" ~ "...have a car",
+    Month == "Households" ~ "Households that..."
+))
+
+
+sside3 <- sside3_rd %>% bind_rows(sside3_hh)
+```
+
+```{r plot_data_2, fig.width=5, fig.height=9, out.extra='class="imgcentered"', eval=FALSE}
+# -- First plot with revised data
+rd <- rd %+% {sside3 %>% select(-`2010`, -`2015`) %>% gather(... = c(-Month, -type)) %>% filter(type == "Residential")}
+hh <- hh %+% {sside3 %>% select(-`2010`, -`2015`) %>% gather(... = c(-Month, -type)) %>% filter(type == "Household")}
+
+gridExtra::grid.arrange(rd, hh, ncol = 1)
+```
+
+```{r plot_data_3, fig.height=9, eval=FALSE}
+rd_bar <- sside3 %>%
+  filter(type == "Residential")  %>%
+  filter(Month != "Residents that...")%>%
+  ggplot() +
+  geom_bar(aes(factor(Month, levels = c("...have a bachelor's degree",
+                                        "...own a home",
+                                        "...are searching for work")),
+               percent_change,
+               fill = factor(sign(percent_change))),
+           stat = "identity") +
+  scale_fill_manual(name = "Change from\n2010-2015",
+                    labels = c("Decrease", "Increase"),
+                    values = c(my_red, my_blue)) +
+  scale_y_continuous(labels = my_percent) +
+  labs(x = NULL) +
+  facet_wrap(~type, ncol = 1,
+             labeller = labeller(type = c(Residential = "Residents that..."))) +
+  coord_flip() +
+  theme_minimal() +
+  theme(plot.margin = unit(c(0, 0, 1, 0), "lines"),
+        panel.grid.major.x = element_blank(),
+        text = element_text(family = "Lato", size = 14))
+
+hh_bar <- sside3 %>%
+  filter(type == "Household")  %>%
+  filter(Month != "Households that...") %>%
+  ggplot() +
+  geom_bar(aes(factor(Month, levels = c("...have an income above $25,000",
+                                        "...have a car",
+                                        "...are above the poverty level")),
+               percent_change,
+               fill = factor(sign(percent_change))),
+           stat = "identity") +
+  scale_fill_manual(name = "Change from\n2010-2015",
+                    labels = c("Decrease", "Increase"),
+                    values = c(my_red, my_blue)) +
+  scale_y_continuous(labels = my_percent,
+                     limits = c(-0.102, 0.102 * (.566 / .781))
+                     ) +
+  labs(x = NULL) +
+  facet_wrap(~type, ncol = 1,
+             labeller = labeller(type = c(Household = "Households that..."))) +
+  coord_flip() +
+  theme_minimal() +
+  theme(panel.grid.major.x = element_blank(),
+        text = element_text(family = "Lato", size = 14))
+
+rd_bar_grob <- ggplotGrob(rd_bar)
+hh_bar_grob <- ggplotGrob(hh_bar)
+
+# find max width
+max_width <- grid::unit.pmax(rd_bar_grob$widths[2:5], hh_bar_grob$widths[2:5])
+
+# fit each to max width
+rd_bar_grob$widths[2:5] <- as.list(max_width)
+hh_bar_grob$widths[2:5] <- as.list(max_width)
+
+# # find max height
+# max_height <- grid::unit.pmax(rd_bar_grob$heights[2:5], hh_bar_grob$heights[2:5])
+# 
+# # fit each to max height
+# rd_bar_grob$heights[2:5] <- as.list(max_height)
+# hh_bar_grob$heights[2:5] <- as.list(max_height)
+
+
+# gridExtra::grid.arrange(rd_bar, hh_bar, ncol = 1)
+gridExtra::grid.arrange(rd_bar_grob, hh_bar_grob, ncol = 1)
+```
+
+
+```{r plot_data_4, fig.height=9}
+rd_bar <- sside3 %>%
+  filter(type == "Residential" & Month != "Residents that...") %>%
+  ggplot() +
+  geom_bar(aes(factor(Month, levels = c("...have a bachelor's degree",
+                                        "...own a home",
+                                        "...are searching for work")),
+               percent_change,
+               fill = factor(sign(percent_change))),
+           stat = "identity") +
+  scale_fill_manual(name = "Change from\n2010-2015",
+                    labels = c("Decrease", "Increase"),
+                    values = c(my_red, my_blue)) +
+  scale_y_continuous(name = NULL,
+                     labels = my_percent) +
+  labs(title = "Residents that...",
+       x = NULL) +
+  coord_flip() +
+  theme_minimal() +
+  theme(plot.margin = unit(c(0, 0, 2, 0), "lines"),
+        panel.grid.major.x = element_blank(),
+        text = element_text(family = "Lato", size = 14),
+        title = element_text(hjust = 0))
+
+hh_bar <- sside3 %>%
+  filter(type == "Household" & Month != "Households that...") %>%
+  ggplot() +
+  geom_bar(aes(factor(Month, levels = c("...have an income above $25,000",
+                                        "...have a car",
+                                        "...are above the poverty level")),
+               percent_change,
+               fill = factor(sign(percent_change))),
+           stat = "identity") +
+  scale_fill_manual(name = "Change from\n2010-2015",
+                    labels = c("Decrease", "Increase"),
+                    values = c(my_red, my_blue)) +
+  scale_y_continuous(name = NULL,
+                     labels = my_percent,
+                     limits = c(-0.102, 0.102 * (.566 / .781))) +
+  labs(title = "Households that...",
+       x = NULL) +
+  coord_flip() +
+  theme_minimal() +
+  theme(panel.grid.major.x = element_blank(),
+        text = element_text(family = "Lato", size = 14),
+        title = element_text(hjust = 0))
+
+rd_bar_grob <- ggplotGrob(rd_bar)
+hh_bar_grob <- ggplotGrob(hh_bar)
+
+# find max width
+max_width <- grid::unit.pmax(rd_bar_grob$widths[2:5], hh_bar_grob$widths[2:5])
+
+# fit each to max width
+rd_bar_grob$widths[2:5] <- as.list(max_width)
+hh_bar_grob$widths[2:5] <- as.list(max_width)
+
+# # find max height
+# max_height <- grid::unit.pmax(rd_bar_grob$heights[2:5], hh_bar_grob$heights[2:5])
+# 
+# # fit each to max height
+# rd_bar_grob$heights[2:5] <- as.list(max_height)
+# hh_bar_grob$heights[2:5] <- as.list(max_height)
+
+
+# gridExtra::grid.arrange(rd_bar, hh_bar, ncol = 1)
+# gridExtra::grid.arrange(rd_bar_grob, hh_bar_grob, ncol = 1)
+gridExtra::grid.arrange(rd_bar_grob, hh_bar_grob, ncol = 1, top = grid::textGrob(label = "2010-2015 Change in:\n", gp = grid::gpar(fontfamily = "Lato", fontsize = "18")))
+```
+
+```{r uni_data, include=FALSE}
+td <- td %>%
+  mutate(diff = (`2017` - `2016`) / `2016`,
+         bigger = if_else(diff > 0, `2017`, `2016`),
+         bigger_year = if_else(diff > 0, 2017, 2016),
+         smaller = if_else(diff > 0, `2016`, `2017`),
+         smaller_year = if_else(diff > 0, 2016, 2017))
+
+# Ok; color is by year; order is by size; difficulty reading year by color
+td %>%
+    ggplot() +
+    geom_point(aes(uni, diff, size = bigger, color = factor(bigger_year)), alpha = 0.7, position = position_nudge(x = -0.05)) +
+    geom_point(aes(uni, diff, size = smaller, color = factor(smaller_year)), alpha = 0.7, position = position_nudge(x = 0.05)) +
+    geom_hline(yintercept = 0) +
+    scale_size_continuous(range = c(5, 20)) +
+    scale_color_manual(values = c(my_green_2, my_red2))
+
+# Better; read year left-to-right; color now indicates above or below x-axis
+td %>%
+    ggplot() +
+    geom_point(aes(uni, diff, size = `2016`, color = factor(sign(diff))),
+               alpha = 0.7,
+               position = position_nudge(x = -0.05)) +
+    geom_point(aes(uni, diff, size = `2017`, color = factor(sign(diff))),
+               alpha = 0.7,
+               position = position_nudge(x = 0.05)) +
+    geom_hline(yintercept = 0) +
+    scale_size_continuous(range = c(1, 12)) +
+    scale_color_manual(values = c(my_red2, my_green_2)) +
+    theme(axis.text.x = element_text(angle = 60))
+```

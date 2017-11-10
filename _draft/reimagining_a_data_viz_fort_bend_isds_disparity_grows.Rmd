@@ -1,0 +1,255 @@
+---
+title  : "Re-imagining a Data Visualization: Fort Bend ISD's disparity grows (Houston Chronicle)"
+author : "Luke Smith"
+date   : "2017-07-25"
+tags   : [r, life expectancy, health, us]
+description: "How has life expectancy changed in American counties?"
+---
+  
+```{r setup_std, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(plyr)
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+old_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- Hooks_Setup
+orig_inline <- knit_hooks$get("inline")
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Inline_Function_Setup
+# Provide a default value for a given condition
+il_condition_default <- function(x, cond, ret) {
+  
+  if (eval(substitute(cond)) == TRUE) return(ret) else return(x)
+  
+}
+
+# Rearrange the numeric base
+il_num_base <- function(x, current_base = 0, new_base = 0) {
+  
+  new_power <- current_base - new_base
+  
+  return(x * 10^new_power)
+  
+}
+
+
+
+# ---- Extra_Function_Setup
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+
+
+# ---- Color_Setup
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_green      <- "#008348"
+my_green2     <- "#1e6545"
+my_lightgreen <- "#00be68"
+my_darkgreen  <- "#00371e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+
+```
+
+```{r setup_extra, include=FALSE}
+library(ggjoy)
+library(cowplot)
+```
+
+
+<!-- Web page found at: -->
+<!--   http://www.houstonchronicle.com/neighborhood/sugarland/news/article/Fort-Bend-ISD-s-disparity-grows-11246060.php -->
+
+<!-- Data downloaded at: -->
+<!--   http://projects.houstonchronicle.com/reportcard/ -->
+<!--     https://docs.google.com/spreadsheets/d/1ElbbdnlHseiMwzZaNTqbraFw_3vog0AwVQdEs-5poC8/edit#gid=1084047029 -->
+
+<!-- Issues with the original map graphic: -->
+<!--   * The C grade color is the same color as the Per Capita Income color -->
+<!--   * The gray color scale for Per Capita Income does not work well with the Grade color scale -->
+<!--   * Only graphic offered up is the map (no x-y point plots, histograms, or lollipops) -->
+
+<!-- More data from Children at Risk: -->
+<!--   http://www.houstonchronicle.com/news/education/article/Report-Card-methodology-How-they-re-ranked-11183560.php -->
+
+I decided to re-imagine this visual because I had a bit of trouble distinguishing the B and C Grade high schools, because the color for those two values is nearly the same as the shades of gray used for 2017 Per Capita Income.
+
+
+```{r import_data, include=FALSE}
+sch_rpt <- read_csv("~/R/misc/chron/School Report Card combined data - elem_houston - Copy.csv",
+                    na   = c("#ERROR!"),
+                    skip = 1L)
+```
+
+```{r clean_data, include=FALSE, eval=FALSE}
+# Parse $address, $city, and $zip from $`full address`
+sch_rpt[is.na(sch_rpt$lat) | is.na(sch_rpt$long), ] <- sch_rpt %>%
+    filter((is.na(lat) | is.na(long))) %>%
+    mutate(address = stringi::stri_extract(`full address`, regex = "[A-Za-z0-9- ]*[^,]"),
+           city    = stringi::stri_extract(`full address`, regex = ",{1}[A-Za-z0-9- ]*"),
+           city    = stringi::stri_extract(city, regex = "[^, ][A-Za-z0-9- ]*"),
+           zip     = stringi::stri_extract(`full address`, regex = "[0-9-]*$"))
+
+# Geocode missing $lat and $long
+sch_rpt_geocodes <- sch_rpt %>%
+  filter(is.na(lat) | is.na(long)) %>%
+  rowwise() %>%
+  do(geocode = ggmap::geocode(.$`full address`))
+
+# Bind into a single data frame and add to missing $lat and %long
+new_coords <- sch_rpt_geocodes$geocode %>%
+  data.table::rbindlist() %>%
+  rename(long = lon)
+
+sch_rpt[is.na(sch_rpt$lat) | is.na(sch_rpt$long), c("long", "lat")] <- new_coords
+
+# Hard code incomputable missing $lat and $long from Bing map search
+geocode_zoe <- c(lat = 32.650833, long = -96.911301)
+geocode_fry <- c(lat = 29.408230, long = -94.896510)
+
+```
+
+```{r plots_ex}
+sch_rpt %>%
+    ggplot() +
+    geom_histogram(aes(`% black`)) +
+    facet_wrap(~grade)
+
+# sch_rpt %>%
+#     ggplot() +
+#     geom_boxplot(aes(grade, `% black`))
+```
+
+
+<!-- sch_rpt %>% -->
+<!--     filter(grade == "A+") %>% -->
+<!--     select(-(id:`id fixed`), -(`proper campus check`:long), -district, -county, -`low grade`, -`charter?`) %>% -->
+<!--     filter(districtcleaned == "Houston ISD") %>% -->
+<!--     select(districtcleaned:`% hispanic`, grade) %>% -->
+<!--     knitr::kable() %>% -->
+<!--     utils::writeClipboard() -->
+
+<br>
+<br>
+
+```{r plots_joy, fig.height=10, fig.width=6, fig.align='center'}
+hsp_grd <- sch_rpt %>%
+    ggplot() +
+    geom_joy(aes(`% hispanic`, gradesimplified))
+
+blk_grd <- sch_rpt %>%
+    ggplot() +
+    geom_joy(aes(`% black`, gradesimplified))
+
+asn_grd <- sch_rpt %>%
+    ggplot() +
+    geom_joy(aes(`% asian`, gradesimplified))
+
+wht_grd <- sch_rpt %>%
+    ggplot() +
+    geom_joy(aes(`% white`, gradesimplified))
+
+sch_rpt <- sch_rpt %>%
+  mutate_at(vars(`average sat score_1`), as.double)
+
+hsp_sat <- sch_rpt %>%
+    ggplot() +
+    geom_line(aes(`% hispanic`, `average sat score_1`))
+
+blk_sat <- sch_rpt %>%
+    ggplot() +
+    geom_line(aes(`% black`, `average sat score_1`))
+
+asn_sat <- sch_rpt %>%
+    ggplot() +
+    geom_line(aes(`% asian`, `average sat score_1`))
+
+wht_sat <- sch_rpt %>%
+    ggplot() +
+    geom_line(aes(`% white`, `average sat score_1`))
+
+# plot_grid(
+#   # blk, blk2, hsp, hsp2,
+#   hsp_grd, hsp_sat, blk_grd, blk_sat,
+#   asn_grd, asn_sat, wht_grd, wht_sat,
+#   nrow = 4, ncol = 2
+#   )
+
+grd <- sch_rpt %>%
+  select(`% asian`:`% hispanic`, gradesimplified) %>%
+  gather(... = -gradesimplified) %>%
+  ggplot() +
+  geom_joy2(aes(value, gradesimplified)) +
+  facet_wrap(~key, ncol = 1)
+
+sat <- sch_rpt %>%
+  mutate_at(vars(`average sat score_1`), as.double) %>%
+  select(`% asian`:`% hispanic`, `average sat score_1`) %>%
+  mutate(sat = cut_width(`average sat score_1`, 300)) %>%
+  select(-`average sat score_1`) %>%
+  gather(... = -sat) %>%
+  ggplot() +
+  geom_joy2(aes(value, sat)) +
+  facet_wrap(~key, ncol = 1)
+
+plot_grid(grd, sat, ncol = 2)
+```

@@ -1,0 +1,337 @@
+```{r setup_std, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(plyr)
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+library(extrafont)
+loadfonts("win")
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- R_Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+old_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- knitr_Options_Setup
+orig_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Hooks_Setup
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+
+
+
+# ---- Extra_Function_Setup
+# -- Control how percentages are formatted
+my_percent <- function(x, i = 1) {
+  sprintf(sprintf("%s%s%s", "%.", i, "f%%"), x * 100)
+}
+
+# -- Convert listified JSON data into a nested tibble
+to_tibble <- function(x) {
+    isdf <- unname(which(unlist(map(x, is.data.frame))))
+    isndf <- seq_along(x)[-isdf]
+    tbbl <- add_column(bind_cols(x[isndf]), x[isdf])
+    names(tbbl)[isdf] <- names(x)[isdf]
+    names(tbbl)[isndf] <- names(x)[isndf]
+    return(tbbl)
+}
+
+# -- Row bind a list into a tibble
+bind_list_rows <- function(list_rows) {
+    tibble::as_tibble(data.table::rbindlist(list_rows))
+}
+
+# -- Union a list of tibbles into a single tibble
+bind_list_tibbles <- function(list_tibbles){
+  purrr::reduce(list_tibbles, function(...) dplyr::union_all(...))
+}
+
+# -- Source and return only the .$value
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+# -- Capitalize
+capitalize <- function(string) {
+  substr(string, 1, 1) <- toupper(substr(string, 1, 1))
+  string
+}
+
+# -- Default theme
+theme_default <- function(text_size = 16) {
+  theme_minimal() +
+    theme(panel.grid.minor = element_blank(),
+                text = element_text(family = "Open Sans",
+                                    size = text_size),
+                complete = TRUE)
+}
+
+  # ---- Color_Setup ----
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+# my_verylight_red <- 
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_lightgreen <- "#198f5a"
+my_lightgreen_2 <- "#329b6c"
+my_lightgreen_3 <- "#4ca87e"
+my_lightgreen_4 <- "#66b491"
+my_verylight_green   <- "#e5f2ec"
+my_verylight_green_2 <- "#cce6da"
+my_verylight_green_3 <- "#b2d9c8"
+my_green      <- "#008348"
+my_green_2    <- "#007540"
+my_green_3    <- "#006839"
+my_green_4    <- "#005b32"
+my_green_5    <- "#004e2b"
+my_green_6    <- "#004124"
+my_darkgreen   <- "#00341c"
+my_darkgreen_2 <- "#002715"
+my_darkgreen_3 <- "#001a0e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+
+
+```
+
+```{r}
+# Create table
+batting <- Lahman::Batting %>%
+  left_join(Lahman::Master %>%
+                select(playerID, nameFirst, nameLast),
+            by = "playerID") %>%
+  mutate(name = paste(nameFirst, nameLast)) %>%
+  select(-nameFirst, -nameLast) %>%
+  as_tibble()
+
+pitching <- Lahman::Pitching %>%
+  left_join(Lahman::Master %>%
+                select(playerID, nameFirst, nameLast),
+            by = "playerID") %>%
+  mutate(name = paste(nameFirst, nameLast)) %>%
+  select(-nameFirst, -nameLast) %>%
+  as_tibble()
+
+# Players who hit 30 or more HR's
+# while batting under .200
+batting %>% 
+    group_by(name, playerID, yearID) %>%
+    summarize(BA = round(sum(H) / sum(AB), 3),
+              HR = sum(HR),
+              teams = n()) %>%
+    ungroup() %>%
+    filter(HR >= 30 & BA < 0.200)
+
+
+# Players who hit 30 or more HR's
+# while batting under .250
+batting %>% 
+    group_by(name, playerID, yearID) %>%
+    summarize(BA = round(sum(H) / sum(AB), 3),
+              HR = sum(HR),
+              teams = n()) %>%
+    ungroup() %>%
+    filter(HR >= 30 & BA < 0.250) %>%
+    arrange(BA)
+
+
+# Players who hit 30 or more HR's
+# while playing for more than one
+# team during the season the most
+batting %>% 
+    group_by(name, playerID, yearID) %>%
+    summarize(BA = round(sum(H) / sum(AB), 3),
+              HR = sum(HR),
+              teams = n()) %>%
+    ungroup() %>%
+    filter(HR >= 30 & teams > 1) %>%
+    arrange(desc(teams)) %>%
+    count(name, playerID) %>%
+    filter(n == max(n))
+
+# Player who hit 30 or more HR's
+# while playing for the most
+# teams during the season.
+batting %>% 
+    group_by(name, playerID, yearID) %>%
+    summarize(BA = round(sum(H) / sum(AB), 3),
+              HR = sum(HR),
+              teams = n()) %>%
+    ungroup() %>%
+    filter(HR >= 30 & teams > 1) %>%
+    filter(teams == max(teams))
+```
+
+```{r agg, include=FALSE}
+# -- Batting
+# Summarize all stats
+batting_summary <- batting %>%
+  group_by(name, playerID, yearID) %>%
+  summarize_at(vars(G:GIDP), sum) %>%
+  ungroup()
+
+# Find number of teams each player
+# played for during each season
+batting_summary <- batting_summary %>%
+  left_join(batting %>% 
+              group_by(name, playerID, yearID) %>%
+              summarize(teams = max(stint)),
+            by = c("name", "playerID", "yearID"))
+
+# Calculate BA
+batting_summary <- batting_summary %>%
+  mutate(BA = round(H / AB, 3))
+
+# -- Pitching
+# Summarize all stats
+pitching_summary <- pitching %>%
+  group_by(name, playerID, yearID) %>%
+  summarize_at(vars(W:SO, IBB:GIDP), sum) %>%
+  ungroup()
+
+# Find numbers of teams each player
+# played for during each season
+pitching_summary <- pitching_summary %>%
+  left_join(pitching %>% 
+              group_by(name, playerID, yearID) %>%
+              summarize(teams = max(stint)),
+            by = c("name", "playerID", "yearID"))
+```
+
+```{r plots}
+batting %>% 
+    group_by(name, playerID, yearID) %>%
+    summarize(BA = round(sum(H) / sum(AB), 3),
+              HR = sum(HR),
+              teams = n()) %>%
+    ungroup() %>%
+    filter(HR >= 30) %>%
+    ggplot() +
+    geom_point(aes(BA, HR))
+
+
+batting_summary %>%
+  ggplot() +
+  geom_point(aes(BA, HR), alpha = 1/100) +
+  scale_alpha_continuous(range = c(0.01, 1)) +
+  theme_default()
+
+
+# BA of those who hit 30 or more HR; aggregated points
+batting_summary %>%
+  filter(HR >= 30) %>%
+  group_by(yearID) %>%
+  summarize(HR_sum = sum(HR),
+            HR_avg = mean(HR),
+            BA = round(sum(H) / sum(AB), 3)) %>%
+  ggplot() +
+  geom_point(aes(yearID, BA, size = HR_sum)) +
+  theme_default()
+
+# BA of those who hit 30 or more HR; individual points
+batting_summary %>%
+  filter(HR >= 30) %>%
+  mutate(BA = round(H / AB, 3)) %>%
+  ggplot() +
+  geom_point(aes(yearID, BA), alpha = 1/4) +
+  theme_default()
+
+# Combination of above two
+batting_summary %>%
+    filter(HR >= 30) %>%
+    mutate(BA = round(H / AB, 3)) %>%
+    ggplot() +
+    geom_point(aes(yearID, BA), alpha = 1/4) +
+    geom_line(data = batting_summary %>%
+                   filter(HR >= 30) %>%
+                   group_by(yearID) %>%
+                   summarize(HR_sum = sum(HR),
+                             HR_avg = mean(HR),
+                             BA = round(sum(H) / sum(AB), 3)),
+               aes(yearID, BA), color = my_red, alpha = 1/4, size = 2) +
+    theme_default()
+
+# Percent of H's that were HR's
+batting_summary %>%
+    group_by(Year = yearID) %>%
+    summarize(`HR / H` = sum(HR) / sum(H)) %>%
+    ggplot() +
+    geom_line(aes(Year, `HR / H`), alpha = 1/1.5) +
+    theme_default()
+```
+
+
+```{r per_game_per_year, include=TRUE}
+lahman_games <- Lahman::Teams %>% as_tibble() %>%
+    group_by(yearID) %>%
+    summarize(G = sum(G) / 2)
+
+season <- list()
+
+# Summary of the entire season (season totals)
+season$batting_summary <- batting %>%
+  group_by(yearID) %>%
+  summarize_at(vars(G:GIDP), sum) %>%
+  ungroup()
+
+# H/G and types of hits per G 
+season$batting_summary %>%
+    mutate(H_G = H / G,
+           X1B_G = (H - (HR + X2B + X3B)) / G,
+           X2B_G = X2B / G,
+           X3B_G = X3B / G,
+           HR_G  = HR / G) %>%
+    select(yearID, H_G:HR_G) %>%
+    gather(... = -yearID) %>%
+    ggplot() +
+    geom_line(aes(yearID, value, group = key)) +
+    facet_wrap(~factor(key, levels = c("H_G", "X1B_G", "X2B_G", "X3B_G", "HR_G")), ncol = 5, scales = "free_y")
+```

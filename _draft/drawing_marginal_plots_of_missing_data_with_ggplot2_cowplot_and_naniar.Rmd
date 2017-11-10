@@ -1,0 +1,345 @@
+---
+title  : "Drawing marginal plots of missing data with ggplot2, cowplot, and naniar"
+author : "Luke Smith"
+date   : "2017-09-20"
+tags   : [r, ggplot2, cowplot, naniar, missing data, how-to]
+description: ""
+---
+
+```{r setup_std, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(plyr)
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(grid)
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+library(extrafont)
+loadfonts("win")
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- R_Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+old_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- knitr_Options_Setup
+orig_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Hooks_Setup
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+
+
+
+# ---- Extra_Function_Setup
+# -- Control how percentages are formatted
+my_percent <- function(x, i = 1) {
+  sprintf(sprintf("%s%s%s", "%.", i, "f%%"), x * 100)
+}
+
+# -- Convert listified JSON data into a nested tibble
+to_tibble <- function(x) {
+    isdf <- unname(which(unlist(map(x, is.data.frame))))
+    isndf <- seq_along(x)[-isdf]
+    tbbl <- add_column(bind_cols(x[isndf]), x[isdf])
+    names(tbbl)[isdf] <- names(x)[isdf]
+    names(tbbl)[isndf] <- names(x)[isndf]
+    return(tbbl)
+}
+
+# -- Row bind a list into a tibble
+bind_list_rows <- function(list_rows) {
+    tibble::as_tibble(data.table::rbindlist(list_rows))
+}
+
+# -- Union a list of tibbles into a single tibble
+bind_list_tibbles <- function(list_tibbles){
+  purrr::reduce(list_tibbles, function(...) dplyr::union_all(...))
+}
+
+# -- Source and return only the .$value
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+# -- Capitalize
+capitalize <- function(string) {
+  substr(string, 1, 1) <- toupper(substr(string, 1, 1))
+  string
+}
+
+# -- Default theme
+theme_default <- function(text_size = 16) {
+  theme_minimal() +
+    theme(panel.grid.minor = element_blank(),
+                text = element_text(family = "Open Sans",
+                                    size = text_size),
+                complete = TRUE)
+}
+
+  # ---- Color_Setup ----
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+# my_verylight_red <- 
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_lightgreen <- "#198f5a"
+my_lightgreen_2 <- "#329b6c"
+my_lightgreen_3 <- "#4ca87e"
+my_lightgreen_4 <- "#66b491"
+my_verylight_green   <- "#e5f2ec"
+my_verylight_green_2 <- "#cce6da"
+my_verylight_green_3 <- "#b2d9c8"
+my_green      <- "#008348"
+my_green_2    <- "#007540"
+my_green_3    <- "#006839"
+my_green_4    <- "#005b32"
+my_green_5    <- "#004e2b"
+my_green_6    <- "#004124"
+my_darkgreen   <- "#00341c"
+my_darkgreen_2 <- "#002715"
+my_darkgreen_3 <- "#001a0e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+
+
+```
+
+```{r setup_extra, include=FALSE}
+library(cowplot)
+library(naniar)
+```
+
+
+Overall technique is to use `naniar::bind_shadow()` to fill/color distribution plots of missing data. The filling/coloring is based on the wheather the other axis' data is missing.
+
+## Two continuous variables
+For this example, we will be looking at `health_poor` vs `drink_average` data in a point plot.
+
+Start with the main point plot.
+
+```{r, echo=TRUE}
+ap <- airquality %>%
+    ggplot() +
+    geom_point(aes(Ozone, Solar.R))
+```
+
+Draw the axis distribution plots of of each variable with a fill color corresponding to whether the other variable is missing.
+
+```{r, echo=TRUE}
+xdens <- ap %>%
+    axis_canvas("x") +
+    geom_density(data = bind_shadow(airquality), aes(Ozone, fill = Solar.R_NA), alpha = 0.7) +
+  scale_fill_manual(values = c(my_blue, my_red))
+
+ydens <- ap %>%
+    axis_canvas("y", coord_flip = TRUE) +
+    geom_density(data = bind_shadow(airquality), aes(Solar.R, fill = Ozone_NA), alpha = 0.7) +
+    coord_flip() +
+  scale_fill_manual(values = c(my_blue, my_red))
+```
+
+Add the two density plots to the main plot, as marginal plots.
+
+```{r, echo=TRUE}
+p1 <- ap %>%
+    insert_xaxis_grob(xdens, grid::unit(0.2, "null"), position = "top")
+
+p2 <- p1 %>%
+    insert_yaxis_grob(ydens, grid::unit(0.2, "null"), position = "right")
+
+ggdraw(p2)
+```
+
+Here is what it would look like with histograms.
+
+```{r}
+xhist <- ap %>%
+    axis_canvas("x") +
+    geom_histogram(data = bind_shadow(airquality), aes(Ozone, fill = Solar.R_NA), alpha = 0.7, binwidth = 10) +
+  scale_fill_manual(values = c(my_blue, my_red))
+
+yhist <- ap %>%
+    axis_canvas("y", coord_flip = TRUE) +
+    geom_histogram(data = bind_shadow(airquality), aes(Solar.R, fill = Ozone_NA), alpha = 0.7, binwidth = 25) +
+    coord_flip() +
+  scale_fill_manual(values = c(my_blue, my_red))
+```
+
+
+```{r}
+p1 <- ap %>%
+    insert_xaxis_grob(xhist, grid::unit(0.2, "null"), position = "top")
+
+p2 <- p1 %>%
+    insert_yaxis_grob(yhist, grid::unit(0.2, "null"), position = "right")
+
+ggdraw(p2)
+```
+
+
+
+## Two continuous variables and one categorical variable
+```{r, echo=TRUE}
+rp <- riskfactors %>%
+    ggplot() +
+    geom_point(aes(bmi, age))
+
+xdens <- rp %>%
+  axis_canvas("x") +
+  geom_density(data = bind_shadow(riskfactors),
+               aes(bmi, fill = smoke_days),
+               alpha = 0.7)
+
+ydens <- rp %>%
+  axis_canvas("y", coord_flip = TRUE) +
+  geom_density(data = bind_shadow(riskfactors),
+               aes(age, fill = smoke_days),
+               alpha = 0.7) +
+  coord_flip()
+
+p1 <- rp %>%
+  insert_xaxis_grob(xdens, grid::unit(0.2, "null"), position = "top")
+
+p2 <- p1 %>%
+  insert_yaxis_grob(ydens, grid::unit(0.2, "null"), position = "right")
+
+ggdraw(p2)
+```
+
+## Diverging categorical data
+```{r}
+rp2_data <- riskfactors %>%
+    dplyr::group_by(income) %>%
+    dplyr::summarise(drink_days = mean(drink_days, na.rm = TRUE))
+
+rp2_data_2 <- group_by(riskfactors, income, marital) %>%
+    dplyr::summarise(drink_days = mean(drink_days, na.rm = TRUE), n = n())
+
+rp2 <- rp2_data %>%
+  ggplot() +
+  geom_col(aes(income, drink_days))
+
+xdot <- rp2 %>%
+    axis_canvas("x") +
+    geom_point(data = rp2_data, aes(as.integer(income), 1, size = n), pch = 21) +
+    scale_size_continuous(range = c(10, 20))
+
+rp2 %>%
+    insert_xaxis_grob(xdot) %>%
+    ggdraw()
+
+# Pies
+
+riskfactors %>%
+    ggplot() +
+    geom_bar(aes(x = factor(1), fill = marital), position = "fill", width = -1) +
+    facet_grid(. ~ income) +
+    coord_polar(theta = "y") +
+    guides(fill = FALSE) +
+    theme(axis.text = element_blank())
+```
+
+## Maps
+
+```{r}
+load("~/R/misc/maps/states_map.RData")
+wells <- st_read("~/R/misc/oil/North_Dakota/shape/Wells.shp") %>%
+  st_transform(4269)
+
+wells_coords <- wells %>% st_coordinates() %>% as.data.frame()
+wells2 <- wells %>% bind_cols(wells_coords)
+
+sfp <- states_map %>%
+  filter(STATE_ABBR == "ND") %>%
+  ggplot() +
+  geom_sf(fill = "#00000000") +
+  geom_point(data = wells2 %>%
+               mutate(newer = year(spud_date) >= 2008),
+             aes(X, Y),
+             size = 0.7, alpha = 0.1) +
+  scale_x_continuous(minor_breaks = NULL) +
+  scale_y_continuous(minor_breaks = NULL) +
+  theme_void() +
+  coord_sf(datum = st_crs(4269))
+
+lgnd <- ggplot() +
+  geom_density(data = wells2 %>%
+                 mutate(newer = year(spud_date) >= 2008),
+               aes(X, fill = newer),
+               alpha = 0.7) +
+  scale_fill_manual(values = c(my_red, my_blue), na.value = "gray50")
+
+lg <- get_legend(lgnd)
+
+sfx <- sfp %>%
+  axis_canvas("x") +
+  geom_density(data = wells2 %>%
+                 mutate(newer = year(spud_date) >= 2008),
+               aes(X, fill = newer),
+               alpha = 0.7) +
+  scale_fill_manual(values = c(my_red, my_blue), na.value = "gray50")
+
+sfy <- sfp %>%
+  axis_canvas("y", coord_flip = TRUE) +
+  geom_density(data = wells2 %>%
+                 mutate(newer = year(spud_date) >= 2010),
+               aes(Y, fill = newer),
+               alpha = 0.7) +
+  coord_flip() +
+    scale_fill_manual(values = c(my_red, my_blue), na.value = "gray50")
+
+p1 <- sfp %>%
+  insert_xaxis_grob(sfx, position = "top")
+
+p2 <- p1 %>%
+  insert_yaxis_grob(sfy, position = "right")
+
+ggdraw(p2)
+```

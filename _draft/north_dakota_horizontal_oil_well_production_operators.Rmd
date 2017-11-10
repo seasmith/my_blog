@@ -1,0 +1,207 @@
+---
+title  : "North Dakota Horizontal Oil Well Production: Operators"
+author : "Luke Smith"
+date   : "2017-08-17"
+tags   : [r, oil and gas]
+description: ""
+---
+
+These 10 operators of horizontal oil wells in North Dakota account for
+`r (nrow(sp_prod_10) / nrow(sp_prod)) %>% my_percent()`
+of oil production from horizontal wells.
+
+```{r}
+source("~/R/misc/oil/North_Dakota/analysis_production.R")
+
+library(extrafont)
+loadfonts("win")
+
+# Read and transform
+twns <- st_read("~/R/misc/oil/North_Dakota/shape/Townships.shp") %>%
+  st_transform("+init=epsg:4326")
+
+# Read and transform
+wells <- st_read("~/R/misc/oil/North_Dakota/shape/Wells.shp") %>%
+  st_transform("+init=epsg:4326")
+
+# Convert api_no to character
+wells <- wells %>%
+  mutate(api_no = stringi::stri_replace_all(as.character(api_no), "", regex = "-"),
+         api = as.character(api))
+
+# Convert API_No to character just like wells
+prod <- prod %>% mutate(API_No = as.character(API_No))
+
+rm_wildcats <- prod %>% anti_join(of, by = c("Field" = "name"))
+
+prod <- prod %>% anti_join(rm_wildcats, "Field")
+
+#!!!
+# - prod$Well_Name == "12X-5" and wells$well_name == "12X-5"
+# -   have the same File_No/file_no but different API's.
+kp_stragglers <- prod %>% anti_join(wells, by = c("API_No" = "api"))
+
+kp_stragglers <- kp_stragglers %>%
+  inner_join(wells %>%
+               mutate_at(vars(file_no), as.integer),
+             by = c("File_No" = "file_no")) %>%
+  select(-api_no) %>%
+  mutate(file_no = File_No) %>%
+  st_sf()
+
+class(kp_stragglers) <- c("sf", "data.frame")
+
+prod <- prod %>%
+  inner_join(wells, by = c("API_No" = "api_no")) %>%
+  st_sf()
+
+class(prod) <- c("sf", "data.frame")
+
+prod <- Reduce(rbind, list(prod, kp_stragglers))
+
+sp_prod <- prod$geometry %>%
+  as("Spatial") %>%
+  `@`("coords") %>%
+  as_tibble() %>%
+  bind_cols(as_tibble(prod), .)
+
+# Plot
+# nd %>%
+#   ggplot() +
+#   geom_sf(fill = "#00000000") +
+#   geom_sf(data = of_2, fill = "#00000000") +
+#   geom_sf(data = prod,
+#           mapping = aes(color = Cum_Oil),
+#           shape = ".") +
+#   scale_color_viridis(option = "magma") +
+#   theme_void()
+
+nd %>%
+  ggplot() +
+  geom_sf(fill = "gray70") +
+  geom_sf(data = of_2, fill = "#00000000") +
+  geom_point(data = sp_prod,
+             mapping = aes(x = coords.x1, y = coords.x2, color = Cum_Oil),
+             size = 0.1) +
+  geom_sf(data = bakken_elv,
+          color = "white",
+          alpha = 1/10,
+          size = 0.1) +
+  scale_color_viridis(option = "magma") +
+  theme_void()
+
+
+# nd %>%
+#   ggplot() +
+#   geom_sf(fill = "gray50") +
+#   geom_sf(data = of_2, fill = "gray30") +
+#   geom_sf(data = prod %>%
+#             inner_join(wells, by = c("API_No" = "api_no")) %>%
+#             st_sf(),
+#           mapping = aes(color = Cum_Oil),
+#           shape = ".") +
+#   geom_sf(data = bakken_elv,
+#           color = "white",
+#           alpha = 0.5,
+#           size = 0.1) +
+#   viridis::scale_color_viridis(option = "magma") +
+#   theme_void()
+
+op_10 <- sp_prod %>%
+  count(operator) %>%
+  arrange(desc(n)) %>%
+  filter(min_rank(-n) <= 10)
+
+op_10$operator <- factor(op_10$operator, levels = op_10$operator)
+
+sp_prod_10 <- sp_prod %>%
+  semi_join(op_10, by = "operator") %>%
+  mutate(operator = as.character(operator),
+         operator = factor(operator, levels = as.character(op_10$operator)))
+
+sp_prod_10_meta <- sp_prod_10 %>%
+  group_by(operator) %>%
+  summarize(Oil = sum(Cum_Oil),
+            Wells = n(),
+            Oil_per_Well = Oil / Wells)
+
+sp_prod_labels <- sp_prod_10_meta %>%
+  {paste0(stri_trans_totitle(.$operator),
+          "\n",
+          "Oil Production: ", round(.$Oil / 1000000, 0), " million bbl",
+          "\n",
+          "Wells: ", .$Wells,
+          "\n",
+          "Oil per well: ", round(.$Oil_per_Well / 1000, 0), " thousand bbl")}
+
+names(sp_prod_labels) <- sp_prod_10_meta$operator
+
+nd %>%
+  ggplot() +
+  # geom_sf(fill = "gray70") +
+  geom_sf(data = of_2, fill = "gray70") +
+  geom_point(data = sp_prod_10,
+             mapping = aes(x = coords.x1, y = coords.x2, color = Cum_Oil),
+             size = 0.75) +
+  geom_sf(data = bakken_elv,
+          color = "white",
+          alpha = 1/10,
+          size = 0.1) +
+  facet_wrap(~operator,
+             labeller = labeller(.default = label_wrap_gen(20),
+                                 operator = sp_prod_labels)) +
+  scale_color_viridis(option = "magma") +
+  theme_void() +
+  theme(text = element_text(family = "Lato", size = 14))
+
+sp_prod_10 %>%
+  ggplot() +
+  geom_histogram(aes(Cum_Oil)) +
+  facet_wrap(~operator, ncol = 1) +
+  theme_minimal() +
+  theme(panel.grid = element_blank())
+```
+
+```{r plot_coord_hist}
+# Lat well hist
+lat_hist <- sp_prod_10 %>%
+    ggplot() +
+    geom_histogram(aes(coords.x1)) +
+    facet_wrap(~operator, labeller = label_wrap_gen(15)) +
+    theme_minimal() +
+    theme(panel.grid = element_blank(),
+          text = element_text(family = "Lato", size = 14))
+
+# Lon well hist
+lon_hist <- sp_prod_10 %>%
+    ggplot() +
+    geom_histogram(aes(coords.x2)) +
+    facet_wrap(~operator, labeller = label_wrap_gen(15)) +
+    theme_minimal() +
+    theme(panel.grid = element_blank(),
+          text = element_text(family = "Lato", size = 14))
+```
+
+```{r plot_coord_dens}
+lat_dens <- sp_prod_10 %>%
+    ggplot() +
+    geom_density(aes(coords.x1)) +
+    geom_density(data = sp_prod_10 %>% select(-operator),
+                 mapping = aes(coords.x1),
+                 fill = "#00000000") +
+    facet_wrap(~operator, labeller = label_wrap_gen(15)) +
+    theme_minimal() +
+    theme(panel.grid = element_blank(),
+          text = element_text(family = "Lato", size = 14))
+
+lon_dens <- sp_prod_10 %>%
+    ggplot() +
+    geom_density(aes(coords.x2)) +
+    geom_density(data = sp_prod_10 %>% select(-operator),
+                 mapping = aes(coords.x2),
+                 fill = "#00000000") +
+    facet_wrap(~operator, labeller = label_wrap_gen(15)) +
+    theme_minimal() +
+    theme(panel.grid = element_blank(),
+          text = element_text(family = "Lato", size = 14))
+```

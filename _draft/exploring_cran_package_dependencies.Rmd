@@ -1,0 +1,241 @@
+```{r setup_std, include=FALSE}
+# ---- Library_Tidyverse_Setup
+library(plyr)
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- R_Options_Setup
+orig_scipen <- getOption("scipen")
+options(scipen = 100)
+
+orig_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- knitr_Options_Setup
+orig_inline <- knit_hooks$get("inline")
+orig_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Hooks_Setup
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+
+
+
+# ---- Extra_Function_Setup
+# -- Control how percentages are formatted
+my_percent <- function(x, i = 1) {
+  sprintf(sprintf("%s%s%s", "%.", i, "f%%"), x * 100)
+}
+
+# -- Convert listified JSON data into a nested tibble
+to_tibble <- function(x) {
+  isdf  <- unname(which(unlist(map(x, is.data.frame))))
+  isndf <- seq_along(x)[-isdf]
+    
+  tbbl <- add_column(bind_cols(x[isndf]), x[isdf])
+    
+  names(tbbl)[isdf] <- names(x)[isdf]
+  names(tbbl)[isndf] <- names(x)[isndf]
+    
+  return(tbbl)
+}
+
+# -- Row bind a list into a tibble
+bind_list_rows <- function(list_rows) {
+  tibble::as_tibble(data.table::rbindlist(list_rows))
+}
+
+# -- Source and return only the .$value
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+
+# ---- Plot_Settings 
+# -- Theme
+theme_default <- function(text_size = 16) {
+  theme_minimal() +
+    theme(panel.grid.minor = element_blank(),
+                text = element_text(family = "Open Sans",
+                                    size = text_size),
+                complete = TRUE)
+}
+
+theme_no_grid <- function(text_size = 16) {
+  theme_minimal() +
+    theme(panel.grid = element_blank(),
+                text = element_text(family = "Open Sans",
+                                    size = text_size),
+                complete = TRUE)
+}
+
+# ---- Color_Setup ----
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+# my_verylight_red <- 
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_lightgreen <- "#198f5a"
+my_lightgreen_2 <- "#329b6c"
+my_lightgreen_3 <- "#4ca87e"
+my_lightgreen_4 <- "#66b491"
+my_verylight_green   <- "#e5f2ec"
+my_verylight_green_2 <- "#cce6da"
+my_verylight_green_3 <- "#b2d9c8"
+my_green      <- "#008348"
+my_green_2    <- "#007540"
+my_green_3    <- "#006839"
+my_green_4    <- "#005b32"
+my_green_5    <- "#004e2b"
+my_green_6    <- "#004124"
+my_darkgreen   <- "#00341c"
+my_darkgreen_2 <- "#002715"
+my_darkgreen_3 <- "#001a0e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+```
+
+```{r setup_extra, include=FALSE}
+library(igraph)
+library(ggraph)
+```
+
+```{r}
+# Import
+tryCatch({
+    cran <- available.packages() %>% as_tibble()
+    }, warning = function(w) {
+        cran <- available.packages() %>% as_tibble()
+    }, error = function(e) {
+        cran <- available.packages() %>% as_tibble()
+    })
+
+# Clean
+cran$Depends <- cran$Depends %>% stri_trim_both()
+
+# Count number of dependencies of each package
+cran$dep_num <- cran$Depends %>%
+    stri_split(regex = ",") %>%
+    map(function(x) sum(!grepl("^R \\(|^R\\(", x))) %>%
+    unlist()
+
+
+cran$dep_pkgs <- cran$Depends %>%
+    stri_split(regex = ",") %>%
+    map(stri_trim_both) %>%
+    map(function(x) x[!stri_detect(x, regex = "^R \\(|^R\\(")])
+
+cran$dep_pkgs <- cran$dep_pkgs %>%
+  map(function(x) if (length(x) == 0) x <- NA else x)
+
+cran_wv <- cran # wv = With (package) Versions
+
+cran$dep_pkgs <- cran$dep_pkgs %>%
+    map(function(x) stri_replace_all(x, "", regex = "\\s\\(.*| \\(.*|\\(.*")) %>%
+    map(stri_trim_both)
+
+pkg_deps <- cran %>%
+  {Map(function(Package, dep_pkgs) tibble(from = rep(Package, length(dep_pkgs)),
+                                          to = dep_pkgs),
+       Package = .$Package,
+       dep_pkgs = .$dep_pkgs)} %>%
+  bind_list_rows() %>%
+  mutate(is_na = is.na(to))#%>%
+    # filter(!is.na(to))  # remove packages with no dependencies
+```
+
+
+```{r data_frame_to_graph}
+# w/ NA's
+graph_1 <- pkg_deps %>%
+  select(-is_na) %>%
+  graph_from_data_frame(directed = TRUE)
+
+pd_summ <- pkg_deps %>% distinct(from, is_na)
+
+V(graph_1)$is_na <- pkg_deps$is_na
+
+# w/o NA's
+graph_2 <- pkg_deps %>%
+  filter(!is.na(to)) %>%
+  graph_from_data_frame(directed = TRUE)
+
+```
+
+
+```{r plots}
+# Hairball
+hairball_1 <- graph_1 %>%
+    ggraph(layout = "linear", circular = TRUE) +
+    geom_edge_arc(alpha = 0.1) +
+    coord_fixed() +
+    theme_graph() +
+    theme(text = element_text(family = "Open Sans"))
+
+hairball_2 <- graph_2 %>%
+    ggraph(layout = "linear", circular = TRUE) +
+    geom_edge_arc(alpha = 0.1) +
+    coord_fixed() +
+    theme_graph() +
+    theme(text = element_text(family = "Open Sans"))
+
+
+# Nicely
+nicely_1 <- graph_1 %>%
+    ggraph() +
+    geom_edge_link(alpha = 0.1) +
+    geom_node_point(alpha = 0.33) +
+    scale_color_manual(values = c(my_red, "black")) +
+    theme_graph() +
+    theme(text = element_text(family = "Open Sans"))
+
+nicely_2 <- graph_2 %>%
+    ggraph() +
+    geom_edge_link(alpha = 0.1) +
+    geom_node_point(alpha = 0.33) +
+    scale_color_manual(values = c(my_red, "black")) +
+    theme_graph() +
+    theme(text = element_text(family = "Open Sans"))
+```

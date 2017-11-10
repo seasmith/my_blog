@@ -1,0 +1,248 @@
+---
+title       : "Revisiting the ENSO and LTTA plots"
+date        : "8-20-2017"
+author      : "Luke Smith"
+description : "Taking another look at the El Niño Southern Oscillation and the Lower-Troposhperic Temperature Anomaly data sets."
+tags        : [r, graphics, ggplot2, enso, temperature]
+---
+
+```{r setup_std, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(plyr)
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+old_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- Hooks_Setup
+orig_inline <- knit_hooks$get("inline")
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Inline_Function_Setup
+# Provide a default value for a given condition
+il_condition_default <- function(x, cond, ret) {
+  
+  if (eval(substitute(cond)) == TRUE) return(ret) else return(x)
+  
+}
+
+# Rearrange the numeric base
+il_num_base <- function(x, current_base = 0, new_base = 0) {
+  
+  new_power <- current_base - new_base
+  
+  return(x * 10^new_power)
+  
+}
+
+
+
+# ---- Extra_Function_Setup
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+
+
+# ---- Color_Setup
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_green      <- "#008348"
+my_green2     <- "#1e6545"
+my_lightgreen <- "#00be68"
+my_darkgreen  <- "#00371e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+
+```
+
+
+```{r setup_extra, include=FALSE}
+library(zoo)
+```
+
+
+```{r import_data, include=FALSE, cache=TRUE}
+# ENSO Data ---------------------------------------------------------------
+
+# - Download data and extract table.
+url <- "http://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ensoyears.shtml"
+enso.orig <- url %>% 
+  read_html() %>% 
+  html_nodes("table") %>%
+  .[[8]] %>%
+  html_table(header = TRUE) %>%
+  filter(Year != "Year") %>%
+  as_tibble()
+
+# Lower-Troposheric Temperatue Anomaly Data -------------------------------
+
+# - Download data and extract HTML.
+url2 <- "http://www.nsstc.uah.edu/data/msu/v6.0/tlt/uahncdc_lt_6.0.txt"
+ltta <- url2 %>%
+  read.fwf(widths = c(5, 3, 6)) %>%
+  as_tibble()
+
+```
+
+
+```{r clean_data, include=FALSE}
+# ENSO Data ---------------------------------------------------------------
+
+# - Convert three-month central moving average labels to numeric Month-Date.
+enso <- enso.orig %>% 
+  rename("01-01" = DJF, "02-01" = JFM, "03-01" = FMA,
+         "04-01" = MAM, "05-01" = AMJ, "06-01" = MJJ,
+         "07-01" = JJA, "08-01" = JAS, "09-01" = ASO,
+         "10-01" = SON, "11-01" = OND, "12-01" = NDJ)
+
+# - Gather and unite data into two columns: Date, SSTA.
+enso <- enso %>%
+  gather(mon, SSTA, -Year) %>%
+  unite("Date", c(Year, mon), sep = "-") %>%
+  mutate(Date = as.Date(Date)) %>%
+  arrange(Date)
+
+
+
+# - Add headers.
+names(ltta) <- c("Year", "Mo", "LTTA")
+
+# - Remove leading and trailing white spaces.
+ltta <- ltta %>%
+  mutate(Year = stri_trim(Year),
+         Mo   = stri_trim(Mo))
+
+# - Remove unecessary first line.
+ltta <- ltta[-1, ]
+
+# - Remove miscellaneous text from the bottom of the table.
+ltta <- ltta$Year %>%
+  stri_trim() %>%
+  `==`("Year") %>%
+  which() %>%
+  .[[1]] %>%
+  `:`(length(ltta$Year)) %>%
+  `-`() %>%
+  ltta[., ]
+
+# - Combine columns and convert to date.
+# - Convert LTTA to numeric (from factor).
+ltta <- ltta %>%
+  unite("Date", c(Year, Mo), sep = "-") %>%
+  mutate(Date  = as.Date(as.yearmon(Date)),
+         LTTA = as.numeric(as.character(LTTA)))
+```
+
+
+```{r merge_data, include=FALSE}
+# Merge -------------------------------------------------------------------
+
+# - Merge the two datasets.
+gccd <- ltta %>%
+  inner_join(enso, by = "Date") %>%
+  filter(nzchar(SSTA)) %>%
+  mutate(SSTA = as.numeric(SSTA))
+```
+
+
+```{r eda, include=FALSE}
+gccd %>% mutate(SSTA = rollmean(SSTA, 6, fill = NA, align = "right"),
+                LTTA = rollmean(LTTA, 6, fill = NA, align = "right"),
+                SSTA = lag(SSTA, 6)) %>%
+    filter(complete.cases(.)) %>%
+    ggplot() +
+    geom_point(aes(SSTA, LTTA, color = Date)) +
+    facet_wrap(~cut_interval(Date, 10))
+
+gccd %>%
+    gather(... = -Date) %>%
+    ggplot() +
+    geom_line(aes(Date, value, color = key)) +
+    facet_wrap(~key, scales = "free_y")
+```
+
+
+```{r import_data_2, include=FALSE}
+# SOI ---------------------------------------------------------------------
+
+url3  <- "http://www.cpc.ncep.noaa.gov/data/indices/soi"
+
+lines <- read_lines(url3)
+lines2read <- lines[4:71]
+
+lines2read <- lines2read %>% stri_replace_all(",", regex = "\\s+")
+lines2read <- lines2read %>% stri_replace_all(",-999.9", regex = "-999.9")
+
+lines2read[1] <- lines2read[1] %>% stri_replace("", regex = ",$")
+
+soi <- lines2read %>%
+  stri_join("\n", collapse = "") %>%
+  read_csv(na = c("-999.9"))
+
+# ESOI --------------------------------------------------------------------
+
+url4 <- "http://www.cpc.ncep.noaa.gov/data/indices/rindo_slpa.for"
+esoi <- read_fwf(url4, fwf_empty(url4), na = c("999.9"))
+
+
+names(esoi) <- names(soi)
+```
+
+```{r clean_data_2, include=FALSE}
+
+```

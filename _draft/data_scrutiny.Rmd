@@ -1,0 +1,48 @@
+---
+title  : "How to guard against errors and unmet expectations in data and data filters"
+author : "Luke Smith"
+date   : ""
+tags   : []
+description: ""
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : ""
+  description : ""
+  image       : ""
+og :
+  image : ""
+---
+
+
+```{r ideas}
+# ----
+# Variable miscues
+# ----
+#
+#   * Mispelling of variable name
+#       * Is there a string function to guess what someone may have ment if no #         such name exists (i.e. a user typing `untis` instead of `units`)
+#
+#   * 
+#
+
+
+# ----
+# Unmet data expectations
+# ----
+#
+#   * Data does not span an expected range
+#
+#   * Data does not include a value for every possible value in a range
+#       * How to check that every category or numeric range has some data
+#         (i.e. data that spans 24-hrs does not include data points for 2 am
+#         or 4 pm)
+#
+#   * Numeric data contains no non-numeric characters (does not contain
+#     string characters)
+#       * grepl("[^0-9+\\.0-9+]", var) = numeric
+#       * grepl("[^0-9+]", var) = integer
+#       * grepl("^[[:digit:]]+$|^[[:digit:]]+\\.[[:digit:]]+$", var) = both
+#       * Check that above values are also not NA or Inf
+```

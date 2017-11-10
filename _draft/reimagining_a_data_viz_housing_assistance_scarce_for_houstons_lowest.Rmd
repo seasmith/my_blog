@@ -1,0 +1,232 @@
+```{r setup_std, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(plyr)
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+old_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- Hooks_Setup
+orig_inline <- knit_hooks$get("inline")
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Inline_Function_Setup
+# Provide a default value for a given condition
+il_condition_default <- function(x, cond, ret) {
+  
+  if (eval(substitute(cond)) == TRUE) return(ret) else return(x)
+  
+}
+
+# Rearrange the numeric base
+il_num_base <- function(x, current_base = 0, new_base = 0) {
+  
+  new_power <- current_base - new_base
+  
+  return(x * 10^new_power)
+  
+}
+
+
+
+# ---- Extra_Function_Setup
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+
+
+# ---- Color_Setup
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_green      <- "#008348"
+my_green2     <- "#1e6545"
+my_lightgreen <- "#00be68"
+my_darkgreen  <- "#00371e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+
+```
+
+```{r import_data}
+# original article: http://www.houstonchronicle.com/news/politics/houston/article/Housing-assistance-scarce-for-Houston-s-lowest-11745872.php
+
+# Data copied and pasted from: https://www.huduser.gov/portal/sites/default/files/pdf/Worst-Case-Housing-Needs.pdf
+
+x_list <- list(c("2015 0–50%", "All", "Incomes", "Atlanta-Sandy Springs-Roswell, GA", 
+"Total households (thousands) 259 729", "Unassisted with severe problems 127", 
+"Unassisted with nonsevere problems only 52", "Unassisted with no problems 30", 
+"Assisted 51", "Boston-Cambridge-Newton, MA-NH", "Total households (thousands) 300 708", 
+"Unassisted with severe problems 93", "Unassisted with nonsevere problems only 41", 
+"Unassisted with no problems 20", "Assisted 146", "Chicago-Naperville-Elgin, IL-IN-WI", 
+"Total households (thousands) 567 1,289", "Unassisted with severe problems 242", 
+"Unassisted with nonsevere problems only 112", "Unassisted with no problems 57", 
+"Assisted 157", "Dallas-Fort Worth-Arlington, TX", "Total households (thousands) 365 1,019", 
+"Unassisted with severe problems 177", "Unassisted with nonsevere problems only 112", 
+"Unassisted with no problems 22", "Assisted 54", "Detroit-Warren-Dearborn, MI", 
+"Total households (thousands) 251 524", "Unassisted with severe problems 115", 
+"Unassisted with nonsevere problems only 54", "Unassisted with no problems 27", 
+"Assisted 57 "), c("2015 0–50%", "All", "Incomes", "Houston-The Woodlands-Sugar Land, TX", 
+"Total households (thousands) 347 892", "Unassisted with severe problems 159", 
+"Unassisted with nonsevere problems only 101", "Unassisted with no problems 37", 
+"Assisted 50", "Los Angeles-Long Beach-Anaheim, CA", "Total households (thousands) 1,041 2,328", 
+"Unassisted with severe problems 567", "Unassisted with nonsevere problems only 220", 
+"Unassisted with no problems 90", "Assisted 164", "Miami-Fort LauderdaleWest", 
+"Palm Beach, FL", "Total households (thousands) 373 860", "Unassisted with severe problems 227", 
+"Unassisted with nonsevere problems only 43", "Unassisted with no problems 29", 
+"Assisted 73", "New York-Newark-Jersey City, NY-NJ-PA", "Total households (thousands) 1,834 3,705", 
+"Unassisted with severe problems 815", "Unassisted with nonsevere problems only 281", 
+"Unassisted with no problems 174", "Assisted 563", "Philadelphia-Camden-Wilmington,", 
+"PA-NJ-DE-MD", "Total households (thousands) 342 722", "Unassisted with severe problems 145", 
+"Unassisted with nonsevere problems only 74", "Unassisted with no problems 39", 
+"Assisted 85 "), c("2015 0–50%", "All", "Incomes", "Phoenix-Mesa-Scottsdale, AZ", 
+"Total households (thousands) 227 622", "Unassisted with severe problems 124", 
+"Unassisted with nonsevere problems only 63", "Unassisted with no problems 15", 
+"Assisted 26", "Riverside-San Bernardino-Ontario, CA", "Total households (thousands) 215 536", 
+"Unassisted with severe problems 123", "Unassisted with nonsevere problems only 33", 
+"Unassisted with no problems 28", "Assisted 30", "San Francisco-Oakland-Hayward, CA", 
+"Total households (thousands) 287 791", "Unassisted with severe problems 142", 
+"Unassisted with nonsevere problems only 40", "Unassisted with no problems 22", 
+"Assisted 84", "Seattle-Tacoma-Bellevue, WA", "Total households (thousands) 199 604", 
+"Unassisted with severe problems 83", "Unassisted with nonsevere problems only 46", 
+"Unassisted with no problems 17", "Assisted 54", "Washington-Arlington-Alexandria,", 
+"DC-VA-MD-WV", "Total households (thousands) 343 809", "Unassisted with severe problems 141", 
+"Unassisted with nonsevere problems only 95", "Unassisted with no problems 33", 
+"Assisted 74 "), c("2015 0–50%", "All", "Incomes", "Cincinnati, OH-KY-IN", 
+"Total households (thousands) 127 281", "Unassisted with severe problems 47", 
+"Unassisted with nonsevere problems only 28", "Unassisted with no problems 16", 
+"Assisted 36", "Cleveland-Elyria, OH", "Total households (thousands) 159 301", 
+"Unassisted with severe problems 62", "Unassisted with nonsevere problems only 43", 
+"Unassisted with no problems 12", "Assisted 42", "Denver-Aurora-Lakewood, CO", 
+"Total households (thousands) 140 395", "Unassisted with severe problems 60", 
+"Unassisted with nonsevere problems only 33", "Unassisted with no problems 16", 
+"Assisted 31", "Kansas City, MO-KS", "Total households (thousands) 121 293", 
+"Unassisted with severe problems 41", "Unassisted with nonsevere problems only 34", 
+"Unassisted with no problems 14", "Assisted 32", "Memphis, TN-MS-AR", 
+"Total households (thousands) 90 201", "Unassisted with severe problems 44", 
+"Unassisted with nonsevere problems only 18", "Unassisted with no problems 12", 
+"Assisted 16 "), c("2015 0–50%", "All", "Incomes", "Milwaukee-Waukesha-West Allis, WI", 
+"Total households (thousands) 115 248", "Unassisted with severe problems 50", 
+"Unassisted with nonsevere problems only 33", "Unassisted with no problems 9", 
+"Assisted 24", "New Orleans-Metairie, LA", "Total households (thousands) 76 191", 
+"Unassisted with severe problems 31", "Unassisted with nonsevere problems only 10", 
+"Unassisted with no problems 9", "Assisted 28", "Pittsburgh, PA", 
+"Total households (thousands) 141 313", "Unassisted with severe problems 43", 
+"Unassisted with nonsevere problems only 33", "Unassisted with no problems 21", 
+"Assisted 44", "Portland-Vancouver-Hillsboro, OR-WA", "Total households (thousands) 125 349", 
+"Unassisted with severe problems 56", "Unassisted with nonsevere problems only 29", 
+"Unassisted with no problems 8", "Assisted 32", "Raleigh, NC", 
+"Total households (thousands) 63 166", "Unassisted with severe problems 25", 
+"Unassisted with nonsevere problems only 19", "Unassisted with no problems 9", 
+"Assisted 11 "))
+```
+
+```{r clean_data}
+split_into_numbers <- function(string) {
+    regexes <- c("Total households",
+                 "Unassisted with severe problems",
+                 "Unassisted with nonsevere problems only",
+                 "Unassisted with no problems",
+                 "Assisted")
+    regexes <- paste0(regexes, collapse = "|")
+    
+    first_split <- split(string, grepl(regexes, string))
+    second_split <- split(first_split$`TRUE`,
+                          ceiling(seq_along(first_split$`TRUE`) / 5))
+    rm_commas <- stringi::stri_replace_all(second_split, "", regex = ",")
+    num_extract <- stringi::stri_extract_all(rm_commas, regex = "[0-9]+")
+    
+    return(num_extract)                      
+}
+
+numbers <- x_list %>% map(split_into_numbers)
+
+split_into_nonumbers <- function(string) {
+    regexes <- c("Total households",
+                 "Unassisted with severe problems",
+                 "Unassisted with nonsevere problems only",
+                 "Unassisted with no problems",
+                 "Assisted")
+    regexes <- paste0(regexes, collapse = "|")
+    
+    first_split <- split(string, grepl(regexes, string))
+    
+    return(first_split$`FALSE`)                      
+}
+
+locations <- x_list %>% map(split_into_nonumbers)
+
+locations[[2]][3] <- paste0(locations[[2]][3], locations[[2]][4])
+locations[[2]][6] <- paste0(locations[[2]][6], locations[[2]][7])
+locations[[2]] <- locations[[2]][c(-4, -7)]
+
+locations[[3]][5] <- paste0(locations[[3]][5], locations[[3]][6])
+locations[[3]] <- locations[[3]][-6]
+
+numbers <- numbers %>%
+    unlist() %>%
+    as.integer() %>%
+    matrix(nrow = 25, ncol = 6, byrow = TRUE) %>%
+    as_tibble()
+
+locations <- locations %>%
+    unlist() %>%
+    matrix(nrow = 25, ncol = 1) %>%
+    as_tibble()
+
+housing <- locations %>% bind_cols(numbers)
+```

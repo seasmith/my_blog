@@ -1,0 +1,174 @@
+---
+title       : "The Federal Reserve's Balance Sheet"
+date        : "2017-10-02"
+author      : "Luke Smith"
+description : ""
+tags        : [r, economics, federal reserve, assets]
+---
+  
+```{r setup_std, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(grid)
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+library(extrafont)
+loadfonts("win")
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+# ---- My_Blogging_Package
+library(blg)
+
+# ---- knitr_chunk_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- R_Options_Setup
+org_scipen <- getOption("scipen")
+options(scipen = 100)
+
+org_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- knitr_hook_Setup
+org_inline <- knit_hooks$get("inline")
+org_plot   <- knit_hooks$get("plot")
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+mod_inline <- knit_hooks$get("inline")
+
+
+# ---- Color_Setup ----
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+# my_verylight_red <- 
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_lightgreen <- "#198f5a"
+my_lightgreen_2 <- "#329b6c"
+my_lightgreen_3 <- "#4ca87e"
+my_lightgreen_4 <- "#66b491"
+my_verylight_green   <- "#e5f2ec"
+my_verylight_green_2 <- "#cce6da"
+my_verylight_green_3 <- "#b2d9c8"
+my_green      <- "#008348"
+my_green_2    <- "#007540"
+my_green_3    <- "#006839"
+my_green_4    <- "#005b32"
+my_green_5    <- "#004e2b"
+my_green_6    <- "#004124"
+my_darkgreen   <- "#00341c"
+my_darkgreen_2 <- "#002715"
+my_darkgreen_3 <- "#001a0e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+```
+
+```{r notes, include=FALSE}
+# https://www.federalreserve.gov/releases/h41/current/
+# ASSETS
+# 5. Consolidated Statement of Condition of All Federal Reserve Banks
+# Millions of dollars
+# Assets, liabilities, and capital                         Eliminations     Wednesday         Change since       
+#                                                              from       Sep 13, 2017   Wednesday    Wednesday  
+#                                                         consolidation                 Sep 6, 2017 Sep 14, 2016 
+# 
+# Assets                                                                                                         
+#   Gold certificate account                                                   11,037            0            0  
+#   Special drawing rights certificate account                                  5,200            0            0  
+#   Coin                                                                        1,829   -        5   -       96  
+#   Securities, unamortized premiums and discounts,     
+#      repurchase agreements, and loans                                     4,403,838   +   15,314   -    8,768  
+#     Securities held outright (1)                                          4,254,571   +   14,972   +    5,054  
+#       U.S. Treasury securities                                            2,465,468   +      179   +    1,915  
+#         Bills (2)                                                                 0            0            0  
+#         Notes and bonds, nominal (2)                                      2,337,326   +      200   -    4,321  
+#         Notes and bonds, inflation-indexed (2)                              109,412            0   +    4,859  
+#         Inflation compensation (3)                                           18,730   -       21   +    1,378  
+#       Federal agency debt securities (2)                                      6,757            0   -   15,735  
+#       Mortgage-backed securities (4)                                      1,782,346   +   14,793   +   18,873  
+#     Unamortized premiums on securities held outright  
+#     (5)                                                                     163,562   +      302   -   14,863  
+#     Unamortized discounts on securities held outright 
+#     (5)                                                                     -14,515   +       32   +    1,036  
+#     Repurchase agreements (6)                                                     0            0            0  
+#     Loans                                                                       220   +        8   +        5  
+#   Net portfolio holdings of Maiden Lane LLC (7)                               1,708            0   +        1  
+#   Items in process of collection                                   (0)           82   -       14   -      131  
+#   Bank premises                                                               2,197            0   -        7  
+#   Central bank liquidity swaps (8)                                               87   +       52   +       81  
+#   Foreign currency denominated assets (9)                                    21,431   -      192   -       13  
+#   Other assets (10)                                                          23,765   +    2,545   -    1,528  
+#                                                                                                                
+# Total assets                                                       (0)    4,471,174   +   17,700   -   10,461  
+# 
+# Note: Components may not sum to totals because of rounding. Footnotes appear at the end of the table.
+
+
+
+# LIABILITIES & CAPITAL
+# 5. Consolidated Statement of Condition of All Federal Reserve Banks (continued)
+# Millions of dollars
+# Assets, liabilities, and capital                         Eliminations     Wednesday         Change since       
+#                                                              from       Sep 13, 2017   Wednesday    Wednesday  
+#                                                         consolidation                 Sep 6, 2017 Sep 14, 2016 
+# 
+# Liabilities                                                                                                    
+#   Federal Reserve notes, net of F.R. Bank holdings                         1,533,584   +    2,219   +  109,162 
+#   Reverse repurchase agreements (11)                                         366,719   -   25,204   +   50,119 
+#   Deposits                                                          (0)    2,521,517   +   39,601   -  169,517 
+#     Term deposits held by depository institutions                                  0            0            0 
+#     Other deposits held by depository institutions                         2,360,190   +    3,142   +   10,902 
+#     U.S. Treasury, General Account                                            73,220   +   34,558   -  179,471 
+#     Foreign official                                                           5,165   -        1   -        1 
+#     Other (12)                                                      (0)       82,942   +    1,903   -      947 
+#   Deferred availability cash items                                  (0)          422   -      327   -      339 
+#   Other liabilities and accrued dividends (13)                                 7,823   +    1,405   -      848 
+#                                                                                                                
+# Total liabilities                                                   (0)    4,430,066   +   17,695   -   11,422 
+#                                                                                                                
+# Capital accounts                                                                                               
+#   Capital paid in                                                             31,109   +        7   +      962 
+#   Surplus                                                                     10,000            0            0 
+#   Other capital accounts                                                           0            0            0 
+#                                                                                                                
+# Total capital                                                                 41,109   +        7   +      962 
+# 
+# Note: Components may not sum to totals because of rounding.
+```
+
+```{r import_data, include=FALSE}
+r_id <- 20
+```

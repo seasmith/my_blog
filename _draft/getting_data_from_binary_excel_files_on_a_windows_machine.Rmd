@@ -1,0 +1,121 @@
+---
+title  : "Getting data from binary Excel (xlsb) files on a Windows machine"
+author : "Luke Smith"
+date   : "2017-10-12"
+tags   : [r, excel, how to, vbs]
+description: "The no frills method to getting the data with a little help from VBScript."
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : "Getting data from binary Excel (xlsb) files on a Windows machine"
+  description : "The no frills method to getting the data with a little help from VBScript."
+  image       : ""
+og :
+  image : ""
+---
+
+This is a fairly simple macro written in VBScript which saves all worksheets in all workbooks in the same directory as the script.
+
+```vbscript
+Dim xl
+
+Dim fso
+Dim dir
+Dim f
+
+Dim wb
+Dim sh
+
+Set xl = CreateObject("Excel.Application")
+Set fso = CreateObject("Scripting.FileSystemObject")
+dir = fso.GetAbsolutePathName(".")
+
+With xl
+  .Visible = False
+  .DisplayAlerts = False
+  .AskToUpdateLinks = False
+  .AlertBeforeOverwriting = False
+  .ScreenUpdating = False
+End With
+
+For Each f in fso.GetFolder(dir).Files
+  If LCase(fso.GetExtensionName(f.Name)) = "xlsb" Then
+    Set wb = xl.Workbooks.Open(f.Path, 0, True)
+      For Each sh In wb.Worksheets
+        sh.SaveAs dir & "\" & sh.Name & ".csv", 6
+      Next
+    wb.Close
+  End If
+Next
+
+xl.Quit
+
+Set wb = Nothing
+Set xl = Nothing
+
+WScript.Quit
+```
+
+Save the above script (i.e. `ConvertToCSV.vbs`), drop it in a directory, and then run the script from the command line as so:
+
+```bash
+# Assuming that cscript is in your PATH variable
+cscript ConvertToCSV.vbs
+```
+
+For a reproducible approach that you could use in your RMarkdown file, use `write()` to save the script text to a `.vbs` file.
+
+```{r vbs_script, eval=FALSE}
+write(
+  x =
+'
+Dim xl
+
+Dim fso
+Dim dir
+Dim f
+
+Dim wb
+Dim sh
+
+Set xl = CreateObject("Excel.Application")
+Set fso = CreateObject("Scripting.FileSystemObject")
+dir = fso.GetAbsolutePathName(".")
+
+With xl
+  .Visible = False
+  .DisplayAlerts = False
+  .AskToUpdateLinks = False
+  .AlertBeforeOverwriting = False
+  .ScreenUpdating = False
+End With
+
+For Each f in fso.GetFolder(dir).Files
+  If LCase(fso.GetExtensionName(f.Name)) = "xlsb" Then
+    Set wb = xl.Workbooks.Open(f.Path, 0, True)
+      For Each sh In wb.Worksheets
+        sh.SaveAs dir & "\" & sh.Name & ".csv", 6
+      Next
+    wb.Close
+  End If
+Next
+
+xl.Quit
+
+Set wb = Nothing
+Set xl = Nothing
+
+WScript.Quit
+',
+  file = "ConvertToCSV.vbs")
+```
+
+Then, with `system()`, call `cscript` to run the `.vbs` macro.
+
+```{r run_vbs, eval=FALSE}
+# Assume VBS script is name ConvertToCSV.vbs
+system("cscript ConvertToCSV.vbs")
+```
+
+Here is a reproducible example that fetch's some rig count data and uses the above script to convert every worksheet to a CSV:

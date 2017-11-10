@@ -1,0 +1,43 @@
+---
+title  : "DIY twitter cards for unsupported blogdown themes."
+author : "Luke Smith"
+date   : "2017-09-20"
+tags   : [r, twitter, blogdown]
+description: "Get serious about tweeting your blog."
+---
+
+Twitter cards help style your tweets by attaching a photo and summary text for any link which you tweet.
+
+They can make your tweets go from this:
+
+To this:
+
+Maybe not a huge difference, but it is very convenient to paste a link inside a tweet and have everything fall into place.
+
+## How it works
+
+The website (link) must support Twitter cards, which means that the site must have the requisite `<meta name="..." content="..." />` structure in order for Twitter to parse the page and assemble a summary.
+
+It take a few extra lines of HTML and can be achieved using JavaScript. And what is most fortunate is that RMarkdown supports JavaScript - either inside a chunk or written as HTML using the `<script>` tag.
+
+## How to do it
+
+* [Twitter cards partials for Hugo][how_to]
+
+[how_to][https://gohugohq.com/partials/twitter-cards-partials-for-hugo/]
+
+## Resources
+### Twitter Card
+* [Summary Card with Large Image][card_lg_img]
+* [Cards Markup Tag Reference][card_ref]
+* [Card validator][card_val]
+
+[card_lg_img][https://dev.twitter.com/cards/types/summary-large-image]
+[card_ref][https://dev.twitter.com/cards/markup]
+[card_val][https://cards-dev.twitter.com/validator]
+
+### OpenGraph Protocol
+
+* [OpenGraph Introduction][og_intro]
+
+[og_intro][http://ogp.me/]

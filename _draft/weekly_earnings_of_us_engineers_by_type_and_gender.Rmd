@@ -1,0 +1,517 @@
+---
+title       : "Weekly Earnings Of U.S. Engineers: By Type And Gender"
+date        : "04-21-2017"
+author      : "Luke Smith"
+description : ""
+tags        : [r, projects, election analysis, political analysis]
+---
+
+```{r setup, include=FALSE}
+# ---- Library_Tidyverse_Setup
+library(plyr)
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- R_Options_Setup
+orig_scipen <- getOption("scipen")
+options(scipen = 100)
+
+orig_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- knitr_Options_Setup
+orig_inline <- knit_hooks$get("inline")
+orig_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Hooks_Setup
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+
+
+
+# ---- Extra_Function_Setup
+# -- Control how percentages are formatted
+my_percent <- function(x, i = 1) {
+  sprintf(sprintf("%s%s%s", "%.", i, "f%%"), x * 100)
+}
+
+# -- Convert listified JSON data into a nested tibble
+to_tibble <- function(x) {
+  isdf  <- unname(which(unlist(map(x, is.data.frame))))
+  isndf <- seq_along(x)[-isdf]
+    
+  tbbl <- add_column(bind_cols(x[isndf]), x[isdf])
+    
+  names(tbbl)[isdf] <- names(x)[isdf]
+  names(tbbl)[isndf] <- names(x)[isndf]
+    
+  return(tbbl)
+}
+
+# -- Row bind a list into a tibble
+bind_list_rows <- function(list_rows) {
+  tibble::as_tibble(data.table::rbindlist(list_rows))
+}
+
+# -- Source and return only the .$value
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+
+
+# ---- Color_Setup ----
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+my_lightred <- "#fabdcd"
+my_darkred  <- "#870b2b"
+my_blue   <- "#4fa8ff"
+my_blue2  <- "#1141ce"
+my_purple <- "#8E3694"
+my_lightgreen   <- "#198f5a"
+my_lightgreen_2 <- "#329b6c"
+my_lightgreen_3 <- "#4ca87e"
+my_lightgreen_4 <- "#66b491"
+my_verylight_green   <- "#e5f2ec"
+my_verylight_green_2 <- "#cce6da"
+my_verylight_green_3 <- "#b2d9c8"
+my_green   <- "#008348"
+my_green_2 <- "#007540"
+my_green_3 <- "#006839"
+my_green_4 <- "#005b32"
+my_green_5 <- "#004e2b"
+my_green_6 <- "#004124"
+my_darkgreen   <- "#00341c"
+my_darkgreen_2 <- "#002715"
+my_darkgreen_3 <- "#001a0e"
+my_orange      <- "#e15c39"
+my_orange2     <- "#834800"
+```
+
+```{r setup_extra, include=FALSE}
+library(extrafont)
+
+loadfonts("win")
+
+# Wrap long strings using "\n"
+wrap <- function(x, length) {
+    paste0(stringi::stri_wrap(x, length, prefix = "\n", initial = ""), collapse = "") 
+}
+```
+
+
+```{r import_setup}
+fapi <- source_value("api_key_fred.R")
+root <- "https://api.stlouisfed.org/fred"
+
+q_release <- "/release/series?release_id="
+q_series  <- "/series/observations?series_id="
+
+q_api <- "api_key="
+q_tags <- "tag_names="
+
+file_type <- "file_type=json"
+```
+
+```{r import_332_engineering_meta, cache=TRUE}
+id_release <- 332
+tags <- "engineering"
+
+search <- paste0(root, q_release, id_release, "&",
+                 q_api, fapi, "&",
+                 q_tags, tags, "&",
+                 file_type)
+
+h <- search %>% read_html()
+h_json <- h %>% html_text() %>% fromJSON()
+```
+
+
+
+```{r wrangle_332_engineering_meta, cache=TRUE}
+eng <- h_json$seriess %>% as_tibble()
+
+# cat_emp_total <- "^Employed full time: Wage and salary workers"
+
+eng2 <- eng %>%
+  .$title %>%
+  stringi::stri_split(regex = ": ") %>%
+  map(as.matrix) %>%
+  map(t) %>%
+  map(function(x) as.data.frame(x, stringsAsFactors = FALSE)) %>%
+  map(function(x) if (length(x) < 5) add_column(x, V5 = NA_character_) else x) %>%
+  map(function(x) if (length(x) < 6) add_column(x, V6 = NA_character_) else x)
+
+eng2 <- eng2 %>%
+  Reduce(function(...) dplyr::union_all(...), .) %>%
+  as_tibble()
+
+eng2 <- eng2 %>%
+  add_column(id = eng$id) %>%
+  # mutate(pk = row_number()) %>%
+  select(id, everything())
+
+levels <- eng2 %>%
+  filter(V1 == "Employed full time",
+         V2 == "Wage and salary workers") %>%
+  arrange(V3)
+
+median_earnings <- eng2 %>%
+  filter(V1 == "Employed full time",
+         V2 == "Median usual weekly nominal earnings (second quartile)",
+         V3 == "Wage and salary workers") %>%
+  arrange(V4)
+
+save(eng, file = "~/R/misc/income/weekly_earnings/eng.RData")
+save(eng2, file = "~/R/misc/income/weekly_earnings/eng2.RData")
+save(levels, file = "~/R/misc/income/weekly_earnings/levels.RData")
+save(median_earnings, file = "~/R/misc/income/weekly_earnings/median_earnings.RData")
+```
+
+
+
+```{r import_levels, cache=TRUE}
+id_series <- levels$id
+
+search <- paste0(root, q_series, id_series, "&",
+                 q_api, fapi, "&",
+                 file_type)
+
+h2 <- search %>% map(read_html)
+h2_json <- h2 %>% map(html_text) %>% map(fromJSON)
+```
+
+
+
+```{r wrangle_levels, cach=TRUE}
+lvls_raw <- h2_json %>% map(function(x) {
+  x <- select(x$observations, date, value)
+  x <- mutate(.data = x,
+              date  = as.Date(date),
+              value = as.numeric(value))
+  x <- as_tibble(x)
+  })
+
+names(lvls_raw) <- id_series
+
+lvls <- lvls_raw %>%
+  ldply() %>%
+  group_by(.id) %>%
+  nest()
+
+save(lvls_raw, file = "~/R/misc/income/weekly_earnings/lvls_raw.RData")
+save(lvls, file = "~/R/misc/income/weekly_earnings/lvls.RData")
+```
+
+
+
+```{r import_median_earnings, cache=TRUE}
+id_series <- median_earnings$id
+
+search <- paste0(root, q_series, id_series, "&",
+                 q_api, fapi, "&",
+                 file_type)
+
+h3 <- search %>% map(read_html)
+h3_json <- h3 %>% map(html_text) %>% map(fromJSON)
+```
+
+
+
+```{r wrangle_median_earnings, cach=TRUE}
+mern_raw <- h3_json %>% map(function(x) {
+  x <- select(x$observations, date, value)
+  x <- mutate(.data = x,
+              date  = as.Date(date),
+              value = as.numeric(value))
+  x <- as_tibble(x)
+  })
+
+names(mern_raw) <- id_series
+
+mern <- mern_raw %>%
+  ldply() %>%
+  group_by(.id) %>%
+  nest()
+
+save(mern_raw, file = "~/R/misc/income/weekly_earnings/mern_raw.RData")
+save(mern, file = "~/R/misc/income/weekly_earnings/mern.RData")
+```
+
+<!-- End of imports -->
+
+```{r}
+cmb <- lvls %>%
+  add_column(id2 = rep("Level", times = nrow(.))) %>%
+  dplyr::union_all(mern %>% add_column(id2 = rep("Median_Earnings", times = nrow(.))))
+
+eng2 <- eng2 %>% inner_join(cmb, by = c("id" = ".id"))
+```
+
+
+```{r}
+eng_l <- eng2 %>%
+  filter(id2 == "Level", !is.na(V5)) %>%
+  select(V3:id2, -V4, -V6, -id2) %>%
+  unnest()
+
+eng_l <- eng_l %>%
+  spread(V5, value) %>%
+  mutate(WM_Ratio = Women / Men) %>%
+  gather(... = -c(V3, date))
+
+eng_me <- eng2 %>%
+  filter(id2 == "Median_Earnings", !is.na(V6)) %>%
+  select(V4:id2, -V5, -id2) %>%
+  unnest()
+
+eng_me <- eng_me %>%
+  spread(V6, value) %>%
+  mutate(WM_Ratio = Women / Men) %>%
+  gather(... = -c(V4, date))
+
+eng_cmb <- eng_l %>%
+  inner_join(eng_me, by = c("V3" = "V4",
+                            "date",
+                            "key"))
+
+names(eng_cmb)[4:5] <- c("level", "earnings")
+
+
+eng_cmb$V3 <- eng_cmb$V3 %>%
+  map(function(x) wrap(x, 22)) %>%
+  unlist()
+
+eng_cmb$V3 <- eng_cmb$V3 %>%
+  stringi::stri_replace("", regex = "occupations$") %>%
+  stringi::stri_trim_right()
+# eng2_lvls <- eng2 %>%
+#   filter(id2 == "Level") %>%
+#   unnest()
+```
+
+
+
+
+```{r plots_initial} 
+eng_l %>%
+  filter(key != "WM_Ratio") %>%
+  ggplot(aes(date, value)) +
+  geom_line(aes(color = V3)) +
+  facet_wrap(~forcats::fct_relevel(key, "Men", "Women")) +
+  guides(color = FALSE) +
+  theme_minimal()
+
+eng_l %>%
+  filter(key != "WM_Ratio") %>%
+  spread(key, value) %>%
+  mutate(V3 = stringi::stri_replace(V3, "", regex = "\\soccupations")) %>%
+  ggplot(aes(Men, Women)) +
+    geom_point(aes(color = V3)) +
+    # facet_wrap(~V3, scales = "free") +
+    guides(color = FALSE) +
+    theme_minimal()
+```
+
+
+
+```{r, fig.height=25}
+eng_l %>%
+  filter(key != "WM_Ratio") %>%
+  spread(key, value) %>%
+  mutate(V3 = stringi::stri_replace(V3, "", regex = "\\soccupations")) %>%
+  ggplot(aes(Men, Women)) +
+    geom_point(aes(color = V3)) +
+    facet_wrap(~V3, scales = "free", ncol = 2) +
+    guides(color = FALSE) +
+    theme_minimal()
+
+
+
+
+    plain <- eng_l %>%
+      filter(key != "WM_Ratio") %>%
+      spread(key, value) %>%
+      rename(v3 = V3)
+    
+    plain2 <- eng_l %>%
+      filter(key == "WM_Ratio") %>%
+      spread(key, value) %>%
+      rename(v3 = V3)
+    
+
+eng_l %>%
+  filter(key != "WM_Ratio") %>%
+  spread(key, value) %>%
+  mutate(V3 = stringi::stri_replace(V3, "", regex = "\\soccupations")) %>%
+  ggplot(aes(Men, Women)) +
+    geom_point(aes(Men, Women, group = v3), plain, color = "gray40") +
+    geom_smooth(aes(group = V3), method = "lm") +
+    facet_wrap(~V3, ncol = 2) +
+    guides(color = FALSE) +
+    theme_minimal()
+```
+
+```{r, fig.height=50}
+p <- eng_l %>%
+  filter(key == "WM_Ratio") %>%
+  spread(key, value) %>%
+  mutate(V3 = stringi::stri_replace(V3, "", regex = "\\soccupations")) %>%
+  ggplot(aes(date, WM_Ratio)) +
+    geom_line(aes(date, WM_Ratio, group = v3), plain2, color = "gray40") +
+    geom_line(aes(color = V3), size = 1.5) +
+    facet_wrap(~V3, scales = "free_y", ncol = 1) +
+    guides(color = FALSE) +
+    scale_x_date(position = "top") +
+    scale_y_continuous(minor_breaks = NULL,
+                       limits       = c(0, 0.7)) +
+    labs(x = "Year",
+         y = "Women:Men Employment Ratio") +
+    theme_minimal()
+
+
+# More work needed
+
+    eng_cmb_plain <- eng_cmb %>%
+      filter(key == "WM_Ratio") %>%
+      rename(v3 = V3)
+
+q <- eng_cmb %>%
+    filter(key == "WM_Ratio") %>%
+    ggplot(aes(earnings, level)) +
+    geom_point(aes(earnings, level), eng_cmb_plain %>% filter(earnings >= 1.0), color = "gray70") +
+    geom_point(aes(earnings, level), eng_cmb_plain %>% filter(earnings < 1.0), color = "gray30") +
+    geom_point(aes(color = V3)) +
+    facet_wrap(~V3, ncol = 1) +
+    guides(color = FALSE) +
+    scale_x_continuous(minor_breaks = NULL,
+                       breaks       = c(0, 1.0, 2.0),
+                       position     = "top") +
+    scale_y_continuous(minor_breaks = NULL,
+                       limits = c(0, 0.7)) +
+    labs(x = "Women:Men Median Earnings Ratio",
+         y = "Women:Men Employment Ratio") +
+    theme_minimal()
+
+gridExtra::grid.arrange(p, q, ncol = 2)
+```
+
+```{r, fig.height=50}
+    plain_me <- eng_me %>%
+          filter(key == "WM_Ratio") %>%
+          spread(key, value) %>%
+          rename(v4 = V4)
+
+p <- eng_me %>%
+  filter(key == "WM_Ratio") %>%
+  spread(key, value) %>%
+  mutate(V4 = stringi::stri_replace(V4, "", regex = "\\soccupations")) %>%
+  ggplot(aes(date, WM_Ratio)) +
+    geom_line(aes(date, WM_Ratio, group = v4), plain_me, color = "gray40") +
+    geom_line(aes(color = V4), size = 1.5) +
+    facet_wrap(~V4, scales = "free_y", ncol = 1) +
+    guides(color = FALSE) +
+    scale_x_date(position = "top") +
+    scale_y_continuous(minor_breaks = NULL,
+                       breaks       = c(0, 1.0, 2.0)) +
+    labs(x = "Year",
+         y = "Women:Men Median Earnings Ratio") +
+    theme_minimal()
+
+q <- q +
+  coord_flip() +
+  scale_x_continuous(minor_breaks = NULL,
+                     breaks       = c(0, 1.0, 2.0),
+                     position     = "bottom") +
+  scale_y_continuous(minor_breaks = NULL,
+                     limits       = c(0, 0.7),
+                     position     = "right")
+
+gridExtra::grid.arrange(p, q, ncol = 2)
+```
+
+```{r plot_line}
+eng_cmb %>%
+    filter(key != "WM_Ratio") %>%
+    filter(earnings != 0 | level != 0) %>%
+    ggplot() +
+    geom_line(aes(date, earnings, color = key)) +
+    facet_grid(V3 ~ ., scales = "free_y") +
+    scale_color_manual(values = c(my_blue, my_purple)) +
+    scale_x_date(minor_breaks = NULL) +
+    scale_y_continuous(minor_breaks = NULL) +
+    theme_minimal() +
+    theme(text = element_text(family = "Open Sans"),
+          strip.text.y = element_text(angle = 0))
+```
+
+
+```{r plot_ribbon}
+eng_cmb %>%
+    select(-level) %>%
+    filter(key != "WM_Ratio") %>%
+    filter(earnings != 0) %>%
+    spread(key, earnings) %>%
+    mutate(up = if_else(Men > Women, Men, Women),
+           down = if_else(Women >= Men, Men, Women)) %>%
+    ggplot(aes(date, Men)) +
+    geom_ribbon(aes(ymin = down, ymax = Men), fill = my_blue, alpha = 0.5) +
+    geom_ribbon(aes(ymin = Men, ymax = up), fill = my_purple, alpha = 0.5) +
+    facet_grid(V3 ~ ., scales = "free_y") +
+    scale_color_manual(values = c(my_blue, my_purple)) +
+    scale_x_date(minor_breaks = NULL) +
+    scale_y_continuous(minor_breaks = NULL) +
+    theme_minimal() +
+    theme(text = element_text(family = "Open Sans"),
+          strip.text.y = element_text(angle = 0))
+```
+
+
+```{r import_education_data}
+# Blog post:
+#   http://www.randalolson.com/2014/06/14/percentage-of-bachelors-degrees-conferred-to-women-by-major-1970-2012/
+#
+# CSV of female graduation by major:
+#   http://www.randalolson.com/wp-content/uploads/percent-bachelors-degrees-women-usa.csv
+# Digest of Education Statistics:
+#   https://nces.ed.gov/programs/digest/2013menu_tables.asp
+```

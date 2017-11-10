@@ -1,0 +1,68 @@
+---
+  title  : "Using naniar to fill in the gaps for tweenr"
+author : "Luke Smith"
+date   : ""
+tags   : [animation, naniar, tweenr]
+description: "Fill in missing data and datetime series with naniar in order give tweenr the right number of rows."
+twitter :
+  card    : "summary_large_image"
+site    : "@lksmth"
+creator : "@lksmth"
+title   : ""
+description : ""
+image       : ""
+og :
+  image : ""
+---
+
+ <!-- d3 easing examples: -->
+ <!--   https://github.com/d3/d3-ease -->
+
+
+```{r tweenr_from_so, include=FALSE}
+library(gapminder)
+library(viridis)
+library(magick)
+library(tidyverse)
+library(tweenr)
+
+td <- tempdir()
+
+gm <- gapminder %>%
+  mutate(year_chr = as.character(year)) %>%
+  group_by(year) %>%
+  nest()
+
+
+gm_tween <- gm$data %>%
+  tween_states(1, 0.25, "linear", 100) %>%
+  as_tibble()
+
+map_chr(unique(gm_tween$.frame), ~{
+  
+  d <- filter(gm_tween, .frame == .x)
+  d %>% 
+    ggplot(aes(gdpPercap, lifeExp, size = pop, color = continent)) +
+    geom_point() +
+    scale_color_viridis(name="Continent", discrete=TRUE) +
+    scale_x_log10() +
+    labs(title   = paste0("Year: ", as.character(unique(d$year_chr))),
+         caption = " Caption test") +
+    guides(colour = guide_legend(order = 2), shape = guide_legend(order = 1)) +
+    theme_void() + 
+    theme(legend.position = "bottom", legend.box = "vertical", legend.title.align = 0) +
+    theme(plot.title = element_text(hjust = 0.5, vjust = 0.05)) +
+    theme(plot.caption = element_text(hjust = 0, color="gray40", size=10)) -> gg 
+  
+  fil <- file.path(td, sprintf("%04d.png", as.integer(.x)))
+  
+  ggsave(fil, width=5, height=3, gg)
+  
+  fil
+  
+}) %>% 
+  map(image_read) %>% 
+  image_join() %>% 
+  image_animate(fps=10, loop=1) %>% 
+  image_write("animated.gif")
+```

@@ -6,4 +6,4 @@ setup_std.R
 comb.RData
 all.RData
 *.html
-*.Rmd
+.Rmd

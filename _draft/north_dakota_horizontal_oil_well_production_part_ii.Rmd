@@ -1,0 +1,472 @@
+---
+title  : "North Dakota Horizontal Oil Well Production - Part II"
+author : "Luke Smith"
+date   : "2017-09-20"
+tags   : [r, oil and gas, north dakota]
+description: "Sifting through North Dakota oil production data, and some EIA shape files, again."
+---
+
+```{r setup_std, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(plyr)
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+library(extrafont)
+loadfonts("win")
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- R_Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+old_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- knitr_Options_Setup
+orig_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Hooks_Setup
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+
+
+
+# ---- Extra_Function_Setup
+# -- Control how percentages are formatted
+my_percent <- function(x, i = 1) {
+  sprintf(sprintf("%s%s%s", "%.", i, "f%%"), x * 100)
+}
+
+# -- Convert listified JSON data into a nested tibble
+to_tibble <- function(x) {
+    isdf <- unname(which(unlist(map(x, is.data.frame))))
+    isndf <- seq_along(x)[-isdf]
+    tbbl <- add_column(bind_cols(x[isndf]), x[isdf])
+    names(tbbl)[isdf] <- names(x)[isdf]
+    names(tbbl)[isndf] <- names(x)[isndf]
+    return(tbbl)
+}
+
+# -- Row bind a list into a tibble
+bind_list_rows <- function(list_rows) {
+    tibble::as_tibble(data.table::rbindlist(list_rows))
+}
+
+# -- Source and return only the .$value
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+# -- Default theme
+theme_default <- function(text_size = 16) {
+  theme_minimal() +
+    theme(panel.grid.minor = element_blank(),
+                text = element_text(family = "Open Sans",
+                                    size = text_size),
+                complete = TRUE)
+}
+
+theme_set(theme_default())
+
+
+  # ---- Color_Setup ----
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+# my_verylight_red <- 
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_lightgreen <- "#198f5a"
+my_lightgreen_2 <- "#329b6c"
+my_lightgreen_3 <- "#4ca87e"
+my_lightgreen_4 <- "#66b491"
+my_verylight_green   <- "#e5f2ec"
+my_verylight_green_2 <- "#cce6da"
+my_verylight_green_3 <- "#b2d9c8"
+my_green      <- "#008348"
+my_green_2    <- "#007540"
+my_green_3    <- "#006839"
+my_green_4    <- "#005b32"
+my_green_5    <- "#004e2b"
+my_green_6    <- "#004124"
+my_darkgreen   <- "#00341c"
+my_darkgreen_2 <- "#002715"
+my_darkgreen_3 <- "#001a0e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+
+
+```
+
+```{r setup_extra, include=FALSE}
+library(igraph)
+library(ggraph)
+library(networkD3)
+library(sf)
+library(plotly)
+```
+
+```{r import_data, include=FALSE}
+load("~/R/misc/oil/North_Dakota/prod_data/prod.RData")
+```
+
+
+```{r summarize_data, include=FALSE}
+prod_nd <- prod %>%
+  summarise(Oil = sum(Cum_Oil))
+
+prod_counties <- prod %>%
+  group_by(County) %>%
+  summarise(Oil = sum(Cum_Oil))
+
+prod_counties_operators <- prod %>%
+  group_by(County, Operator) %>%
+  summarise(Oil = sum(Cum_Oil)) %>%
+  rename(from = County) %>%
+  mutate(to = paste(from, Operator, sep = "_"))
+
+prod_counties <- prod_counties %>%
+  add_column(from = "North Dakota") %>%
+  select(from, everything()) %>%
+  rename(to = County)
+
+prod_nd <- prod_nd %>%
+  add_column(from = "North Dakota", to = NA) %>%
+  select(from, to, Oil)
+```
+
+```{r make_graphs, include=FALSE}
+# PRISTINE VERTICES (not)
+prod_vertices <- prod_nd$from %>%
+  c(prod_counties$to) %>%
+  c(prod_counties_operators$to) %>%
+  tibble(name = .)
+
+# Add oil production data with left_join()
+prod_vertices <- prod_vertices %>%
+  left_join(prod_counties_operators, by = c("name" = "to")) %>%
+  select(-from, -Operator)
+
+# Turn NA into 0
+prod_vertices$Oil[is.na(prod_vertices$Oil)] <- 0
+
+# Add labels for counties
+prod_vertices <- prod_vertices %>%
+  left_join(prod_counties %>%
+              select(-from, -Oil) %>%
+              mutate(label = to),
+            by = c("name" = "to")) %>%
+  mutate(label = if_else(is.na(label), "", label))
+
+# PRISTINE EDGES
+prod_edges <- prod_counties %>%
+  bind_rows(prod_counties_operators) %>%
+  select(from:to)
+
+# Add `Oil` to edges
+prod_edges_g <- prod_edges %>%
+  left_join(prod_counties %>%
+              select(-from),
+            by = "to")
+
+prod_edges_g$Oil[is.na(prod_edges_g$Oil)] <- 0
+
+g <- prod_edges_g %>%
+  graph_from_data_frame(vertices = prod_vertices %>% select(-Oil))
+
+# Add `Oil` as a vertices attributes
+V(g)$Oil <- prod_vertices$Oil
+
+# Add `label` as a vertices attributes
+V(g)$label <- prod_vertices$label
+
+# Add `Oil` as an edge attributes
+E(g)$Oil <- E(g)$Oil
+
+```
+
+
+```{r plot_graphs, eval=FALSE, include=FALSE}
+# Circular dendrogram
+g %>%
+  ggraph(layout = "dendrogram", circular = TRUE) +
+  geom_node_point(aes(size = Oil)) +
+  geom_node_text(aes(label = label)) +
+  geom_edge_arc() +
+  coord_fixed() +
+  theme_graph()
+
+# Fans
+g %>%
+    ggraph() +
+    geom_node_point(aes(size = Oil)) +
+    geom_node_text(aes(label = label)) +
+    geom_edge_fan() +
+    coord_fixed() +
+    theme_graph()
+
+g %>%
+    ggraph() +
+    geom_node_point(aes(color = Oil), size = 4) +
+    geom_node_text(aes(label = label)) +
+    geom_edge_fan0() +
+    scale_color_viridis(option = "magma") +
+    coord_fixed() +
+    theme_graph() +
+    theme(text = element_text(family = "Open Sans", size = 16))
+```
+
+```{r sankey_prep_1, include=FALSE}
+nd <- list()
+
+nd$nodes <- prod_nd$from %>%
+    c(prod_counties$to) %>%
+    tibble(name = ., id = c("state", rep("county", length(.) - 1)))
+
+nd$links <- prod_counties
+
+# Create encodings to use instead of names
+nd$encoding <- nd$nodes %>%
+  add_column(encoding_to = seq_len(nrow(nd$nodes)) - 1)
+
+# Join encodings with names in nd$links
+nd$links <- nd$links %>%
+  left_join(nd$encoding, by = c("to" = "name")) %>%
+  add_column(encoding_from = 0)
+```
+
+```{r sankey_graph}
+sankeyNetwork(Links = nd$links,
+              NodeGroup = "id",
+              Nodes = nd$nodes,
+              Source = "encoding_from",
+              Target = "encoding_to",
+              Value = "Oil",
+              units = "barrels",
+              NodeID = "name",
+              fontSize = 12,
+              nodeWidth = 30)
+```
+
+```{r sankey_prep_2}
+# Grab the 10th largest producer
+# and use their production mark
+# as a cut point
+prod_summ <- prod %>%
+  group_by(Operator) %>%
+  summarize(Oil = sum(Cum_Oil)) %>%
+  arrange(desc(Oil))
+
+cut_mark <- prod_summ %>%
+  arrange(desc(Oil)) %>%
+  slice(10) %>%
+  .$Oil
+
+top_10 <- prod_summ %>%
+  filter(Oil >= cut_mark) %>%
+  arrange(desc(Oil))
+
+# 
+# all_others <- prod_summ %>%
+#   filter(Oil < cut_mark) %>%
+#   summarize(Oil = sum(Oil)) %>%
+#   add_column(Operator = "All others") %>%
+#   select(Operator, Oil)
+# 
+# nd_summ <- top_10 %>%
+#   bind_rows(all_others)
+
+pco <- prod_counties_operators %>%
+  mutate(to = stringi::stri_replace(to, "", regex = ".*_"),
+         to = stringi::stri_trans_totitle(to))
+
+# Take only `Operators` matching the top_10$Operators
+pco_top_10 <- pco %>%
+  filter(Operator %in% top_10$Operator) %>%
+  rename(to = Operator)
+
+# Take only `Operators` NOT matching the top_10$Operators
+pco_all_others <- pco %>%
+  filter(!(Operator %in% top_10$Operator)) %>%
+  group_by(from) %>%
+  summarize(Oil = sum(Oil)) %>%
+  add_column(to = "All others") %>%
+  select(from, to, Oil)
+
+# Stack them
+pco_summ <- pco_top_10 %>%
+  bind_rows(pco_all_others)
+
+# Copy previous work
+nd2 <- nd
+
+# Add new nodes
+nd2$nodes <- nd2$nodes %>%
+  add_row(name = pco_summ$to %>% unique())
+
+# Add new links
+nd2$links <- nd2$links %>%
+  select(from:Oil) %>%
+  bind_rows(pco_summ)
+
+# Create encodings
+nd2$encoding <- nd2$nodes %>%
+  add_column(encoding_to = seq_len(nrow(nd2$nodes)) - 1)
+
+# Join encodings and links
+nd2$links <- nd2$links %>%
+  left_join(nd2$encoding, by = c("to" = "name")) %>%
+  left_join(nd2$encoding %>%
+              rename(encoding_from = encoding_to),
+            by = c("from" = "name"))
+
+# Add a categorical column to control
+# the coloring of the nodes
+nd2$nodes <- nd2$nodes %>%
+  mutate(id = if_else(is.na(id), "operator", id))
+```
+
+```{r sankey_graph_2}
+sankeyNetwork(Links = nd2$links,
+              Nodes = nd2$nodes,
+              Source = "encoding_from",
+              Target = "encoding_to",
+              Value = "Oil",
+              NodeID = "name",
+              NodeGroup = "id",
+              units = "barrels",
+              fontSize = 16,
+              fontFamily = "Open Sans",
+              nodeWidth = 20)
+```
+
+```{r map_prep, include=FALSE}
+of <- st_read("~/R/misc/oil/North_Dakota/shape/OilFields.shp")
+load("~/R/misc/maps/states_map.RData")
+
+state_nd <- states_map %>%
+  filter(STATE_ABBR == "ND")
+
+prod_summ_rank <- prod_summ %>%
+  split(.$Operator %in% top_10$Operator) %>%
+  {
+    bind_rows(summarize(.[[1]], Oil = sum(Oil)) %>%
+                add_column(Operator = "All Others"),
+              .[[2]])}
+
+prod_sf <- of %>% inner_join(prod, by = c("name" = "Field"))
+
+prod_sf <- prod_sf %>%
+  mutate(is_top_10 = Operator %in% top_10$Operator)
+
+
+make_map <- function(var) {
+  # enquo_var <- quo(var)
+  
+  plot <- state_nd %>%
+    ggplot() +
+    geom_sf(data = of, fill = "gray50", color = "gray40") +
+    geom_sf(fill = "#00000000") +
+    geom_sf(data = prod_sf %>%
+                filter(Operator == var) %>%
+                group_by(name) %>%
+                summarize(Cum_Oil = sum(Cum_Oil)) %>%
+                ungroup(),
+            aes(fill = Cum_Oil, color = Cum_Oil)) +
+    scale_fill_viridis(option = "A") +
+    scale_color_viridis(option = "A") +
+    labs(title = stri_trans_totitle(var))
+  
+  return(plot)
+}
+
+```
+
+```{r map_plot, message=FALSE, fig.height=4}
+l <- list()
+l <- top_10$Operator %>% map(make_map)
+
+# ggplotly(l[[1]])
+# ggplotly(l[[2]])
+# ggplotly(l[[3]])
+# ggplotly(l[[4]])
+# ggplotly(l[[5]])
+# ggplotly(l[[6]])
+# ggplotly(l[[7]])
+# ggplotly(l[[8]])
+# ggplotly(l[[9]])
+# ggplotly(l[[10]])
+
+l[[1]]
+l[[2]]
+l[[3]]
+l[[4]]
+l[[5]]
+l[[6]]
+l[[7]]
+l[[8]]
+l[[9]]
+l[[10]]
+```
+
+
+
+```{r stock_data, include=FALSE}
+nd_stocks <- tribble(
+    ~operator, ~symbol, ~exchange,
+    "Burlington", "COP", "NYSE",
+    "QEP", "QEP", "NYSE",
+    "Whiting", "WLL", "NYSE",
+    "Oasis", "OAS", "NYSE",
+    "EOG", "EOG", "NYSE",
+    "Hess", "HES", "NYSE",
+    "XTO", "XOM", "NYSE",
+    "Statoil", "STO", "NYSE",
+    "Continental", "CLR", "NYSE",
+    "Marathon", "MRO", "NYSE"
+    )
+```

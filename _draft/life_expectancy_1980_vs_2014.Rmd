@@ -1,0 +1,708 @@
+---
+title  : "Re-imagining a Data Visualization: As U.S. Life Expectancies Climb, People In A Few Places Are Dying Younger (FiveThirtyEight)"
+author : "Luke Smith"
+date   : "2017-08-17"
+tags   : [r, life expectancy, health, us]
+description: "How has life expectancy changed in American counties?"
+---
+  
+```{r setup_std, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(plyr)
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- R_Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+old_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- knitr_Options_Setup
+orig_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Hooks_Setup
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+
+
+
+# ---- Extra_Function_Setup
+# -- Control how percentages are formatted
+my_percent <- function(x, i = 1) {
+  sprintf(sprintf("%s%s%s", "%.", i, "f%%"), x * 100)
+}
+
+# -- Convert listified JSON data into a nested tibble
+to_tibble <- function(x) {
+    isdf <- unname(which(unlist(map(x, is.data.frame))))
+    isndf <- seq_along(x)[-isdf]
+    tbbl <- add_column(bind_cols(x[isndf]), x[isdf])
+    names(tbbl)[isdf] <- names(x)[isdf]
+    names(tbbl)[isndf] <- names(x)[isndf]
+    return(tbbl)
+}
+
+# -- Row bind a list into a tibble
+bind_list_rows <- function(list_rows) {
+    tibble::as_tibble(data.table::rbindlist(list_rows))
+}
+
+# -- Source and return only the .$value
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+
+
+  # ---- Color_Setup ----
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+# my_verylight_red <- 
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_lightgreen <- "#198f5a"
+my_lightgreen_2 <- "#329b6c"
+my_lightgreen_3 <- "#4ca87e"
+my_lightgreen_4 <- "#66b491"
+my_verylight_green   <- "#e5f2ec"
+my_verylight_green_2 <- "#cce6da"
+my_verylight_green_3 <- "#b2d9c8"
+my_green      <- "#008348"
+my_green_2    <- "#007540"
+my_green_3    <- "#006839"
+my_green_4    <- "#005b32"
+my_green_5    <- "#004e2b"
+my_green_6    <- "#004124"
+my_darkgreen   <- "#00341c"
+my_darkgreen_2 <- "#002715"
+my_darkgreen_3 <- "#001a0e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+
+
+```
+
+```{r setup_extra, include=FALSE}
+# -- Map: https://vizhub.healthdata.org/subnational/usa
+
+library(sf)
+library(viridis)
+library(geofacet)
+library(ggjoy)
+library(readxl)
+library(extrafont)
+loadfonts("win")
+```
+
+
+```{r import, eval=FALSE}
+
+# ---- Life_Expectancy_Import ----
+
+x_files <- "~/R/misc/health/IHME_USA_COUNTY_LE_MORTALITY_RISK_1980_2014_STATES_AND_DC_XLSX" %>%
+    list.files(full.names = TRUE)
+
+rm_x <- x_files %>%
+  grepl("WEST_VIRGINIA", .) %>%
+  which()
+
+lex_orig <- x_files[-rm_x] %>%
+  map_df(function(x) read_xlsx(x, sheet = "Life expectancy", skip = 1L))
+
+
+
+# ---- Counties_Import ----
+
+# - Missing counties:
+  # - Oglala Lakota County was previously known as Shannon County
+
+# - 1980 Counties
+counties_1980 <- st_read("~/R/misc/health/co1980p020_nt00091/co1980p020.shp") %>%
+  st_set_crs(4269)
+
+# - 2014 Counties
+load("~/R/misc/maps/counties_2014_adjusted.RData")
+```
+
+```{r clean, eval=FALSE}
+# ---- Life_Expectancy_Clean ----
+
+lex  <- lex_orig
+cols <- names(lex_orig)[grepl("^Life expectancy", names(lex_orig))]
+
+for(i in 1:(ncol(lex) + length(cols))) {
+    col <- names(lex)[i]
+    if (col %in% cols) {
+        year <- stri_extract(names(lex)[i], regex = "\\d+")
+        lex <- separate_(lex,
+                         col,
+                         c(paste0("LE_", year),
+                           paste0("LE_Range_", year)),
+                         "\\s",
+                         extra = "merge")
+    }
+}
+
+lex <- lex %>%
+  mutate_at(vars(matches("^LE_[0-9]")), as.double) %>%
+  separate(Location, c("County", "State"), ", ", fill = "left")
+
+  
+
+rm_FIPS <- lex %>% count(FIPS) %>% filter(n > 1)
+
+lex2 <- lex %>% filter(!(FIPS %in% rm_FIPS$FIPS | is.na(State)))
+
+f_levels <- lex2 %>% arrange(LE_1980) %>% .$FIPS
+
+lex2$FIPS_ranks <- factor(lex2$FIPS, levels = f_levels)
+
+
+
+# ---- Counties_Clean ----
+
+# Convert factor to character and $FIPS to integer
+counties_1980 <- counties_1980 %>%
+  mutate_if(is.factor, as.character) %>%
+  mutate(FIPS = as.integer(FIPS))
+
+counties_2014_adjusted <- counties_2014_adjusted %>%
+  mutate_if(is.factor, as.character) %>%
+  mutate(ADMIN_FIPS = as.integer(ADMIN_FIPS))
+
+# Missing counties
+counties_1980[counties_1980$FIPS == 46113, ] <- counties_1980 %>%
+  filter(COUNTY == "Shannon County", STATE == "SD") %>%
+  mutate(COUNTY = "Oglala Lakota County",
+         FIPS   = 46102)
+
+# Remove PR and VI
+counties_2014_adjusted <- counties_2014_adjusted %>%
+  filter(STATE != "PR") %>%
+  filter(STATE != "VI")
+
+# Reassign changes to coutnies/census areas
+counties_2014_adjusted <- counties_2014_adjusted %>%
+    mutate(
+      ADMIN_NAME = case_when(
+        ADMIN_NAME == "Shannon County" & STATE == "SD" ~ "Oglala Lakota County",
+        ADMIN_NAME == "Wade Hampton Census Area" & STATE == "AK" ~ "Kusilvak Census Area",
+        TRUE ~ as.character(ADMIN_NAME)
+        ),
+      ADMIN_FIPS = case_when(
+        ADMIN_FIPS == 46113 ~ 46102L, # Oglala Lakota County
+        ADMIN_FIPS == 2270 ~ 2158L,  # Kusilvak Census Area
+        ADMIN_FIPS == 2232 ~ 2105L,  # Hoonah-Angoon Census Area
+        ADMIN_FIPS == 2280 ~ 2195L,  # Petersburg Borough
+        TRUE               ~ as.integer(ADMIN_FIPS)
+      ),
+      NAME = case_when(
+        NAME == "Wade Hampton Census Area" ~ "Kusilvak Census Area",
+        NAME == "Shannon County" & STATE == "SD" ~ "Oglala Lakota"
+      ))
+
+# Remove uneeded FIPS (i.e. Great Lakes)
+rm_FIPS_2 <- counties_2014_adjusted %>%
+  anti_join(lex2, by = c("ADMIN_FIPS" = "FIPS")) %>%
+  filter(is.na(ADMIN_NAME)) %>%
+  .$ADMIN_FIPS
+
+counties_2014_adjusted <- counties_2014_adjusted %>%
+  filter(!(ADMIN_FIPS %in% rm_FIPS_2))
+```
+
+A recent FiveThirtyEight article, [As U.S. Life Expectancies Climb, People In A Few Places Are Dying Younger][article] featured two maps: a US county choropleth and a state-faceted line plot.
+
+Here, I've produced my own versions of these charts plus a few others which may, hopefully, aid in the apprehension of the article's title.
+
+[article]: https://fivethirtyeight.com/features/as-u-s-life-expectancies-climb-people-in-a-few-places-are-dying-younger/
+
+```{r plot_LE_1980}
+lex2 %>%
+  ggplot() +
+  geom_line(aes(FIPS_ranks, LE_1980, group = State)) +
+  facet_geo(~ State) +
+  scale_x_discrete(labels = NULL) +
+  theme_minimal() +
+  theme(axis.ticks = element_blank()) +
+    theme(text = element_text(family = "Open Sans"))
+
+
+counties_1980 %>%
+    filter(!(STATE == "AK" | STATE == "HI" | STATE == "PR" | is.na(COUNTY))) %>%
+    left_join(lex2, by = "FIPS") %>%
+    ggplot() +
+    geom_sf(aes(fill = LE_1980, color = LE_1980)) +
+    scale_fill_viridis(option = "magma") +
+    scale_color_viridis(option = "magma") +
+    theme_minimal() +
+    theme(text = element_text(family = "Open Sans"))
+
+
+counties_2014_adjusted %>%
+    filter(!(STATE == "AK" | STATE == "HI" | STATE == "PR")) %>%
+    filter(SUFFIX == "County" | SUFFIX == "Parish") %>%
+    left_join(lex2, by = c("ADMIN_FIPS" = "FIPS")) %>%
+    ggplot() +
+    geom_sf(aes(fill = LE_2014, color = LE_2014)) +
+    scale_fill_viridis(option = "magma") +
+    scale_color_viridis(option = "magma") +
+    theme_minimal() +
+    theme(text = element_text(family = "Open Sans"))
+
+
+# lex2 %>%
+#   ggplot() +
+#   geom_point(aes(FIPS, LE_1980)) +
+#   facet_wrap(~State)
+
+# -- County maps faceted by year
+
+# Adjusted map
+counties_2014_adjusted %>%
+    left_join(lex2 %>% select(County, State, FIPS, matches("^LE_[0-9]")),
+              by = c("ADMIN_FIPS" = "FIPS")) %>%
+    gather(... = LE_1980:LE_2014) %>%
+    ggplot() +
+    geom_sf(aes(fill = value, color = value)) +
+    scale_fill_viridis("Life Expectancy", option = "magma") +
+    scale_color_viridis("Life Expectancy", option = "magma") +
+    facet_wrap(~key,
+               labeller = labeller(key = c(LE_1980 = "1980",
+                                           LE_1985 = "1985",
+                                           LE_1990 = "1990",
+                                           LE_1995 = "1995",
+                                           LE_2000 = "2000",
+                                           LE_2005 = "2005",
+                                           LE_2010 = "2010",
+                                           LE_2014 = "2014")),
+               ncol = 2) +
+    labs(title = "US Life Expectancy",
+         subtitle = "1980-2014") +
+    theme_minimal() +
+    theme(line = element_blank(),
+          rect = element_blank(),
+          text = element_text(family = "Open Sans"),
+          axis.text = element_blank(),
+          axis.title = element_blank(),
+          plot.margin = unit(c(1, 0, 0, 0), "lines"))
+
+
+
+dat <- counties_2014_adjusted %>%
+    left_join(lex2 %>% select(County, State, FIPS, matches("^LE_[0-9]")),
+              by = c("ADMIN_FIPS" = "FIPS")) %>%
+    gather(... = LE_1980:LE_2014) %>%
+    filter(key == "LE_2014")
+
+dat <- dat %>% mutate(cut = cut_number(value, 6))
+
+dat %>%
+    ggplot() +
+    geom_sf(data = dat %>% select(-cut), fill = "gray50", color = "gray50") +
+    geom_sf(aes(fill = value, color = value)) +
+    scale_fill_viridis("Life Expectancy", option = "magma") +
+    scale_color_viridis("Life Expectancy", option = "magma") +
+    facet_wrap(~cut, ncol = 2) +
+    theme_void() +
+    theme(text = element_text(family = "Open Sans"),
+          axis.text   = element_blank(),
+          axis.title  = element_blank(),
+          plot.margin = unit(c(1, 0, 0, 0), "lines"))
+```
+
+```{r plot_dumbbells}
+# -- Top and Bottom 10 of LE_2014
+# lex2 %>%
+#     filter(min_rank(LE_2014) >= (n() - 10) | min_rank(LE_2014) <= 10) %>%
+#     ggplot() +
+#     geom_dumbbell(aes(y     = reorder(paste0(County, ", ", State), LE_2014, mean),
+#                       x     = LE_1980, xend = LE_2014,
+#                       color = LE_2014 > LE_1980),
+#                   colour_x    = my_lightgreen,
+#                   colour_xend = my_darkgreen,
+#                   size = 1.2) +
+#     scale_color_manual(values = c(my_lightgreen, my_darkgreen)) +
+#     theme_minimal()
+
+
+lex2 %>%
+    filter(min_rank(LE_2014) >= (n() - 10) | min_rank(LE_2014) <= 10) %>%
+    ggplot() +
+    geom_segment(aes(y     = reorder(paste0(County, ", ", State), LE_2014, mean),
+                     yend  = reorder(paste0(County, ", ", State), LE_2014, mean),
+                     x     = LE_1980,
+                     xend  = LE_2014,
+                     color = LE_2014 > LE_1980),
+                  arrow = arrow(length = unit(0.2, "cm"), type = "open")) +
+    scale_color_manual(values = c(my_red, my_blue),
+                       labels = c("Decreased", "Increased")) +
+    guides(color = guide_legend(title = "Direction of Change")) +
+    labs(title = "The Top and Bottom 10 Counties: Three Decades Later",
+         subtitle = "How has life expectancy\nchanged for the top and\nbottom 10 counties from\n1980 to 2014?",
+         y = NULL,
+         x = "Life Expectancy") +
+    theme_minimal() +
+    theme(panel.grid.major.y = element_blank())
+
+# -- Top and Bottom 10 of LE_1980
+
+# lex2 %>%
+#     filter(min_rank(LE_1980) >= (n() - 10) | min_rank(LE_1980) <= 10) %>%
+#     ggplot() +
+#     geom_dumbbell(aes(y     = reorder(paste0(County, ", ", State), LE_2014, mean),
+#                       x     = LE_1980, xend = LE_2014,
+#                       color = LE_2014 > LE_1980),
+#                   colour_x    = my_lightgreen,
+#                   colour_xend = my_darkgreen,
+#                   size = 1.2) +
+#     scale_color_manual(values = c(my_darkgreen, my_lightgreen)) +
+#     theme_minimal()
+
+
+lex2 %>%
+    filter(min_rank(LE_1980) >= (n() - 10) | min_rank(LE_1980) <= 10) %>%
+    ggplot() +
+    geom_segment(aes(y     = reorder(paste0(County, ", ", State), LE_2014, mean),
+                     yend  = reorder(paste0(County, ", ", State), LE_2014, mean),
+                     x     = LE_1980,
+                     xend  = LE_2014,
+                     color = LE_2014 > LE_1980),
+                  arrow = arrow(length = unit(0.2, "cm"), type = "open")) +
+    scale_color_manual(values = c(my_blue)) +
+    theme_minimal() +
+    theme(panel.grid.major.y = element_blank(),
+          text = element_text(family = "Open Sans"))
+
+# -- States plus DC
+
+lex2 %>%
+    filter(FIPS %in% maps::state.fips$fips) %>%
+    ggplot() +
+    geom_segment(aes(y     = reorder(State, LE_2014, mean),
+                     yend  = reorder(State, LE_2014, mean),
+                     x     = LE_1980,
+                     xend  = LE_2014,
+                     color = LE_2014 > LE_1980),
+                 arrow = arrow(length = unit(0.2, "cm"), type = "open")) +
+    scale_color_manual(values = c(my_blue),
+                       labels = c("Increased")) +
+    guides(color = guide_legend(title = "How has life expectancy\nchanged for each state\n(plus Washington DC)\nfrom 1980 to 2014?")) +
+    labs(x = "Life Expectancy",
+         y = "State") +
+    theme_minimal() +
+    theme(panel.grid.major.y = element_blank(),
+          text = element_text(family = "Open Sans"))
+```
+
+
+```{r plot_others}
+# -- Lines
+lex2 %>%
+  select(State, FIPS, matches("^LE_[0-9]")) %>%
+  filter(FIPS %in% maps::state.fips$fips) %>%
+  select(-FIPS) %>%
+  rename_at(2:ncol(.), function(x) stri_replace(x, "", regex = "LE_")) %>%
+  gather(... = -State, convert = TRUE) %>%
+  ggplot() +
+  geom_line(aes(key, value, group = State))
+
+## -- Boxplots
+lex2 %>%
+  select(State, FIPS, matches("^LE_[0-9]")) %>%
+  filter(FIPS %in% maps::state.fips$fips) %>%
+  select(-FIPS) %>%
+  rename_at(2:ncol(.), function(x) stri_replace(x, "", regex = "LE_")) %>%
+  gather(... = -State, convert = TRUE) %>%
+  ggplot() +
+  geom_boxplot(aes(key, value))
+
+
+## -- Tile
+lex2 %>%
+    select(State, FIPS, matches("^LE_[0-9]")) %>%
+    filter(FIPS %in% c(maps::state.fips$fips, 2, 15)) %>%
+    select(-FIPS) %>%
+    rename_at(2:ncol(.), function(x) stri_replace(x, "", regex = "LE_")) %>%
+    gather(... = -State, convert = TRUE) %>%
+    ggplot(aes()) +
+    geom_tile(aes(factor(key), factor(1), fill = value), width = 1) +
+    scale_fill_viridis(option = "magma") +
+    facet_geo(~State) +
+  theme_minimal() +
+  theme()
+
+## -- Joy
+lex2 %>%
+    select(State, FIPS, matches("^LE_[0-9]")) %>%
+    filter(FIPS %in% c(maps::state.fips$fips, 2, 15)) %>%
+    select(-FIPS) %>%
+    rename_at(2:ncol(.), function(x) stri_replace(x, "", regex = "LE_")) %>%
+    gather(... = -State, convert = TRUE) %>%
+    ggplot() +
+    geom_joy(aes(x = value, y = fct_rev(factor(key)))) +
+    theme_joy() +
+    theme(text = element_text(family = "Open Sans"))
+```
+
+```{r plot_map_density}
+p1 <- counties_2014_adjusted %>%
+  mutate(STATE = as.character(STATE)) %>%
+  filter(!(STATE == "AK" | STATE == "HI" | STATE == "PR")) %>%
+  filter(SUFFIX == "County" | SUFFIX == "Parish") %>%
+  mutate(ADMIN_FIPS = as.integer(as.character(ADMIN_FIPS))) %>%
+  left_join(lex2 %>% select(County, State, FIPS, matches("^LE_[0-9]")), by = c("ADMIN_FIPS" = "FIPS")) %>%
+  gather(... = LE_1980:LE_2014) %>%
+  ggplot() +
+  geom_sf(aes(fill = value, color = value)) +
+  scale_fill_viridis("Life Expectancy", option = "magma") +
+  scale_color_viridis("Life Expectancy", option = "magma") +
+  facet_wrap(~key,
+             labeller = labeller(key = c(LE_1980 = "1980",
+                                         LE_1985 = "1985",
+                                         LE_1990 = "1990",
+                                         LE_1995 = "1995",
+                                         LE_2000 = "2000",
+                                         LE_2005 = "2005",
+                                         LE_2010 = "2010",
+                                         LE_2014 = "2014")),
+             ncol = 1,
+             strip.position = "left") +
+  theme_minimal() +
+  theme(line = element_blank(),
+        rect = element_blank(),
+        axis.text = element_blank(),
+        axis.title = element_blank(),
+        plot.margin = unit(c(0, 0, 0, 0), "lines"),
+        complete = TRUE)
+
+p2 <- lex2 %>%
+    select(County, State, FIPS, matches("^LE_[0-9]")) %>%
+    filter(!(State == "AK" | State == "HI")) %>%
+    gather(... = LE_1980:LE_2014) %>%
+    group_by(key) %>%
+    mutate(mean_le = mean(value),
+           median_le = median(value)) %>%
+    ggplot() +
+    geom_density(aes(value, fill = median_le)) +
+    geom_vline(aes(xintercept = median_le),
+               lty   = "dashed",
+               color = "gray50",
+               size  = 0.9) +
+    facet_wrap(~key, labeller = labeller(key = c(LE_1980 = "1980",
+                                                 LE_1985 = "1985",
+                                                 LE_1990 = "1990",
+                                                 LE_1995 = "1995",
+                                                 LE_2000 = "2000",
+                                                 LE_2005 = "2005",
+                                                 LE_2010 = "2010",
+                                                 LE_2014 = "2014")),
+               ncol = 1,
+               strip.position = NULL) +
+    scale_y_continuous("Density",
+                       breaks   = c(0, .10, .20),
+                       labels   = c("0", ".10", ".20"),
+                       position = "right") +
+    scale_x_continuous("Life Expectancy") +
+    scale_fill_viridis("Median\nLife Expectancy", option = "magma") +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank())
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+
+```{r import_data_2, include=FALSE}
+# FRED Release ID's (RID):
+#
+#  -- 119 - Annual Estimates of the Population for Counties
+#  -- 175 - Local Area Personal Income
+#           * Need only Per Capita Personal Income
+#  -- 346 - Small Area Income and Poverty Estimates
+#           * Need only Estimate of Median Household Income
+#  -- 116 - Unemployment in States and Local Areas (all other areas)
+
+ids <- c(119, 175, 346, 116)
+
+root     <- "https://api.stlouisfed.org/fred/release/series?release_id="
+api_qry  <- "&api_key="
+api_key  <- source("~/R/my_blog/static/blog/api_key_fred.R")$value
+ft_json  <- "&file_type=json"
+
+# Get data from FRED and listify the JSON
+fred_meta_1 <- root %>%
+  paste0(ids, api_qry, api_key, ft_json, "&offset=1000") %>%
+  map(read_html) %>%
+  map(html_text) %>%
+  map(fromJSON)
+
+fred_meta_2 <- root %>%
+  paste0(ids, api_qry, api_key, ft_json, "&offset=1000") %>%
+  map(read_html) %>%
+  map(html_text) %>%
+  map(fromJSON)
+
+fred_meta_3 <- root %>%
+  paste0(ids, api_qry, api_key, ft_json, "&offset=2000") %>%
+  map(read_html) %>%
+  map(html_text) %>%
+  map(fromJSON)
+
+fred_meta_4 <- root %>%
+  paste0(ids, api_qry, api_key, ft_json, "&offset=3000") %>%
+  map(read_html) %>%
+  map(html_text) %>%
+  map(fromJSON)
+
+fred_meta_5 <- root %>%
+  paste0(ids, api_qry, api_key, ft_json, "&offset=4000") %>%
+  map(read_html) %>%
+  map(html_text) %>%
+  map(fromJSON)
+
+fred_meta_6 <- root %>%
+  paste0(ids, api_qry, api_key, ft_json, "&offset=5000") %>%
+  map(read_html) %>%
+  map(html_text) %>%
+  map(fromJSON)
+
+# Tibblefy the listified JSON
+fred_meta_1 <- fred_meta_1 %>%
+  map(to_tibble) %>%
+  bind_list_rows()
+
+fred_meta_2 <- fred_meta_2 %>%
+  map(to_tibble) %>%
+  bind_list_rows()
+
+fred_meta_3 <- fred_meta_3 %>%
+  map(to_tibble) %>%
+  bind_list_rows()
+
+fred_meta_4 <- fred_meta_4 %>%
+  map(to_tibble) %>%
+  bind_list_rows()
+
+fred_meta_5 <- fred_meta_5[-1] %>%
+  map(to_tibble) %>%
+  bind_list_rows()
+
+fred_meta_6 <- fred_meta_6[-1] %>%
+  map(to_tibble) %>%
+  bind_list_rows()
+
+# Tibblefy the data frames
+fred_meta_1$seriess <- fred_meta_1 %>%
+  .$seriess %>%
+  map(as_tibble)
+
+fred_meta_2$seriess <- fred_meta_2 %>%
+  .$seriess %>%
+  map(as_tibble)
+
+fred_meta_3$seriess <- fred_meta_3 %>%
+  .$seriess %>%
+  map(as_tibble)
+
+fred_meta_4$seriess <- fred_meta_4 %>%
+  .$seriess %>%
+  map(as_tibble)
+
+fred_meta_5$seriess <- fred_meta_5 %>%
+  .$seriess %>%
+  map(as_tibble)
+
+fred_meta_6$seriess <- fred_meta_6 %>%
+  .$seriess %>%
+  map(as_tibble)
+
+# Add and put id column first
+fred_meta_1 <- add_column(fred_meta_1, id = ids) %>%
+  select(id, everything())
+
+fred_meta_2 <- add_column(fred_meta_2, id = ids) %>%
+  select(id, everything())
+
+fred_meta_3 <- add_column(fred_meta_3, id = ids) %>%
+  select(id, everything())
+
+fred_meta_4 <- add_column(fred_meta_4, id = ids) %>%
+  select(id, everything())
+
+fred_meta_5 <- add_column(fred_meta_5, id = ids[-1]) %>%
+  select(id, everything())
+
+fred_meta_6 <- add_column(fred_meta_6, id = ids[-1]) %>%
+  select(id, everything())
+
+
+fred_meta <- bind_rows(fred_meta_1,
+                       fred_meta_2,
+                       fred_meta_3,
+                       fred_meta_4,
+                       fred_meta_5,
+                       fred_meta_6)
+```
+
+```{r import_data_misc, include=FALSE}
+(function(x, uid) {
+    x_sieriess <- select(filter(x, id == uid), seriess)
+    map(x_sieriess, function(x) x[[1]]$id)
+})(x = fred_meta, uid = 119)
+
+```
+
+```{r clean_data_2, include=FALSE}
+fred_data[[1]]$seriess %>%
+    select(1:6) %>% head %>%
+    mutate(title = stri_replace(title, "", regex = "Resident Population in ")) %>%
+    separate("title", c("County", "State"), sep = ", ")
+```

@@ -1,0 +1,131 @@
+---
+title  : "Tracking the Houston area weather"
+author : "Luke Smith"
+date   : "2017-09-20"
+tags   : [houston, weather, xml, scraping]
+description: ""
+---
+
+```{r, eval=FALSE}
+bld_qry <- function(url, ...) {
+  # Does base_url have an ending slash
+  has_end_slash <- if (grepl("/$", base_url)) base_url else paste0(base_url, "/")
+  
+  # Create proper base_url; path will always begin with a leading `/`
+  base_url <- if (end_slash) has_end_slash else base_url
+  
+  # Capture query parts
+  qry <- list(...)
+  
+  # Get names
+  qry_nms <- names(qry)
+  
+  # Compose query from names and values
+  qry <- paste0(qry_nms, "=", qry)
+  qry <- paste0(qry, collapse = "&")
+
+  # Build request url
+  req <- paste0(url, "?", qry)
+  
+  # Return request url
+  return(req)
+}
+
+bld_pth <- function(url, ...) {
+  path <- list(...)
+  
+  # Make sure path has a leading slash
+  path <- if (grepl("^/", path)) path else paste0("/", path)
+  
+}
+```
+
+```{r, eval=FALSE}
+base_url <- "http://www.wrh.noaa.gov/mesowest/getobextXml.php"
+qry_sid <- "sid="
+qry_num <- "num="
+
+stations <- paste0("K", c("IAH", "HOU", "EFD", "DWH", "LVJ", "SGR",
+                          "GLS", "UTS", "PSX", "CLL", "CXO", "VCT",
+                          "LBX", "BYY", "11R", "ARM", "DKR", "RWV",
+                          "6R3"))
+
+rqs <- lapply(stations, function(x) bld_qry(url = base_url, sid = x, num = "168"))
+
+fpath_base <- "~/R/misc/weather/houston/stations/"
+
+# create folder to download files
+ffolder <- paste0(fpath_base, Sys.Date())
+dir.create(ffolder)
+
+# create names for downloaded files
+fpath <- paste0(ffolder, "/", stations, ".xml")
+
+library(curl)
+outcome <- Map(curl_download, rqs, fpath)
+```
+
+```{r}
+library(xml2)
+library(purrr)
+
+all_files <- list.files(fpath_base, recursive = TRUE, full.names = TRUE)
+
+x <- all_files %>%
+  map(read_xml)
+
+station_header <- x %>%
+  map(xml_attrs) %>%
+  map(t) %>%
+  map(as_tibble) %>%
+  bind_rows()
+
+observation_meta <- x %>%
+  map(xml_find_all, xpath = "//ob") %>%
+  map(xml_attrs) %>%
+  modify_depth(2, rbind) %>%
+  modify_depth(2, as_tibble) %>%
+  map(bind_rows, .id = "id") %>%
+  map2(station_names, function(i, j) add_column(i, station = j)) %>%
+  bind_rows()
+
+# Convert character to POSIXct
+observation_meta$time <- observation_meta %>%
+  .$time %>%
+  strptime(format = "%d %b %I:%M %p", tz = "America/Chicago") %>%
+  as.POSIXct()
+
+observation_values <- x %>%
+  map(xml_find_all, xpath = "//ob") %>%
+  map(function(y) map(y, xml_children)) %>%
+  map(function(y) map(y, xml_attrs)) %>%
+  modify_depth(3, rbind) %>%
+  modify_depth(3, as_tibble) %>%
+  modify_depth(2, bind_rows) %>%
+  map(bind_rows, .id = "id") %>%
+  map2(station_names, function(i, j) add_column(i, station = j)) %>%
+  bind_rows()
+
+
+observations <- observation_meta %>%
+  inner_join(observation_values, by = c("id", "station"))
+```
+
+
+```{r plot_data}
+observations %>%
+  select(time, station, var, value) %>%
+  spread(var, value) %>%
+  select(time, station, P, T, TD) %>%
+  mutate_at(vars(P:TD), as.double) %>%
+  ggplot() +
+  geom_line(aes(time, T, group = station, color = station == "KIAH", alpha = station == "KIAH")) +
+  scale_color_manual(name = "Station",
+                     values = c(my_blue, "black"),
+                     labels = c("KIAH", "Other SE TX")) +
+  scale_alpha_manual(values = c(0.25, 1)) +
+  guides(alpha = FALSE) +
+  labs(title = "First cold front of the year comes to Houston.",
+       x = "Date",
+       y = "Temperature (°F)")
+```

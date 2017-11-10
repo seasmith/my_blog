@@ -1,0 +1,355 @@
+---
+title  : "US State GDP's vs the World"
+author : "Luke Smith"
+date   : ""
+tags   : []
+description: ""
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : ""
+  description : ""
+  image       : ""
+og :
+  image : ""
+---
+
+```{r setup_std, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(grid)
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+library(extrafont)
+loadfonts("win")
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+# ---- My_Blogging_Setup
+library(blg)
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+# ---- R_Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+old_digits <- getOption("digits")
+options(digits = 2)
+
+
+# ---- knitr_Options_Setup
+orig_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+# ---- Hooks_Setup
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+
+my_blue   <- "#0059B3"
+my_orange <- "#B35A00"
+my_pink   <- "#B30059"
+my_green  <- "#59B300"
+```
+
+```{r setup_extra, include=FALSE}
+library(httr)
+ISO_3166_1 <- ISOcodes::ISO_3166_1 %>% as_tibble()
+```
+
+```{r fred_notes, include=FALSE, eval=FALSE}
+#                                Series | rid | Tags
+# Gross Domestic Product (GDP) by State | 140 | state; gsp; nsa; annual
+#          World Development Indicators | 234 | nation; gdp; nsa; annual
+#
+# State GDP ex:
+#   https://api.stlouisfed.org/fred/release/series?release_id=140&api_key=myAPIKeyHere&tag_names=state;gsp;nsa;annual
+#
+# WDI ex:
+#   https://api.stlouisfed.org/fred/release/series?release_id=234&api_key=myAPIKeyHere&tag_names=nation;gdp;nsa;annual
+```
+
+```{r import_state_meta, include=FALSE, eval=TRUE, cache=TRUE}
+# URL
+api_url  <- "https://api.stlouisfed.org/fred/"
+
+# Path
+req_type <- "release/series"
+
+# Query keys
+api_key_fred <- getOption("api_key_fred")
+tags <- paste("state", "gsp", "gdp", "nsa", "annual", sep = ";")
+
+url <- parse_url(api_url)
+url$path  <- paste0(url$path, req_type)
+url$query <- list(release_id = "140",
+                  api_key = api_key_fred,
+                  tag_names = tags,
+                  file_type = "json")
+
+fred_qry <- build_url(url) %>% gsub("%3B", ";", .)
+
+
+state_meta <- list()
+n <- 1
+
+repeat {
+  h <- html_text(read_html(fred_qry))
+  h_series <- fromJSON(h)[["seriess"]]
+  state_meta[[n]] <- as_tibble(h_series)
+  
+  if (nrow(state_meta[[n]]) != 1000) break
+  
+  url$query <- list(release_id = "140",
+                    api_key = api_key_fred,
+                    tag_names = tags,
+                    offset = 1000 * n,
+                    file_type = "json")
+  
+  fred_qry <- build_url(url) %>% gsub("%3B", ";", .)
+  n <- n + 1
+}
+```
+
+```{r tidy_state_meta, include=FALSE, eval=TRUE, cache=TRUE}
+state_meta <- state_meta %>% bind_rows()
+
+gsp_meta <- state_meta %>%
+  filter(grepl("^Total Gross Domestic Product .*", title))
+```
+
+```{r import_state_data, include=FALSE, eval=TRUE, cache=TRUE}
+# Add new path
+req_type <- "series/observations"
+url <- parse_url(api_url)
+url$path  <- paste0(url$path, req_type)
+
+# Get series id for series_id
+sids <- gsp_meta$id
+
+gsp_data <- sids %>%
+    map(~{
+        url$query <- list(series_id = .x,
+                          api_key = api_key_fred,
+                          file_type = "json")
+        
+        fred_qry <- gsub("%3B", ";", build_url(url))
+        h <- html_text(read_html(fred_qry))
+        h_observations <- fromJSON(h)[["observations"]]
+        as_tibble(h_observations)
+        })
+
+names(gsp_data) <- sids
+gsp_data <- gsp_data %>% bind_rows(.id = "State")
+
+# Meaningful state names with lookup table
+state_lookup <- tibble(state_abb = state.abb,
+                       state_name = state.name)
+state_lookup <- state_lookup %>%
+    add_row(state_abb = "DC", state_name = "Washington DC")
+
+gsp_data <- gsp_data %>%
+    mutate(state_abb = stri_sub(State, 1L, 2L)) %>%
+    left_join(state_lookup, by = "state_abb")
+
+# Convert columns to correct class and correct value
+gsp_data <- gsp_data %>%
+  mutate_at(vars(realtime_start, realtime_end, date), as.Date) %>%
+  mutate_at(vars(value), as.double) %>%
+  mutate(value = value * 10^6)
+```
+
+```{r import_nation_meta, include=FALSE, eval=TRUE, cache=TRUE}
+req_type <- "release/series"
+
+tags <- paste("nation", "gdp", "nsa", "annual")
+
+url <- parse_url(api_url)
+url$path <- paste0(url$path, req_type)
+url$query <- list(release_id = "234",
+                  api_key = api_key_fred,
+                  tag_names = tags,
+                  file_type = "json")
+
+fred_qry <- url %>%
+  build_url() %>%
+  gsub("%3B|%20", ";", .)
+
+nation_meta <- fred_qry %>%
+  read_html() %>%
+  html_text() %>%
+  fromJSON() %>%
+  .[["seriess"]] %>%
+  as_tibble()
+
+gdp_meta <- nation_meta %>%
+  filter(grepl("Gross Domestic Product", title))
+
+gdp_meta <- gdp_meta %>%
+    filter(!grepl("Per Capita", title))
+```
+
+```{r import_nation_data, include=FALSE, eval=TRUE, cache=TRUE}
+sids <- gdp_meta$id
+
+# Add new path
+req_type <- "series/observations"
+url <- parse_url(api_url)
+url$path  <- paste0(url$path, req_type)
+
+gdp_data <- sids %>%
+    map(~{
+        url$query <- list(series_id = .x,
+                          api_key = api_key_fred,
+                          file_type = "json")
+        
+        fred_qry <- gsub("%3B|%20", ";", build_url(url))
+        h <- html_text(read_html(fred_qry))
+        h_observations <- fromJSON(h)[["observations"]]
+        as_tibble(h_observations)
+        })
+
+names(gdp_data) <- sids
+gdp_data <- gdp_data %>% bind_rows(.id = "Nation")
+
+gdp_data <- gdp_data %>%
+  mutate_at(vars(realtime_start, realtime_end, date), as.Date) %>%
+  mutate_at(vars(value), as.double)
+
+gdp_match_tbl <- gdp_meta %>%
+    select(id, title) %>%
+    mutate(title = stri_replace(title, "", regex = "^Gross Domestic Product for "))
+
+gdp_data <- gdp_data %>%
+    mutate(Nation2 = stri_sub(Nation, 7L, 9L)) %>%
+    left_join(gdp_match_tbl, by = c("Nation" = "id"))
+```
+
+```{r gsp_checks, include=FALSE, eval=TRUE, cache=TRUE}
+# All most recent date values are present for each state
+gsp_all_dates <- gsp_data %>%
+    count(date, state_name) %>%
+    split(.$date) %>%
+    map_int(~nrow(anti_join(.x, state_lookup, by = "state_name"))) %>%
+    sum()
+
+most_recent <- gsp_data %>%
+  distinct(date) %>%
+  filter(date == max(date))
+```
+
+```{r gdp_checks, include=FALSE, eval=TRUE, cache=TRUE}
+gdp_title_lookup <- gdp_data %>% distinct(title)
+
+map_int(sort(unique(year(gdp_data$date))), ~{
+    gdp_data %>%
+        filter(year(date) == .x) %>%
+        anti_join(gdp_title_lookup, ., by = "title") %>%
+        nrow()
+    })
+
+
+# NOTES ON COUNTRY CODE
+# 
+# gdp_data | ISO_3166_1 | Name
+# ---------|------------|-----
+# AFA      | AFG        | Afghanistan
+# AWA      | ABW        | Aruba
+# BBA      | BRB        | Barbados
+# CHA      | CHE        | Switzerland
+# DJA      | DJI        | Djibouti
+# TNA      | TUN        | Tunisia
+corrections <- tribble(
+  ~gdp_name, ~iso_name, ~name,
+  "AFA", "AFG", "Afghanistan",
+  "AWA", "ABW", "Aruba",
+  "BBA", "BRB", "Barbados",
+  "CHA", "CHE", "Switzerland",
+  "DJA", "DJI", "Djibouti",
+  "EGA", "EGY", "Egypt",
+  "ERA", "ERI", "Eritrea",
+  "FMA", "FSM", "Micronesia",
+  "GQA", "GNQ", "Equatorial Guinea",
+  "HRA", "HRV", "Croatia",
+  "HUA", "HUN", "Hungary",
+  "IQA", "IRQ", "Iraq",
+  "IRA", "IRN", "Iran",
+  "KHA", "KHM", "Cambodia",
+  "KWA", "KWT", "Kuwait",
+  "KYA", "CYM", "Cayman Islands",
+  "LTA", "LTU", "Lithuania",
+  "LVA", "LVA", "Latvia",  # ???
+  "LYA", "LBY", "Libya",
+  "MDA", "MDA", "Moldova",
+  "NZA", "NZL", "New Zealand",
+  "OMA", "OMN", "Oman",
+  "PLA", "POL", "Poland",
+  "SBA", "SLB", "Solomon Islands",
+  "SIA", "SVN", "Slovenia",
+  "SKA", "SVK", "Slovakia",
+  "SOA", "SOM", "Somalia",
+  "STA", "STP", "Sao Tome and Principe",
+  "SVA", "SLV", "El Salvador",
+  "SYA", "SYR", "Syria",
+  "TNA", "TUN", "Tunisia",
+  "VIA", "VIR", "Virgin Islands, U.S."
+)
+```
+
+```{r actual_analysis, include=FALSE, eval=FALSE}
+gsp <- gsp_data %>%
+  filter(year(date) == 2014)
+
+gdp <- gdp_data %>%
+  filter(year(date) == 2014)
+
+not_included <- gdp_data %>%
+  filter(year(date) == 2014) %>%
+  anti_join(gdp_title_lookup, ., by = "title") %>%
+  rename(Nation = title)
+
+# How many nations have GDP's less than US states
+lt <- gsp %>%
+    split(.$state_name) %>%
+    map(~{
+        filter(gdp, value < .x$value)
+    })
+
+lt_count <- lt %>%
+    map_df(nrow) %>%
+    t() %>%
+    as.data.frame() %>%
+    data.frame(state = row.names(.), row.names = NULL) %>%
+    as_tibble() %>%
+    select(state, num = V1) %>%
+    arrange(desc(num))
+```

@@ -1,0 +1,20 @@
+Seps:
+
+
+```{bash}
+# Place 7z.exe within the search path
+PATH=$PATH:/C/'Program Files'/7-Zip
+
+# General format:
+7z e path -o/dump_path
+
+    # Unzip
+    7z e /C/Users/Luke/Downloads/stackoverflow.com-Posts.7z -o/C/Users/Luke/Downloads
+    
+    7z e /C/Users/Luke/Downloads/stackoverflow.com-Comments.7z -o/C/Users/Luke/Downloads
+    
+    7z e /C/Users/Luke/Downloads/stackoverflow.com-Users.7z -o/C/Users/Luke/Downloads
+    
+    7z e /C/Users/Luke/Downloads/stackoverflow.com-Badges.7z -o/C/Users/Luke/Downloads
+
+```

@@ -1,0 +1,367 @@
+---
+title       : "Global Remittance Data"
+date        : "2017-09-27"
+author      : "Luke Smith"
+description : ""
+tags        : [r, economics, remittances, global, united states, us]
+---
+
+
+```{r setup_std, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(grid)
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+library(extrafont)
+loadfonts("win")
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+# ---- My_Blogging_Package
+library(blg)
+
+# ---- knitr_chunk_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- R_Options_Setup
+org_scipen <- getOption("scipen")
+options(scipen = 100)
+
+org_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- knitr_hook_Setup
+org_inline <- knit_hooks$get("inline")
+org_plot   <- knit_hooks$get("plot")
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+mod_inline <- knit_hooks$get("inline")
+
+
+# ---- Color_Setup ----
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+# my_verylight_red <- 
+my_lightred   <- "#fabdcd"
+my_darkred    <- "#870b2b"
+my_blue       <- "#4fa8ff"
+my_blue2      <- "#1141ce"
+my_purple     <- "#8E3694"
+my_lightgreen <- "#198f5a"
+my_lightgreen_2 <- "#329b6c"
+my_lightgreen_3 <- "#4ca87e"
+my_lightgreen_4 <- "#66b491"
+my_verylight_green   <- "#e5f2ec"
+my_verylight_green_2 <- "#cce6da"
+my_verylight_green_3 <- "#b2d9c8"
+my_green      <- "#008348"
+my_green_2    <- "#007540"
+my_green_3    <- "#006839"
+my_green_4    <- "#005b32"
+my_green_5    <- "#004e2b"
+my_green_6    <- "#004124"
+my_darkgreen   <- "#00341c"
+my_darkgreen_2 <- "#002715"
+my_darkgreen_3 <- "#001a0e"
+my_orange     <- "#e15c39"
+my_orange2    <- "#834800"
+```
+
+```{r setup_extra, include=FALSE}
+library(zeallot)
+library(cowplot)
+theme_set(blg_theme_default(10))
+
+# Immigration data:
+#   * https://www.dhs.gov/immigration-statistics/yearbook
+#   * https://www.dhs.gov/immigration-statistics
+#
+# How do you define remittance?
+# https://datahelpdesk.worldbank.org/knowledgebase/articles/114950-how-do-you-define-remittances
+```
+
+```{r import_data, include=FALSE, eval=FALSE}
+url <- list(
+  remittances_received = "http://api.worldbank.org/v2/en/indicator/BX.TRF.PWKR.CD.DT?downloadformat=csv",
+  remittances_paid = "http://api.worldbank.org/v2/en/indicator/BM.TRF.PWKR.CD.DT?downloadformat=csv",
+  gdp = "http://api.worldbank.org/v2/en/indicator/NY.GDP.MKTP.CD?downloadformat=csv"
+  )
+
+
+dest_folder <- "~/R/misc/income/worldbank"
+dir.create(dest_folder)
+nms <- paste0(names(url), ".zip")
+dest_files  <- file.path(dest_folder, nms)
+
+dwnld_outcome <- map2(url, dest_files, download.file, mode = "wb")
+```
+
+```{r unzip_data, include=FALSE, eval=FALSE}
+extract_folders <- gsub("\\.zip$", "", dest_files)
+unzip_outcome   <- map2(dest_files, extract_folders, ~unzip(.x, exdir = .y))
+extract_files <- extract_folders %>%
+  map(list.files)
+are_data_files <- extract_files %>%
+  map(~grepl("^API", .x))
+files_to_read <- map2(extract_files, are_data_files, `[`) %>%
+  map2(extract_folders, ., file.path)
+
+c(remittances_received_raw,
+  remittances_paid_raw,
+  gdp_raw) %<-% map(files_to_read, read_csv, skip = 4L)
+```
+
+```{r save_data, include=FALSE, eval=FALSE}
+files_to_save <- extract_folders %>%
+    basename() %>%
+    paste0("_raw.RData") %>%
+    map2(extract_folders, ~file.path(.y, .x))
+
+save(remittances_received_raw, file = files_to_save[[1]])
+save(remittances_paid_raw, file = files_to_save[[2]])
+save(gdp_raw, file = files_to_save[[3]])
+```
+
+```{r load_from_previous_import, include=FALSE}
+load("~/R/misc/income/worldbank/remittances_received/remittances_received_raw.RData")
+load("~/R/misc/income/worldbank/remittances_paid/remittances_paid_raw.RData")
+load("~/R/misc/income/worldbank/gdp/gdp_raw.RData")
+
+gdp <- gdp_raw %>%
+  select(-(`Country Code`:`Indicator Code`), -X62) %>%
+  gather(... = -`Country Name`, year, gdp)
+
+remittances_received <- remittances_received_raw %>%
+    select(-(`Country Code`:`Indicator Code`), -X62) %>%
+    gather(... = -`Country Name`, year, received)
+
+remittances_paid <- remittances_paid_raw %>%
+    select(-(`Country Code`:`Indicator Code`), -X62) %>%
+    gather(... = -`Country Name`, year, paid)
+
+
+remittances <- remittances_received %>%
+  inner_join(remittances_paid, by = c("Country Name", "year"))
+
+wb <- remittances %>%
+  inner_join(gdp, by = c("Country Name", "year"))
+```
+
+
+```{r plot_by_percent}
+theme_set(blg_theme_default(12))
+my_percent_0 <- blg::blg_frmt_percent(i = 0)
+
+# wb %>%
+#     mutate_at(vars(year:paid), as.double) %>%
+#     mutate(net_remittances = received - paid,
+#            net_prcnt_gdp = net_remittances / gdp) %>%
+#     filter(grepl("Mexico|El Salvador|Guatemala|Nicaragua|Belize|Honduras|Costa Rica|Panama|Venezuela", `Country Name`)) %>%
+#     ggplot() +
+#     geom_line(aes(year, net_prcnt_gdp)) +
+#     facet_wrap(~`Country Name`) +
+#     scale_y_continuous(labels = my_percent_0)
+
+wb_summ <- wb %>%
+    mutate_at(vars(year:paid), as.double) %>%
+    mutate(net_remittances = received - paid,
+           net_prcnt_gdp = net_remittances / gdp) %>%
+    select(`Country Name`:gdp, net_prcnt_gdp)
+
+wb_summ_10_years <- wb_summ %>%
+    filter(!grepl("small states|Arab World", `Country Name`, ignore.case = TRUE)) %>%
+    filter(year >= 2007) %>%
+    group_by(`Country Name`) %>%
+    filter(!(is.na(received) | is.na(paid))) %>%
+    summarize(net_prcnt_gdp = (sum(received) - sum(paid)) / sum(gdp)) %>%
+    filter(!is.na(net_prcnt_gdp))
+
+top_recipients <- wb_summ_10_years %>%
+  arrange(desc(net_prcnt_gdp)) %>%
+  pull(`Country Name`)
+
+bottom_recipients <- wb_summ_10_years %>%
+  filter(!grepl("small states|Arab World", `Country Name`, ignore.case = TRUE)) %>%
+  arrange(net_prcnt_gdp) %>%
+  pull(`Country Name`)
+
+top_12 <- wb %>%
+  filter(year >= 1970) %>%
+  mutate_at(vars(year:paid), as.double) %>%
+  mutate(net_remittances = received - paid,
+         net_prcnt_gdp = net_remittances / gdp) %>%
+  filter(`Country Name` %in% top_recipients[1:9]) %>%
+  mutate(`Country Name` = factor(`Country Name`, levels = top_recipients[1:9])) %>%
+  ggplot() +
+  geom_line(aes(year, net_prcnt_gdp)) +
+  geom_hline(yintercept = 0, color = "black") +
+  facet_wrap(~`Country Name`) +
+  scale_x_continuous(labels = blg_frmt_stagger()) +
+  scale_y_continuous(labels = my_percent_0) +
+  scale_color_manual(values = c(my_red, my_blue)) +
+  guides(color = FALSE)
+
+bottom_12 <- wb %>%
+  filter(year >= 1970) %>%
+  mutate_at(vars(year:paid), as.double) %>%
+  mutate(net_remittances = received - paid,
+         net_prcnt_gdp = net_remittances / gdp) %>%
+  filter(`Country Name` %in% bottom_recipients[1:9]) %>%
+  mutate(`Country Name` = factor(`Country Name`, levels = bottom_recipients[1:9])) %>%
+  ggplot() +
+  geom_line(aes(year, net_prcnt_gdp)) +
+  geom_hline(yintercept = 0, color = "black") +
+  facet_wrap(~`Country Name`) +
+  scale_x_continuous(labels = blg_frmt_stagger()) +
+  scale_y_continuous(labels = my_percent_0) +
+  scale_color_manual(values = c(my_red, my_blue)) +
+  guides(color = FALSE)
+
+plot_grid(top_12, bottom_12)
+```
+
+<br>
+<br>
+<br>
+
+```{r plot_by_total}
+outs <- c("World", "High income", "OECD members",
+          "Post-demographic dividend", "Europe & Central Asia",
+          "European Union", "Euro area", "Late-demographic dividend",
+          "Middle East & North Africa", "North America", "Arab World",
+          "IDA & IBRD total", "IBRD only",
+          "Early-demographic dividend", "Low & middle income",
+          "Middle income", "East Asia & Pacific",
+          "Upper middle income",
+          "East Asia & Pacific (excluding high income)",
+          "East Asia & Pacific (IDA & IBRD countries)",
+          "Europe & Central Asia (IDA & IBRD countries)",
+          "Europe & Central Asia (excluding high income)",
+          "Small states", "Other small states", "Lower middle income",
+          "South Asia", "South Asia (IDA & IBRD)", "IDA total",
+          "Latin America & Caribbean",
+          "Latin America & the Caribbean (IDA & IBRD countries)",
+          "Latin America & Caribbean (excluding high income)",
+          "IDA only",
+          "Middle East & North Africa (excluding high income)",
+          "IDA blend",
+          "Middle East & North Africa (IDA & IBRD countries)",
+          "Least developed countries: UN classification",
+          "Sub-Saharan Africa",
+          "Sub-Saharan Africa (IDA & IBRD countries)",
+          "Sub-Saharan Africa (excluding high income)",
+          "Pre-demographic dividend",
+          "Central Europe and the Baltics",
+          "Fragile and conflict affected situations",
+          "Heavily indebted poor countries (HIPC)", "Low income")
+
+top_paid <- wb %>%
+  mutate_at(vars(received:paid), as.double) %>%
+  filter(year == 2016) %>%
+  filter(!(`Country Name` %in% outs)) %>%
+  arrange(desc(paid)) %>%
+  slice(1:9)
+
+top_received <- wb %>%
+  mutate_at(vars(received:paid), as.double) %>%
+  filter(year == 2016) %>%
+  filter(!(`Country Name` %in% outs)) %>%
+  arrange(desc(received)) %>%
+  slice(1:9)
+
+plot_top_paid <- wb %>%
+  mutate_at(vars(received:paid), as.double) %>%
+  mutate_at(vars(year), as.integer) %>%
+  filter(year >= 1970L) %>%
+  semi_join(top_paid, by = "Country Name") %>%
+  mutate_at(vars(`Country Name`), factor, levels = top_paid$`Country Name`) %>%
+  ggplot() +
+  geom_line(aes(year, paid, group = `Country Name`)) +
+  scale_x_continuous(labels = blg_frmt_stagger()) +
+  scale_y_continuous(labels = function(x) {x / 10^9}) +
+  facet_wrap(~`Country Name`, labeller = label_wrap_gen(12)) +
+  labs(title = "Paid Remittances",
+       subtitle = "Billion of US Dollars ($)",
+       y = NULL)
+
+plot_top_received <- wb %>%
+  mutate_at(vars(received:paid), as.double) %>%
+  mutate_at(vars(year), as.integer) %>%
+  filter(year >= 1970L) %>%
+  semi_join(top_received, by = "Country Name") %>%
+  mutate_at(vars(`Country Name`), factor, levels = top_received$`Country Name`) %>%
+  ggplot() +
+  geom_line(aes(year, received, group = `Country Name`)) +
+  scale_x_continuous(labels = blg_frmt_stagger()) +
+  scale_y_continuous(labels = function(x) {x / 10^9}) +
+  facet_wrap(~`Country Name`, labeller = label_wrap_gen(12)) +
+  labs(title = "Received Remittances",
+       subtitle = "Billion of US Dollars ($)",
+       y = NULL)
+
+# plot_grid(plot_top_received, plot_top_paid)
+
+# Grobify
+ptr_grob <- ggplotGrob(plot_top_received)
+ptp_grob <- ggplotGrob(plot_top_paid)
+
+# Arrange grobs with layout_matrix and widths
+grobs <- arrangeGrob(grobs = list(ptr_grob, ptp_grob),
+            layout_matrix = rbind(c(1,NA,2)),
+            widths = c(unit(1, "null"), unit(0.075, "null"), unit(1, "null")))
+
+# Clear viewport and draw
+grid.newpage()
+grid.draw(grobs)
+```
+
+
+```{r an_idea_for_better_pipes, include=FALSE}
+# Split table into sections of continuous and discontinuous.
+#   * Continuous = sign (>=/< 0) is the same for consecutive rows
+#     * Positive = positive continuous sign (>= 0)
+#     * Negative = negative continuous sign (< 0)
+#   * Discontinuous = sign flips 
+wb %>%
+    mutate_at(vars(year:paid), as.double) %>%
+    mutate(net_remittances = received - paid,
+           net_prcnt_gdp = net_remittances / gdp) %>%
+    filter(`Country Name` %in% bottom_recipients[1:9]) %>%
+    mutate(`Country Name` = factor(`Country Name`, levels = bottom_recipients[1:9]),
+           ymin = if_else(net_prcnt_gdp >= 0, 0, net_prcnt_gdp),
+           ymax = if_else(net_prcnt_gdp >= 0, net_prcnt_gdp, 0)) %>%
+    filter(`Country Name` == "Malta") %>%
+    mutate(is_cont = sign(net_prcnt_gdp) - lag(sign(net_prcnt_gdp))) %>%
+    tail(n = 15) %>%
+    select(1,2, net_prcnt_gdp, 10)
+```
