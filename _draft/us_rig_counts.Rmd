@@ -609,7 +609,8 @@ sf_text <- sf_plays %>%
 # Extract coordinates
 sf_text <- sf_text %>%
   st_coordinates() %>%
-  cbind(as_tibble(sf_text), .)
+  cbind(as_tibble(sf_text), .) %>%
+  as_tibble()
 
 tst <- sf_text %>%
   cbind(tibble(offset_X = c( 5.8,  1.7, # Ardmore,      Fayetteville
