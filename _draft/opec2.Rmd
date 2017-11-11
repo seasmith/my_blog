@@ -386,9 +386,15 @@ wide_lims <- post_tst %>%
 wide_lims <- c(min(thin_lims, wide_lims),
                max(thin_lims, wide_lims))
 
+min_date <- post_tst %>%
+  filter(date == min(date)) %>%
+  .$date %>%
+  unique()
+
 date_iterator <- post_tst %>%
   distinct(date) %>%
-  add_row(date = rep(scale_marker, 20)) %>%
+  # add_row(date = rep(min_date, 20)) %>%
+  add_row(date = rep(scale_marker, 30)) %>%
   add_row(date = rep(max(.$date), 20)) %>%
   arrange(date) %>%
   add_column(id = seq(1, nrow(.)))
@@ -396,7 +402,7 @@ date_iterator <- post_tst %>%
 # Label country lines
 sa_y  <-  900
 or_y  <-  350
-usa_y <- -150
+usa_y <- -550
 
 labels <- date_iterator %>%
   filter(date == max(date) | date == scale_marker) %>%
@@ -404,25 +410,28 @@ labels <- date_iterator %>%
                                  TRUE ~ NA_character_),
          sa_y   = case_when(date == scale_marker   ~ sa_y,
                                TRUE ~ NA_real_),
-         or_label  = case_when(between(row_number(), 7, 21)  ~ "or",
+         or_label  = case_when(between(row_number(), 9, max(row_number())) & date == scale_marker  ~ "or",
                                TRUE ~ NA_character_),
-         or_y      = case_when(between(row_number(), 7, 21)  ~ or_y,
+         or_y      = case_when(between(row_number(), 9, max(row_number())) & date == scale_marker  ~ or_y,
                                TRUE ~ NA_real_),
-         usa_label = case_when(between(row_number(), 13, 21) ~ "The United
-                               States",
+         usa_label = case_when(between(row_number(), 17, max(row_number())) & date == scale_marker ~ "The United States",
                                TRUE ~ NA_character_),
-         usa_y     = case_when(between(row_number(), 13, 21) ~ usa_y,
+         usa_y     = case_when(between(row_number(), 17, max(row_number())) & date == scale_marker ~ usa_y,
                                TRUE ~ NA_real_))
 
 # Explain the y-axis values and the starting point
-explainers <- tribble(
-  ~axis, ~date,
-  "Change in production", paste0("From this date", "\nJune 2007")
-  )
+# explainers <- date_iterator %>%
+#     filter(date == min_date) %>%
+#     mutate(y_axis = paste0("Change in production"),
+#            y_axis_x = as.Date("2008-06-01"),
+#            y_axis_y = 500,
+#            start  = paste0("From June 2007"),
+#            start_x = as.Date("2009-01-01"),
+#            start_y = -200)
 
 # Label x-offsets
-sa_offset_x  <- 180
-or_offset_x  <- 225
+sa_offset_x  <- 200
+or_offset_x  <- 295
 usa_offset_x <- 540
 
 # Arrow tables
@@ -435,14 +444,22 @@ sa_arrow <- sa_arrow %>%
              x_end = scale_marker,
              y_end = filter(data_arrow, Name == "Saudi Arabia")$init_change)
 
+sa_arrow <- sa_arrow %>%
+  mutate(y = y - 140,
+         x = x + 30)
+
 usa_arrow <- tibble(id = filter(labels, !is.na(usa_label))$id)
 usa_arrow <- usa_arrow %>%
   add_column(x = scale_marker + usa_offset_x,
              y = usa_y,
              x_end = scale_marker,
-             y_end = filter(data_arrow, Name == "Untied States")$init_change)
+             y_end = filter(data_arrow, Name == "United States")$init_change)
+
+usa_arrow <- usa_arrow %>%
+  mutate(y = y + 200)
 
 map2_chr(date_iterator$date, date_iterator$id, ~{
+  
   # Set y-limits
   lims <- if (.x <= scale_marker) thin_lims else NULL
   gg <- ggplot(filter(post_tst, date <= .x)) +
@@ -467,18 +484,31 @@ map2_chr(date_iterator$date, date_iterator$id, ~{
                                         10))
   # Add text at appropriate times
   if (.x == scale_marker) {
-    d  <- filter(labels, id == .y)
+    l     <- filter(labels, id == .y)
+    sa_d  <- filter(sa_arrow, id == .y)
+    usa_d <- filter(usa_arrow, id == .y)
+    
     gg <- gg +
-      geom_text(data = d,
-                aes(date, saudi_y, label = saudi_label),
+      geom_text(data = l,
+                aes(date, sa_y, label = saudi_label),
                 alpha = 0.6, size = 4, nudge_x = sa_offset_x) +
-      geom_text(data = d,
+      geom_curve(data = sa_d,
+                 aes(x, y, xend = x_end, yend = y_end),
+                 alpha = 0.6, size = 0.6,
+                 arrow = arrow(angle = 25, ends = "last", length = unit(0.03, "npc")),
+                 curvature = 0.10) +
+      geom_text(data = l,
                 aes(date, or_y, label = or_label),
                 size = 5, nudge_x = or_offset_x) +
-      geom_text(data = d,
+      geom_text(data = l,
                 aes(date, usa_y, label = usa_label),
-                alpha = 1, size = 6, nudge_x = usa_offset_x)
-    }
+                alpha = 1, size = 6, nudge_x = usa_offset_x) +
+      geom_curve(data = usa_d,
+                 aes(x, y, xend = x_end, yend = y_end),
+                 alpha = 1, size = 1,
+                 arrow = arrow(angle = 35, ends = "last"),
+                 curvature = -0.5)
+      }
 
   fil <- file.path(td, sprintf("%s.png", as.character(.y)))
   ggsave(fil, gg, , units = "in", width=6, height=3.5)
@@ -489,5 +519,5 @@ map2_chr(date_iterator$date, date_iterator$id, ~{
   map(image_scale, geometry = "675x") %>%
   image_join() %>%
   image_animate() %>%
-  image_write("prod2.gif")
+  image_write("prod3.gif")
 ```
