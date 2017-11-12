@@ -7,4 +7,5 @@ Thumbs.db
 logs
 derby.log
 *.gif
+*.png
 desktop.ini

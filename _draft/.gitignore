@@ -6,4 +6,5 @@ setup_std.R
 comb.RData
 all.RData
 *.html
-.Rmd
+*.png
+*.gif
