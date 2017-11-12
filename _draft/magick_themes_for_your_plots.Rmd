@@ -1,0 +1,108 @@
+---
+title  : "US State GDP's vs the World"
+author : "Luke Smith"
+date   : ""
+tags   : []
+description: ""
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : ""
+  description : ""
+  image       : ""
+og :
+  image : ""
+---
+
+
+```{r setup_std, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(grid)
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+library(extrafont)
+loadfonts("win")
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+# ---- My_Blogging_Setup
+library(blg)
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+# ---- R_Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+old_digits <- getOption("digits")
+options(digits = 2)
+
+
+# ---- knitr_Options_Setup
+orig_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+# ---- Hooks_Setup
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+
+my_blue   <- "#0059B3"
+my_orange <- "#B35A00"
+my_pink   <- "#B30059"
+my_green  <- "#59B300"
+```
+
+```{r setup_extra, include=FALSE}
+library(magick)
+```
+
+```{r iris_ex}
+i <- iris %>%
+  ggplot() +
+  geom_point(aes(Sepal.Length, Petal.Length, color = Species)) +
+  labs(title = "Sepal Length vs Petal Length")
+
+ggsave(fp <- "i.png", i)
+
+i <- image_read(fp)
+```
+
+```{r iris_print, echo=TRUE}
+# Dark theme
+(i_neg <- image_negate(i) %>% image_scale("700x"))
+
+# 60's print theme
+image_charcoal(i_neg) %>%
+  image_negate() %>%
+  image_charcoal()
+```
