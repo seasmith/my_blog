@@ -117,6 +117,15 @@ oil_prices <- oil_prices %>%
   mutate(value = as.double(value),
          date  = as.Date(date)) %>%
   rename(price = value)
+
+# Get monthly price (instead of using weekly)
+oil_prices <- oil_prices %>%
+    group_by(m = month(date), y = year(date)) %>%
+    summarize(price = mean(price, na.rm = TRUE)) %>%
+    ungroup() %>%
+    transmute(date = paste(y, m, "01", sep = "-"),
+              date = as.Date(date),
+              price = price)
 ```
 
 ```{r import_oil_production_meta, include=FALSE, eval=FALSE}
@@ -324,10 +333,14 @@ post_recession <- post_recession %>%
 
 ```{r plot_post_recession, include=FALSE}
 # Jordan and Slovenia have no production value (all NA)
-post_recession2 <- post_recession %>%
-    filter(!grepl("Jordan|Slovenia", Name)) 
+pr_top_10 <- post_recession %>%
+    filter(date == max(date)) %>%
+    arrange(desc(init_change)) %>%
+    slice(1:10) %>%
+    select(Name, date, production, init_change)
 
-Names <- unique(post_recession2$Name)
+pr_op <- post_recession %>%
+    left_join(oil_prices)
 
 td <- tempdir()
 
@@ -520,4 +533,34 @@ map2_chr(date_iterator$date, date_iterator$id, ~{
   image_join() %>%
   image_animate() %>%
   image_write("prod3.gif")
+```
+
+```{r modeling, include=FALSE}
+us_data <- pr_op %>%
+  filter(Name %in% "United States")
+
+it <- seq(0L, 48L)
+td <- tempdir()
+
+it %>%
+  map_chr(~{
+    gg <- us_data %>%
+      mutate(init_change = lead(init_change, .x)) %>%
+      select(Name, date, production, init_change, price) %>%
+      arrange(date) %>%
+      ggplot(aes(init_change, price)) +
+      geom_point() +
+      geom_smooth(method = "loess") +
+      labs(subtitle = paste0("Production change lagged by ", .x, " months"))
+    
+    fil <- file.path(td, sprintf("%s.png", as.character(.x)))
+    ggsave(fil, gg, , units = "in", width=6, height=3.5)
+    fil
+    
+  }) %>%
+  map(image_read) %>%
+  map(image_scale, geometry = "675x") %>%
+  image_join() %>%
+  image_animate(2) %>%
+  image_write("model.gif")
 ```
