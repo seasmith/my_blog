@@ -88,6 +88,10 @@ library(httr)
 library(curl)
 library(zeallot)
 library(kableExtra)
+
+library(magick)
+library(tweenr)
+
 theme_set(blg_theme_default())
 ref <- "~/R/misc/oil/rig_counts"
 ```
@@ -939,38 +943,8 @@ x %>%
              size = 1)
 ```
 
-```{r exp, include=FALSE, eval=FALSE}
-ckey <- basin %>%
-  group_by(basin, key) %>%
-  arrange(Date) %>%
-  mutate(chng_1wk = (value - lag(value)) / value,
-         chng_4wk = (value - lag(value, 4)) / value,
-         chng_16wk = (value - lag(value, 16)) / value,
-         chng_52wk = (value - lag(value, 52)) / value) %>%
-  ungroup() %>%
-  filter(Date == key_dates[["this_week"]]) %>%
-  filter(key != "Total")
-
-ckey <- ckey %>%
-  mutate(basin = factor(basin, levels = tw_levels))
-
-ckey <- ckey %>%
-  mutate(chng_1wk = if_else(is.na(chng_1wk), 0, chng_1wk))
-
-ckey %>%
-  select(basin:chng_1wk) %>%
-  spread(key, value) %>%
-  filter(chng_1wk != 0)
-```
 
 ```{r tween_prep, include=FALSE, eval=FALSE}
-# ----
-# GIF
-# ----
-
-# tweenr
-library(tweenr)
-
 # Need the right variables
 t <- master_type %>%
   select(Basin, PublishDate, hz) %>%
@@ -1033,7 +1007,6 @@ t_tween <- t_tween %>%
 ```
 
 ```{r plot_tweenr_hz, include=FALSE, eval=FALSE}
-library(magick)
 td <- tempdir()
 
   
@@ -1107,58 +1080,100 @@ map_chr(unique(summ_animate$Date), ~{
     image_write("rig_count_animate.gif")
 ```
 
-```{r exp_plot, include=FALSE, eval=FALSE}
-# ---- OLDER
-t <- master_type %>%
-  select(Basin, PublishDate, hz)
+```{r rc_vs_price, include=FALSE}
+comb <- left_join(basin, oil_prices, by = c("Date" = "date"))
 
-# NEED TO SPLIT BY `PublishDate` NOT `id`!!!
-t_tween <- t %>%
-  rename(x = PublishDate, y = hz, id = Basin) %>%
-  mutate(id = factor(id)) %>%
-  group_by(id) %>%
-  nest()
+ab <- comb %>% filter(key == "Total")
+bn <- ab %>% distinct(basin)
+bn <- bn %>% union_all(., .)
+bn <- bn %>% arrange(basin)
+bn_first_basin <- bn %>% slice(1:2)
+
+bn <- bn %>%
+  union_all(bn_first_basin) %>%
+  mutate(id = row_number())
+
+td <- tempdir()
+
+imgs <- bn$basin %>%
+  map2_chr(bn$id, ~{
+    gg <- ggplot(filter(ab, basin == .x)) +
+      geom_point(aes(value, price, color = Date)) +
+      scale_colour_date(low = blg::blg_colors$blue, high = blg::blg_colors$red) +
+      # viridis::scale_colour_viridis(option = "A") +
+      labs(title = paste0("Rig Count vs Oil Price"),
+           subtitle = paste0("Basin: ", .x, "\n"),
+           x = "Total Rig Count",
+           y = "Oil Price ($)",
+           caption = paste0("Source: US EIA; FRED; Baker Hughes")) +
+      theme(plot.caption = element_text(size = 10, color = "gray50"))
+    
+  fil <- file.path(td, sprintf("%s.png", as.character(.y)))
+  ggsave(fil, gg, , units = "in", width=6, height=3.5)
+  fil
+  
+  })
+
+imgs <- imgs %>% 
+  map(image_read) %>%
+  map(image_scale, geometry = "675x")
+
+imgs <- imgs %>%
+  image_join()
+
+imgs <- imgs %>% 
+  image_animate(10)
+
+imgs <- imgs %>% 
+  image_morph(nrow(bn) / 3)
+
+imgs <- imgs %>%
+  image_write("rc_vs_price_each.gif")
+  
+
+td <- tempdir()
+
+# Snapshot of each
 
 
-t_tween <- t %>%
-  rename(x = PublishDate, y = hz, id = Basin) %>%
-  mutate(id = factor(id)) %>%
-  group_by(id) %>%
-  nest()
+# Lagging price
+ef <- filter(comb, basin == "Eagle Ford" & key == "Total")
+wi <- filter(comb, basin == "Williston" & key == "Total")
 
-# t_tween <- t_tween %>%
-#     mutate(PublishDate = x, Basin = id) %>%
-#     inner_join(t)
+it <- seq(0L, 16L)
 
-# ggplot2
-p <- ggplot(t_tween, aes(id, y, frame = .frame)) +
-    geom_point()
+it %>%
+  map_chr(~{
+    
+    gg <- ggplot(ef) +
+      geom_point(aes(value, lag(price, .x), color = ef$Date)) +
+      labs(title = paste0("Rig count vs Oil price"),
+           subtitle = paste0("Price lagged by ", .x, " months"))
+    
+  fil <- file.path(td, sprintf("%04d.png", as.integer(.x)))
 
-# gganimate
-library(gganimate)
-gganimate(p)
-
-# ---- Other
-this_week %>%
-  ggplot() +
-  geom_point(aes(fct_rev(basin), chng_1wk, color = factor(sign(chng_1wk)), size = value)) +
-  geom_segment(aes(x = basin, xend = basin, y = 0, yend = chng_1wk, color = factor(sign(chng_1wk)))) +
-  coord_flip() +
-  scale_color_manual(name = "Change",
-                     values = c(blg_colors$red, "black", blg_colors$blue)) +
-  scale_size_continuous(name = "Number of rigs") +
-  scale_y_continuous(labels = blg_frmt_percent(1),
-                     limits = c(-0.05, 0.05),
-                     breaks = c(-0.05, -0.025, 0, 0.025, 0.05)
-                     ) +
-  guides(color = FALSE) +
-  labs(title = "US rig count (lower 48 states)",
-       subtitle = paste0("Percent change in rig count from week of\n",
-                         key_dates[["week_ago"]], " to ", key_dates[["this_week"]]),
-       x = paste0("Basin"),
-       y = paste0("Percent change in rigs")) +
-  blg_theme_default(14)
+  ggsave(fil, gg, , units = "in", width=6, height=3.5)
+  
+  fil
+  
+  }) %>% 
+  map(image_read) %>%
+  map(image_scale, geometry = "675x") %>%
+  image_join() %>% 
+  image_animate(2) %>% 
+  image_write("rc_vs_price_lagged.gif")
 ```
+
+
+
+
+
+
+
+
+
+
+
 
 ```{r map_conversion, include=FALSE, eval=FALSE}
 gj_plays_total <- geojson_json(sf_plays_total)
