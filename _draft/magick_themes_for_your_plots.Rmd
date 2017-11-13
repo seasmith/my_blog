@@ -106,3 +106,27 @@ image_charcoal(i_neg) %>%
   image_negate() %>%
   image_charcoal()
 ```
+
+
+```{r me}
+me <- image_read("~/R/my_blog/me.png")
+```
+
+
+```{r blur_me}
+it <- seq(2L, 50L)
+td <- tempdir()
+blurry <- list()
+blurry[[1]] <- image_blur(me)
+
+for ( i in it) {
+  blurry[[i]] <- image_blur(blurry[[i - 1]])
+}
+
+blurry %>%
+  rev() %>%
+  append(blurry) %>%
+  image_join() %>%
+  image_animate(50) %>%
+  image_write("me.gif")
+```
