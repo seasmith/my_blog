@@ -1,23 +1,21 @@
 ---
-  title  : "US Rig Counts"
+title  : "US Rig Counts"
 author : "Luke Smith"
 date   : "2017-10-06"
 tags   : [r, oil, gas, oil and gas, rig counts]
 description: ""
 twitter :
   card    : "summary_large_image"
-site    : "@lksmth"
-creator : "@lksmth"
-title   : "US Rig Counts"
-description : ""
-image       : ""
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : "US Rig Counts"
+  description : ""
+  image       : ""
 og :
   image : ""
 ---
   
-```{r setup_std, include=FALSE}
-# source("setup_std.R")
-
+```{r setup_std, include=FALSE, purl=FALSE, eval=TRUE}
 # ---- Library_Tidyverse_Setup
 library(tidyverse)
 library(lubridate)
@@ -48,9 +46,9 @@ library(blg)
 # ---- Opts_Setup
 knitr::opts_chunk$set(echo =  FALSE)
 knitr::opts_chunk$set(fig.height = 7)
-knitr::opts_chunk$set(message    = FALSE)
-knitr::opts_chunk$set(warning    = FALSE)
-
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(purl = FALSE)
 
 # ---- R_Options_Setup
 old_scipen <- getOption("scipen")
@@ -83,14 +81,8 @@ my_green  <- "#59B300"
 
 ```{r setup_extra, include=FALSE}
 library(sf)
-library(forcats)
 library(httr)
-library(curl)
-library(zeallot)
-library(kableExtra)
-
 library(magick)
-library(tweenr)
 
 theme_set(blg_theme_default())
 
@@ -100,8 +92,14 @@ file_path <- function(..., fsep = .Platform$file.sep) {
   
   paste0(file.path(..., fsep = fsep), fsep)
 }
+```
 
-# Ref to external data source
+
+
+```{r import_from_chunks, eval=TRUE, include=FALSE}
+# FROM: us_rig_counts.Rmd
+# read_csv_rig_count
+# wrangle_data_rig_counts
 ref <- "~/R/misc/oil/rig_counts"
 
 # Ref to this working directory
@@ -116,121 +114,13 @@ knit("us_rig_counts.Rmd", fp, tangle = TRUE)
 read_chunk(fp)
 ```
 
-```{r import_oil_price, include=FALSE, eval=FALSE}
-api_url <- "https://api.stlouisfed.org/fred/"
-req_type <- "series/observations"
-req_qry <- "?series_id="
-api_qry <- "&api_key="
-api_key_fred <- getOption("api_key_fred")
-file_type <- "&file_type="
-
-fred_qry <- paste0(api_url, req_type,
-                   req_qry, "DCOILWTICO",
-                   api_qry, api_key_fred,
-                   file_type, "json")
-
-oil_prices <- fred_qry %>%
-  read_html() %>%
-  html_text() %>%
-  fromJSON() %>%
-  .[["observations"]] %>%
-  as_tibble() %>%
-  select(-(1:2))
-
-oil_prices <- oil_prices %>%
-  mutate(value = as.double(value),
-         date  = as.Date(date)) %>%
-  rename(price = value)
-```
-
-```{r import_from_chunks, eval=FALSE, include=FALSE}
-# FROM: us_rig_counts.Rmd
-# read_csv_rig_count
-# wrangle_data_rig_counts
-```
-
 ```{r read_csv_rig_count}
 ```
 
 ```{r wrangle_data_rig_counts}
 ```
 
-```{r import_state_prod_meta}
-api_key_eia <- getOption("api_key_eia")
 
-base <- "http://api.eia.gov"
-path <- "category" %>% file.path()
-# US Crude Oil Production
-cat_id  <- 296686
-
-url <- parse_url(base)
-url$path <- path %>% file_path()
-url$query <- list(
-  api_key     = api_key_eia,
-  category_id = cat_id
-)
-
-url <- url %>% build_url()
-
-# Read:
-# - "Crude Oil Imports"
-#   - "By Origin"
-
-state_prod_meta <- url %>%
-  read_html() %>%
-  html_text() %>%
-  fromJSON() %>%
-  .$category %>%
-  .$childseries %>%
-  as_tibble()
-```
-
-```{r import_state_prod}
-tbpd <- "Thousand Barrels per Day"
-monthly <- "M"
-
-series_ids <- state_prod_meta %>%
-  filter(f == monthly & units == tbpd) %>%
-  pull(series_id)
-
-path <- "series"
-
-state_prod <- series_ids %>%
-  map(~{
-    
-    url <- parse_url(base)
-    url$path <- path %>% file_path()
-    url$query <- list(
-      api_key = api_key_eia,
-      series_id = .x
-    )
-    
-    h <- read_html(build_url(url))
-    h <- fromJSON(html_text(h))
-    h <- as_tibble(h$series$data[[1]])
-    names(h) <- c("date", "production")
-    
-    return(h)
-  })
-```
-
-```{r tidy_state_prod}
-# Get names to use for list
-series_names <- state_prod_meta %>%
-    filter(series_id %in% series_ids) %>%
-    mutate(name = stri_replace(name, "", regex = " (Field Production|Crude Oil) .*"),
-           name = stri_trim(name)) %>%
-  pull(name)
-
-# Add names and bind
-names(state_prod) <- series_names
-state_prod <- state_prod %>% bind_rows(.id = "location")
-
-# Data coercion
-state_prod <- state_prod %>%
-        mutate(date = as.Date(stri_paste(date, "01"), format = "%Y%m%d"),
-               production = as.integer(production))
-```
 
 ```{r import_og_split, include=FALSE}
 ogrc <- file.path(ref, "US Oil & Gas Split.csv") %>%
@@ -252,13 +142,13 @@ ogrc <- ogrc %>%
          `% Gas` = fun_2(`% Gas`))
 
 ogrc <- ogrc %>%
-    mutate(Oil = case_when(
-        is.na(Oil) ~ as.numeric((Total) - (Gas + Misc)),
-        TRUE ~ as.numeric(Oil)
-    ))
+  mutate(Oil = case_when(
+    is.na(Oil) ~ as.numeric((Total) - (Gas + Misc)),
+    TRUE ~ as.numeric(Oil)
+  ))
 
 ogrc <- ogrc %>%
-    left_join(oil_prices, by = c("Date" = "date"))
+  left_join(oil_prices, by = c("Date" = "date"))
 
 ogrc %>%
   ggplot(aes(Oil, price)) +
@@ -296,46 +186,46 @@ plot_lines <- function(data, dc_order = 1L) {
 # price ~ Oil
 # Faceted by year intervals
 ogrc %>%
-    ggplot(aes(Oil, price, color = cut_interval(year(Date), 4))) +
-    geom_point(alpha = 1/6) +
-    geom_smooth(method = "lm", color = blg_colors$blue) +
-    facet_wrap(~cut_interval(year(Date), 4)) +
-    scale_color_manual(values = c(blg_colors$red, blg_colors$lightred, blg_colors$lightgreen_4, blg_colors$green_4)) +
-    guides(color = FALSE)
+  ggplot(aes(Oil, price, color = cut_interval(year(Date), 4))) +
+  geom_point(alpha = 1/6) +
+  geom_smooth(method = "lm", color = blg_colors$blue) +
+  facet_wrap(~cut_interval(year(Date), 4)) +
+  scale_color_manual(values = c(blg_colors$red, blg_colors$lightred, blg_colors$lightgreen_4, blg_colors$green_4)) +
+  guides(color = FALSE)
 
 # price ~ Oil
 # Faceted by `% Oil` intervals
 ogrc %>%
-    filter(year(Date) >= 2007) %>%
-    ggplot(aes(Oil, price)) +
-    geom_point(aes(color = Date), alpha = 1/2) +
-    geom_smooth(method = "lm", color = blg_colors$blue) +
-    facet_wrap(~cut_interval(`% Oil`, 4)) +
-    guides(color = FALSE)
+  filter(year(Date) >= 2007) %>%
+  ggplot(aes(Oil, price)) +
+  geom_point(aes(color = Date), alpha = 1/2) +
+  geom_smooth(method = "lm", color = blg_colors$blue) +
+  facet_wrap(~cut_interval(`% Oil`, 4)) +
+  guides(color = FALSE)
 
 # Total ~ Oil
 # Faceted by `price` intervals
 ogrc %>%
-    filter(year(Date) >= 2007 & !is.na(price)) %>%
-    ggplot(aes(Oil, Total)) +
-    geom_point(aes(color = Date), alpha = 1/2) +
-    geom_smooth(method = "lm", color = blg_colors$blue) +
-    facet_wrap(~cut_interval(`price`, 4)) +
-    guides(color = FALSE)
+  filter(year(Date) >= 2007 & !is.na(price)) %>%
+  ggplot(aes(Oil, Total)) +
+  geom_point(aes(color = Date), alpha = 1/2) +
+  geom_smooth(method = "lm", color = blg_colors$blue) +
+  facet_wrap(~cut_interval(`price`, 4)) +
+  guides(color = FALSE)
 ```
 
 
 ```{r ogrc_monthly}
 ogrc_m <- ogrc %>%
-    select(-`% Oil`, -`% Gas`) %>%
-    group_by(Date = zoo::as.yearmon(Date)) %>%
-    summarise_all(mean, na.rm = TRUE)
+  select(-`% Oil`, -`% Gas`) %>%
+  group_by(Date = zoo::as.yearmon(Date)) %>%
+  summarise_all(mean, na.rm = TRUE)
 ```
 
 ```{r join}
 stp <- state_prod %>%
-    mutate(date = zoo::as.yearmon(date)) %>%
-    left_join(ogrc_m, c("date" = "Date"))
+  mutate(date = zoo::as.yearmon(date)) %>%
+  left_join(ogrc_m, c("date" = "Date"))
 
 # Bye-bye other Alaska's
 
@@ -345,6 +235,12 @@ stp <- stp %>%
 ```
 
 ```{r join_plots}
+load("~/R/misc/maps/states_map_adjusted.RData")
+
+us_map <- states_map_adjusted %>%
+  filter(!(STATE_ABBR == "PR" | STATE_ABBR == "VI") & TYPE == "Land") %>%
+  select(-(STATE_FIPS:PRIM_MILES))
+
 stp %>%
   filter(grepl("Texas|North Dakota|Colorado|Oklahoma|California", location)) %>%
   ggplot(aes(production, Oil)) +
@@ -378,11 +274,113 @@ stp %>%
   left_join(us_only) %>%
   select(-(Oil:price)) %>%
   group_by(location) %>%
+  arrange(date) %>%
   mutate(state_percent = production / U.S.,
          diff = production - production[1]) %>%
   ungroup() %>%
   ggplot(aes(date, state_percent, group = location)) +
   geom_line()
+
+stp %>%
+  filter(!grepl("U\\.S\\.", location)) %>%
+  filter(date >= (max(date) - 10)) %>%
+  left_join(us_only) %>%
+  select(-(Oil:price)) %>%
+  group_by(location) %>%
+  arrange(date) %>%
+  mutate(state_percent = production / U.S.,
+         diff = production - production[1],
+         diff_percent = diff / diff_US) %>%
+  ungroup() %>%
+  select(location, date, state_percent, diff_percent) %>%
+  gather(... = -c(location, date)) %>%
+  ggplot(aes(date, value, group = location)) +
+  geom_line() +
+  facet_wrap(~key, scales = "free_y")
+
+# Slope chart
+stp %>%
+  filter(!grepl("U\\.S\\.", location)) %>%
+  filter(date >= (max(date) - 10)) %>%
+  left_join(us_only) %>%
+  select(-(Oil:price)) %>%
+  group_by(location) %>%
+  arrange(date) %>%
+  mutate(state_percent = production / U.S.,
+         diff = production - production[1],
+         diff_percent = diff / diff_US) %>%
+  ungroup() %>%
+  select(location, date, state_percent, diff_percent) %>%
+  filter(date == max(date) | date == min(date)) %>%
+  mutate(diff_percent = if_else(is.na(diff_percent), 0, diff_percent)) %>%
+  gather(... = -c(location, date)) %>%
+  ggplot(aes(date, value, group = location)) +
+  geom_line() +
+  facet_wrap(~key, scales = "free_y")
+```
+
+```{r animated_maps}
+## Map
+us_prod_map <- us_map %>%
+  left_join(stp, ., c("location" = "NAME")) %>%
+  st_as_sf()
+
+# us_prod_map <- us_map %>%
+#   left_join(stp, ., c("location" = "NAME"))
+
+us_prod_map %>%
+  ggplot() +
+  geom_sf(aes(fill = production))
+
+
+
+us_prod_map %>%
+  filter(date == max(date) & location != "U.S.") %>%
+  mutate(prod_cut = cut(production, breaks = c(0, 10, 60, 180, 800, 2000, 4500), right = FALSE),
+         prod_cat = as.integer(prod_cut)) %>%
+  select(location:production, prod_cat) %>%
+  ggplot() +
+  geom_sf(data = us_map, fill = "black") +
+  geom_sf(aes(fill = factor(prod_cat))) +
+  scale_fill_manual(values = rev(c("black", RColorBrewer::brewer.pal(6, "BrBG"))))
+
+
+## First animated map
+td <- tempdir()
+
+it_date <- us_prod_map %>%
+  filter(location != "U.S." & date >= 1981) %>%
+  .$date %>%
+  unique() %>%
+  sort()
+
+img <- map_chr(it_date, ~{
+  
+  dat <- select(
+    filter(
+      us_prod_map,
+      date == .x & location != "U.S."
+    ),
+    location:production)
+  
+  gg <- ggplot(dat) +
+    geom_sf(data = us_map) +
+    geom_sf(aes(fill = production)) +
+    labs(title = paste0("US State Oil Production"),
+         subtitle = paste0("Date: ", .x))
+  
+  fil <- file.path(td, sprintf("%s.png", as.character(.x)))
+  ggsave(fil, gg, , units = "in", width=6, height=3.5)
+  fil
+  
+}) %>%
+  map(image_read) %>%
+  map(image_scale, geometry = "675x") %>%
+  image_join()
+
+fin <- img %>%
+  image_animate(20) %>%
+  image_write("us_map_prod.gif")
 ```
 
 ```{r rc_vs_price, include=FALSE}
@@ -413,10 +411,10 @@ imgs <- bn$basin %>%
            caption = paste0("Source: US EIA; FRED; Baker Hughes")) +
       theme(plot.caption = element_text(size = 10, color = "gray50"))
     
-  fil <- file.path(td, sprintf("%s.png", as.character(.y)))
-  ggsave(fil, gg, , units = "in", width=6, height=3.5)
-  fil
-  
+    fil <- file.path(td, sprintf("%s.png", as.character(.y)))
+    ggsave(fil, gg, , units = "in", width=6, height=3.5)
+    fil
+    
   })
 
 imgs <- imgs %>% 
@@ -434,7 +432,7 @@ imgs <- imgs %>%
 
 imgs <- imgs %>%
   image_write("rc_vs_price_each.gif")
-  
+
 
 td <- tempdir()
 
@@ -455,12 +453,12 @@ it %>%
       labs(title = paste0("Rig count vs Oil price"),
            subtitle = paste0("Price lagged by ", .x, " months"))
     
-  fil <- file.path(td, sprintf("%04d.png", as.integer(.x)))
-
-  ggsave(fil, gg, , units = "in", width=6, height=3.5)
-  
-  fil
-  
+    fil <- file.path(td, sprintf("%04d.png", as.integer(.x)))
+    
+    ggsave(fil, gg, , units = "in", width=6, height=3.5)
+    
+    fil
+    
   }) %>% 
   map(image_read) %>%
   map(image_scale, geometry = "675x") %>%
@@ -479,10 +477,13 @@ it %>%
 
 ```{r join_data, include=FALSE, eval=FALSE}
 jt <- oil_prices %>%
-    group_by(ym = as.yearmon(date)) %>%
-    summarise(price = mean(price, na.rm = TRUE)) %>%
-    inner_join(trajectory %>%
-                   group_by(ym = as.yearmon(Date)) %>%
-                   summarise_at(vars(Directional, Horizontal, Vertical, TOTAL), mean), by = "ym")
+  group_by(ym = as.yearmon(date)) %>%
+  summarise(price = mean(price, na.rm = TRUE)) %>%
+  inner_join(trajectory %>%
+               group_by(ym = as.yearmon(Date)) %>%
+               summarise_at(vars(Directional, Horizontal, Vertical, TOTAL), mean), by = "ym")
 ```
 
+```{r cleanup, include=FALSE}
+rm(list = ls(pattern = "api_key_"))
+```

@@ -15,9 +15,7 @@ og :
   image : ""
 ---
 
-```{r setup_std, include=FALSE}
-# source("setup_std.R")
-
+```{r setup_std, include=FALSE, purl=FALSE, eval=TRUE}
 # ____ Library_Tidyverse_Setup
 library(tidyverse)
 library(lubridate)
@@ -93,7 +91,7 @@ library(magick)
 library(tweenr)
 
 theme_set(blg_theme_default())
-ref <- "~/R/misc/oil/rig_counts"
+ref <- "~/R/misc/oil/US/rig_counts"
 ```
 
 
@@ -128,7 +126,7 @@ ref <- "~/R/misc/oil/rig_counts"
 #    16 Total US RigCount
 ```
 
-```{r import_oil_price}
+```{r import_oil_price, eval=FALSE}
 read_chunk("us_rig_counts_ii.Rmd", labels = "import_oil_price")
 ```
 
@@ -309,7 +307,7 @@ write(y, "~/R/misc/oil/rig_counts/ConvertToCSV.cmd")
 system("C:/Users/Luke/Documents/R/misc/oil/rig_counts/ConvertToCSV.cmd")
 ```
 
-```{r read_csv_rig_count, include=FALSE}
+```{r read_csv_rig_count, include=FALSE, purl=TRUE}
 # ____ Read basin data
 # Find and read file; skip first 10
 basin_csv <- grep("Basin", list.files(ref, full.names = TRUE), value = TRUE)
@@ -338,7 +336,7 @@ master_csv <- grep("Master Data.csv$", list.files(ref, full.names = TRUE), value
 master <- read_csv(master_csv)
 ```
 
-```{r wrangle_data_rig_counts, include=FALSE}
+```{r wrangle_data_rig_counts, include=FALSE, purl=TRUE}
 basin <- basin %>%
   mutate(key = case_when(
     grepl("Oil", key) ~ "Oil",
@@ -1060,4 +1058,8 @@ map_chr(unique(summ_animate$Date), ~{
 ```{r map_conversion, include=FALSE, eval=FALSE}
 gj_plays_total <- geojson_json(sf_plays_total)
 gj_states_48 <- geojson_json(states_48 %>% st_transform(4326))
+```
+
+```{r cleanup, include=FALSE}
+rm(list = ls(pattern = "api_key_"))
 ```
