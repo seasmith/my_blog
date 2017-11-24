@@ -1,0 +1,101 @@
+---
+title  : "US Rig Counts"
+author : "Luke Smith"
+date   : "2017-10-06"
+tags   : [r, oil, gas, oil and gas, rig counts]
+description: ""
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : "US Rig Counts"
+  description : ""
+  image       : ""
+og :
+  image : ""
+---
+
+This script attempts to create a best-practice for loading
+packages by loading packages in an order to create a search
+path leading to the least amount of namespace conflicts.
+
+Consideration is given for the importance of the package - how often it will be loaded into the environment, and how often and how many functions from that package are used once loaded and attached.
+
+If a package not from this list is to be loaded, and that package will cause significant namespace collision (i.e. 'plyr'), care should be taken to attach it to a particular position on the search path that will result in a reduction of such collisions.
+
+For example:
+
+```{r, eval=FALSE, purl=FALSE}
+library(plyr, pos = grep("tidyverse", search()))
+```
+
+
+```{r setup_lib_std, include=FALSE}
+## Library_Tidyverse_Setup
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+## Library_ploting_Setup
+library(grid)
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+library(extrafont)
+
+## Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+## Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+## My_Blogging_Setup
+library(blg)
+```
+
+```{r knitr_opts_chunk_std, include=FALSE}
+## Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+# knitr::opts_chunk$set(purl = FALSE)
+```
+
+```{r knitr_opts_hooks_std, include=FALSE}
+## knitr_Options_Setup
+orig_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+## Hooks_Setup
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+```
+
+```{r r_opts_std, include=FALSE}
+## R_Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+old_digits <- getOption("digits")
+options(digits = 2)
+```
+
+```{r r_misc_std, include=FALSE}
+loadfonts("win")  ## from 'extrafont'; Windows only
+
+my_blue   <- "#0059B3"
+my_orange <- "#B35A00"
+my_pink   <- "#B30059"
+my_green  <- "#59B300"
+```
