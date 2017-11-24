@@ -5,6 +5,7 @@ api_key_nyt.R
 setup_std.R
 comb.RData
 all.RData
+*.RData
 *.html
 *.png
 *.gif
