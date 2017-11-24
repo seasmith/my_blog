@@ -129,4 +129,6 @@ blurry %>%
   image_join() %>%
   image_animate(50) %>%
   image_write("me.gif")
+
+neg <- image_negate(me)
 ```
