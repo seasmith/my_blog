@@ -50,7 +50,6 @@ knitr::opts_chunk$set(echo =  FALSE)
 knitr::opts_chunk$set(fig.height = 7)
 knitr::opts_chunk$set(message = FALSE)
 knitr::opts_chunk$set(warning = FALSE)
-# knitr::opts_chunk$set(purl = FALSE)
 ```
 
 ```{r knitr_opts_hooks_std, include=FALSE}
@@ -92,34 +91,8 @@ my_green  <- "#59B300"
 library(magick)
 ```
 
-<!-- Begin purl -->
-
-```{r purl_docs, include=FALSE, eval=FALSE}
-knitr::opts_chunk$set(purl = TRUE)
-f_name <- tools::file_path_sans_ext
-
-p_fils <- c("us_state_prod.Rmd",
-            "us_oil_price.Rmd")
-
-td <- tempdir()
-
-f_state_prod <- file.path(td, "us_state_prod.R")
-f_oil_price <- file.path(td, "us_oil_price.R")
-
-knitr::knit("us_state_prod.Rmd", tangle = TRUE)
-knitr::knit("us_oil_price.Rmd", tangle = TRUE)
-```
-
-```{r read_chunk_docs, include=FALSE, eval=FALSE}
-# knitr::read_chunk(f_state_prod)
-# knitr::read_chunk(f_oil_price)
-```
-
-<!-- Source docs and get data -->
-
-```{r source_docs, include=FALSE, eval=FALSE}
-source(f_state_prod, TRUE)
-source(f_oil_price, TRUE)
+```{r knitr_ops_chunk_extra, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r extract_data, include=FALSE}
@@ -168,7 +141,7 @@ state_prod %>%
   filter(date == max(date)) %>%
   filter(production != 0) %>%
   ggplot(aes(reorder(location, production, identity), production)) +
-  geom_col(fill = blg::blg_colors$green) +
+  geom_col(fill = blg::clrs$green) +
   coord_flip()
 
 ## Historical production line chart
@@ -226,7 +199,9 @@ rc_state %>%
     ggplot(aes(total, price)) +
     geom_point(aes(group = location), alpha = 1/4) +
     facet_wrap(~location, scales = "free")
+```
 
+```{r animation, eval=FALSE}
 ## price ~ total
 #  ~ Faceted by location
 #  ~ animated
@@ -261,7 +236,7 @@ if (nrow(ani_pred) == 1) {
   img <- it_loc %>%
     map2_chr(it_num, ~{
       gg <- ggplot(filter(dat, location == .x), aes(total, price)) +
-        geom_smooth(method = "lm", color = blg_colors$blue, se = FALSE) +
+        geom_smooth(method = "lm", color = clrs$blue, se = FALSE) +
         geom_point(aes(group = location), alpha = 1/5) +
         labs(title = paste0("Rig Count and Oil Price Trends Per State"),
              subtitle = paste0("State: ", .x, "\n"),
@@ -282,6 +257,8 @@ if (nrow(ani_pred) == 1) {
     image_write("state_rig_count_vs_price2.gif")
 }
 ```
+
+<!-- Clean up all the sensitive stuff -->
 
 ```{r cleanup, include=FALSE}
 rm(list = ls(pattern = "api_key_"))

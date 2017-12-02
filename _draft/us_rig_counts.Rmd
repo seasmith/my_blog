@@ -94,7 +94,7 @@ theme_set(blg_theme_default())
 ref <- "~/R/misc/oil/US/rig_counts"
 ```
 
-
+<!-- Rig count notes -->
 
 ```{r notes_rig_count, include=FALSE, eval=FALSE}
 # Earliest splits by:
@@ -126,253 +126,30 @@ ref <- "~/R/misc/oil/US/rig_counts"
 #    16 Total US RigCount
 ```
 
-```{r import_oil_price, eval=FALSE}
-read_chunk("us_rig_counts_ii.Rmd", labels = "import_oil_price")
+```{r load_data, include=FALSE, purl=TRUE}
+ref <- "~/R/misc/oil/US/rig_counts"
+load(file.path(ref, "rc_basin.RData"))
+load(file.path(ref, "rc_master.RData"))
 ```
-
-```{r fetch_link_rig_count, include=FALSE}
-# What an unusual url
-url <- "http://phx.corporate-ir.net/phoenix.zhtml?c=79687&p=irol-reportsother"
-
-h <- url %>% read_html()
-
-links <- h %>%
-  html_nodes(".ccbnTblLnk")
-
-links_text <- links %>%
-  html_text()
-
-which_pivot <- links_text %>%
-  grepl("North America Rotary Rig Count Pivot Table \\(Feb 2011 - Current\\) ", .)
-
-which_count <- links_text %>%
-  grepl("North America Rotary Rig Count \\(Jan 2000 - Current\\) ", .)
-
-
-pivot_link <- html_attr(links[which_pivot], "href")
-count_link <- html_attr(links[which_count], "href")
-```
-
-```{r check_log_exists, include=FALSE, eval=FALSE}
-# Get all file names
-all_files  <- list.files(ref, full.names = TRUE)
-
-# Find files by extension
-xlsb_files <- grepl("\\.xlsb$", all_files)
-csv_files  <- grepl("\\.csv$", all_files)
-RData_file <- grepl("\\.RData$", all_files)
-
-file_exists <- sum(RData_file)
-
-if (file_exists) {
-  
-  # Load previous header
-  load("~/R/misc/oil/rig_counts/previous_headers.RData")
-  
-  # Create new folder and move old data
-  n_folder <- as.Date(previous_headers[[1]]$date)
-  dir.create(paste0(ref, "/", as.character.Date(n_folder)))
-    
-  # Get files to copy by extension
-  files_to_copy <- (xlsb_files | csv_files)
-  file.copy(from = all_files[files_to_copy],
-            to   = file.path(dirname(all_files[files_to_copy]),
-                             n_folder,
-                             basename(all_files[files_to_copy])))
-  file.remove(all_files[files_to_copy])
-  
-  }
-```
-
-```{r check_for_update_rig_count, include=FALSE, eval=FALSE}
-i <- 0L  # counter
-start_watch <- Sys.time()
-
-repeat {
-
-  if (!file_exists) break
-  if (i == 10L) break
-  
-  # Send HEAD requests and check headers$`last-modified` against
-  # previous headers$`last-modified`
-  pivot_req <- HEAD(pivot_link)
-  count_req <- HEAD(count_link)
-
-  # FUNCTION: Convert columns to POSIXct
-  change_to_POSIXct <- function(x) {
-    
-    # Get names and find match for likely date-time field
-    x_names <- names(x)
-    are_date <- grepl("date|last-modified|expires", x_names)
-    
-    # Convert those which are datetime to POSIXct
-    x[are_date] <- map(x[are_date], function(y) {
-      y <- as.POSIXct(y,
-                      format = "%a, %d %b %Y %H:%M:%S",
-                      tz = "GMT")
-      attributes(y)$tz <- "America/Chicago"
-      return(y)})
-    return(x)
-  }
-  
-  # Convert datetime fields to POSIXct
-  headers <- map(list(pivot_req$headers, count_req$headers),
-                 change_to_POSIXct)
-  
-  cond <- previous_headers[[1]]$`last-modified` < headers[[1]]$`last-modified` &
-      previous_headers[[2]]$`last-modified` < headers[[2]]$`last-modified`
-  
-    if (cond) {
-      previous_headers <- headers
-      save(previous_headers,
-           file = paste0("~/R/misc/oil/rig_counts/previous_headers.RData"))
-      break
-    }
-  
-  # Sys.sleep(30L)
-  i <- i + 1L
-  
-}
-
-exit_watch <- Sys.time()
-if (i == 10L) stop(paste0("Data has not been updated.\n",
-                            "Started: ", start_watch, "\n",
-                            "Exited: ", exit_watch))
-```
-
-```{r download_rig_count, include=FALSE, eval=FALSE}
-dest_files <- c("pivot.xlsb", "count.xlsb") %>%
-  paste0("~/R/misc/oil/rig_counts/", .)
-
-target_files <- c(pivot_link, count_link)
-
-map2(target_files, dest_files, curl_download)
-```
-
-```{vbs vbs_script, include=FALSE, eval=FALSE}
-x <- c('
-Dim xl
-
-Dim fso
-Dim dir
-Dim File
-
-Dim wb
-Dim sh
-
-Set xl = CreateObject("Excel.Application")
-Set fso = CreateObject("Scripting.FileSystemObject")
-dir = fso.GetAbsolutePathName(".")
-
-With xl
-  .Visible = False
-  .DisplayAlerts = False
-  .AskToUpdateLinks = False
-  .AlertBeforeOverwriting = False
-  .ScreenUpdating = False
-End With
-
-For Each f in fso.GetFolder(dir).Files
-  If LCase(fso.GetExtensionName(f.Name)) = "xlsb" Then
-    Set wb = xl.Workbooks.Open(f.Path, 0, True)
-      For Each sh In wb.Worksheets
-        sh.SaveAs dir & "\" & sh.Name & ".csv", 6
-      Next
-    wb.Close
-  End If
-Next
-
-xl.Quit
-
-Set wb = Nothing
-Set xl = Nothing
-
-WScript.Quit
-')
-
-write(x, "~/R/misc/oil/rig_counts/ConvertToCSV.vbs")
-```
-
-```{r batch_file, include=FALSE, eval=FALSE}
-y <- c('cd C:/Users/Luke/Documents/R/misc/oil/rig_counts
-       cscript ConvertToCSV.vbs')
-
-write(y, "~/R/misc/oil/rig_counts/ConvertToCSV.cmd")
-```
-
-```{r run_vbs_on_rig_count, include=FALSE, eval=FALSE}
-# System command to call a batch file
-#   which calls a vbs script
-#   which calls an Excel VBA macro
-system("C:/Users/Luke/Documents/R/misc/oil/rig_counts/ConvertToCSV.cmd")
-```
-
-```{r read_csv_rig_count, include=FALSE, purl=TRUE}
-# ____ Read basin data
-# Find and read file; skip first 10
-basin_csv <- grep("Basin", list.files(ref, full.names = TRUE), value = TRUE)
-basin <- read_csv(basin_csv, skip = 10L)
-basin <- basin %>%
-  select(-X66) %>% # need to check how many cols and if last is meaningless
-  filter(!is.na(Date)) # stupid Excel
-
-# Split by basin and gather variables
-basin <- seq.int(2, 65) %>%  # Create seq along columns except `Date`
-  split(ceiling(seq_along(.) / 4)) %>%  # Split into groups of 4
-  map(~gather(select(basin, 1, .x), ... = -Date))  # Gather the groups of four
-
-# Get names from row 10
-basin_names <- read_csv(basin_csv, skip = 9L, n_max = 1L)
-basin_names <- names(basin_names)[seq.int(2, length(basin_names) - 1L, 4)]
-
-# Assing to the list element names
-names(basin) <- basin_names
-
-# Bind everything by row
-basin <- basin %>% bind_rows(.id = "basin")
-
-# ____ Read master data from pivot table
-master_csv <- grep("Master Data.csv$", list.files(ref, full.names = TRUE), value = TRUE)
-master <- read_csv(master_csv)
-```
-
-```{r wrangle_data_rig_counts, include=FALSE, purl=TRUE}
-basin <- basin %>%
-  mutate(key = case_when(
-    grepl("Oil", key) ~ "Oil",
-    grepl("Gas", key) ~ "Gas",
-    grepl("Misc", key) ~ "Misc",
-    grepl("Total", key) ~ "Total"
-    )) %>%
-  mutate(Date = as.Date(Date, format = "%m/%d/%Y")) %>%
-  filter(basin != "Total US RigCount")
-
-master <- master %>%
-  mutate(Basin = if_else(Basin == "Dj-Niobrara", "DJ-Niobrara", Basin),
-         PublishDate = stri_replace(PublishDate, "", regex = "\\s+0\\:00"),
-         PublishDate = as.Date(PublishDate, format = "%m/%d/%Y"))
-```
-
 
 ```{r analyze_data_rig_counts, include=FALSE}
 nms <- c("this_week", "week_ago",
          "month_ago", "six_months_ago",
          "year_ago")
 
-key_dates <- basin %>%
-    distinct(Date) %>%
-    arrange(desc(Date)) %>%
-    pull(Date) %>%
-    magrittr::extract(c(this_week      = 1,  # magrittr::extract = base::`[`
-                        week_ago       = 2,
-                        month_ago      = 5,
-                        six_months_ago = 27,
-                        year_ago       = 53)) %>%
+key_dates <- rc_basin %>%
+  distinct(Date) %>%
+  arrange(desc(Date)) %>%
+  pull(Date) %>%
+  magrittr::extract(c(this_week      = 1,
+                      week_ago       = 2,
+                      month_ago      = 5,
+                      six_months_ago = 27,
+                      year_ago       = 53)) %>%
   set_names(nms)
 
 # Find most recent week's change from previous week; Total
-totals <- basin %>%
-  # mutate(value = as.integer(value)) %>%
+total_comparison <- rc_basin %>%
   group_by(basin, key) %>%
   arrange(Date) %>%
   mutate(chng_1wk  = (value - lag(value)) / lag(value),
@@ -386,11 +163,10 @@ c(this_week,
   week_ago,
   month_ago,
   six_months_ago,
-  year_ago) %<-% map(nms, ~filter(totals, Date == key_dates[[.x]]))
+  year_ago) %<-% map(nms, ~filter(total_comparison, Date == key_dates[[.x]]))
 
 # Find most recent week's oil and gas type
-current_type <- basin %>%
-  mutate(value = as.integer(value)) %>%
+type_comparison <- rc_basin %>%
   group_by(basin, key) %>%
   arrange(Date) %>%
   mutate(chng_1wk = (value - lag(value)) / lag(value),
@@ -401,7 +177,7 @@ current_type <- basin %>%
   filter(Date == key_dates[["this_week"]]) %>%
   filter(key != "Total")
 
-current_type <- current_type %>%
+type_comparison <- type_comparison %>%
     select(basin:value) %>%
     filter(key != "Misc") %>%
     spread(key, value) %>%
@@ -421,39 +197,39 @@ this_week <- this_week %>%
   mutate(basin = factor(basin, levels = tw_levels))
 
 # Weekly summary
-summ <- basin %>%
+summ <- rc_basin %>%
   group_by(key, Date) %>%
   summarize(value = sum(value, na.rm = TRUE))
 
-# ____ Summarize master
+# ____ Summarize rc_master
 # Total rig count by `Year` and `Week`
 
-master_total <- master %>%
+rc_master_total <- rc_master %>%
   filter(Country == "UNITED STATES") %>%
   group_by(PublishDate, Basin) %>%
   summarize(RigCount = sum(RigCount, na.rm = TRUE)) %>%
   ungroup()
 
-master_total <- master_total %>%
+rc_master_total <- rc_master_total %>%
   add_column(Trajectory = "Total")
 
 # Keep only US and remove unneeded columns
-master_type <- master %>%
+rc_master_type <- rc_master %>%
   filter(Country == "UNITED STATES") %>%
   select(-Country, -WellDepth, -(Year:Week))
 
 # Group and summarize
-master_type <- master_type %>%
+rc_master_type <- rc_master_type %>%
   group_by(Basin, Trajectory, PublishDate) %>%
   summarize(RigCount = sum(RigCount, na.rm = TRUE)) %>%
   ungroup()
 
-master_type <- master_type %>%
-    union_all(master_total) %>%
+rc_master_type <- rc_master_type %>%
+    union_all(rc_master_total) %>%
     spread(Trajectory, RigCount) %>%
     mutate(hz = Horizontal / Total)
 
-diff <- basin %>%
+diff <- rc_basin %>%
     filter(Date == key_dates[["this_week"]] | Date == key_dates[["week_ago"]]) %>%
     filter(key != "Total") %>%
   group_by(Date, key) %>%
@@ -469,6 +245,14 @@ diff <- diff %>%
 
 ```{r print_diff}
 diff %>%
+  kable(format = "html") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE)
+
+# rc_master_total
+print("rc_master_total")
+rc_master_total %>%
+  filter(PublishDate == max(PublishDate)) %>%
   kable(format = "html") %>%
   kable_styling(bootstrap_options = c("striped", "hover"),
                 full_width = FALSE)
@@ -659,8 +443,8 @@ tst_proj <- tst_proj %>%
 sf_plays_total <- sf_plays %>%
   merge(this_week, by.x = "Shale_play", by.y = "basin")
 
-sf_current_type <- sf_plays %>%
-  merge(current_type, by.x = "Shale_play", by.y = "basin")
+sf_type_comparison <- sf_plays %>%
+  merge(type_comparison, by.x = "Shale_play", by.y = "basin")
 ```
 
 
@@ -674,19 +458,19 @@ gb <- ggplot() +
   theme(axis.title = element_blank()) +
   theme(plot.caption = element_text("Open Sans", colour = "gray30", size = 12))
 
-# ____ Map
+##  Map
 wk1_colors <- this_week$chng_1wk %>%
   sign() %>%
   unique()
 
 map_colors <- switch(as.character(sum(wk1_colors + c(2, 4, 6))),
-       "2" = blg_colors$red,
+       "2" = clrs$red,
        "3" = "gray50",
-       "5" = c(blg_colors$red, "gray50"),
-       "7" = blg_colors$blue,
-       "9" = c(blg_colors$red, blg_colors$blue),
-       "10" = c("gray50", blg_colors$blue),
-       "12" = c(blg_colors$red, "gray50", blg_colors$blue))
+       "5" = c(clrs$red, "gray50"),
+       "7" = clrs$blue,
+       "9" = c(clrs$red, clrs$blue),
+       "10" = c("gray50", clrs$blue),
+       "12" = c(clrs$red, "gray50", clrs$blue))
 
 rc_map <- sf_plays_total %>%
   ggplot() +
@@ -707,7 +491,7 @@ rc_map <- sf_plays_total %>%
         legend.justification = c("left", "bottom"),
         legend.box.just = "right")
 
-# ____ Change from week ago
+##  Change from week ago
   # Create levels vector
     chng_1wk_levels <- this_week %>%
       arrange(desc(chng_1wk), basin) %>%
@@ -718,11 +502,11 @@ rc_map <- sf_plays_total %>%
     mutate(basin = factor(basin, levels = chng_1wk_levels))
   
 wk1_colors <- switch(as.character(sum(wk1_colors) + 2),
-                    "1" =  blg_colors$red, # when only negative change
-                    "2" =  c(blg_colors$blue, blg_colors$red), # when both
-                    "3" =  blg_colors$blue) # when only positive change
+                    "1" =  clrs$red, # when only negative change
+                    "2" =  c(clrs$blue, clrs$red), # when both
+                    "3" =  clrs$blue) # when only positive change
 
-# ____ BAR - Change from week ago; rig count
+##  BAR - Change from week ago; rig count
 rc_chng_1wk <- this_week %>%
   filter(chng_1wk != 0 & !is.infinite(chng_52wk)) %>%
   ggplot() +
@@ -738,7 +522,7 @@ rc_chng_1wk <- this_week %>%
        y = NULL) +
   blg_theme_default(12)
 
-# ____ Change from year ago
+##  Change from year ago
   # Create levels vector
   chng_52wk_levels <- this_week %>%
     arrange(desc(chng_52wk), basin) %>%
@@ -753,11 +537,11 @@ wk52_colors <- this_week$chng_52wk %>%
   unique()
 
 wk52_colors <- switch(as.character(sum(wk52_colors) + 2),
-                      "1" = blg_colors$red, # when only negative change
-                      "2" = c(blg_colors$blue, blg_colors$red), # when both
-                      "3" = blg_colors$blue) # when only positive change
+                      "1" = clrs$red, # when only negative change
+                      "2" = c(clrs$blue, clrs$red), # when both
+                      "3" = clrs$blue) # when only positive change
 
-# ____ BAR - Rig count; 52 week percent change
+##  BAR - Rig count; 52 week percent change
 rc_chng_52wk <- this_week %>%
   filter(chng_52wk != 0 & !is.infinite(chng_52wk)) %>%
   ggplot() +
@@ -772,19 +556,19 @@ rc_chng_52wk <- this_week %>%
   blg_theme_default(12)
 
 
-# ____ BAR - Total current rig total
+##  BAR - Total current rig total
 rc_total <- this_week %>%
   arrange(value) %>%
   mutate(basin = factor(basin, levels = basin)) %>%
   ggplot() +
-  geom_col(aes(basin, value), fill = blg_colors$green) +
+  geom_col(aes(basin, value), fill = clrs$green) +
   labs(title = "\nTotal rig count",
        x = NULL,
        y = NULL) +
   blg_theme_default(12) +
   rotateTextX(30, vjust = 1)
 
-# ____ GROBS
+##  GROBS
 rc_grobs <- arrangeGrob(rc_map, rc_chng_1wk, rc_chng_52wk,
                         layout_matrix = rbind(c(1, 1),
                                               c(2, 3)))
@@ -797,7 +581,7 @@ grid.draw(gb_grob)
 ```
 
 ```{r plot_rig_type, fig.height=9.2}
-# ____ LAYOUT - Rig type
+##  LAYOUT - Rig type
 gb <- ggplot() +
   geom_blank() +
   labs(title = "Focal point",
@@ -805,7 +589,7 @@ gb <- ggplot() +
   theme(axis.title = element_blank()) +
   theme(plot.caption = element_text("Open Sans", colour = "gray30", size = 12))
 
-# ____ LINE - Rig type
+##  LINE - Rig type
 summ_text <- summ %>%
     ungroup() %>%
     filter(key != "Misc") %>%
@@ -849,8 +633,8 @@ rt_type <- summ %>%
        y = "Rig count") +
   blg_theme_default(12)
 
-# ____ MAP - Rig type
-rt_map <- sf_current_type %>%
+##  MAP - Rig type
+rt_map <- sf_type_comparison %>%
   ggplot() +
   geom_sf(data = states_48, fill = "white", color = "gray60") +
   geom_sf(aes(fill = prcnt_oil),
@@ -885,180 +669,6 @@ gb_grob$grobs[[which(gb_grob$layout$name == "panel")]] <- gb_grob$grobs[[which(g
 grid.draw(gb_grob)
 ```
 
-```{r plot_numbers_summary, include=FALSE, eval=FALSE}
-x <- week_ago %>% bind_rows(this_week) %>%
-  mutate(Date = as.factor(Date)) %>%
-  group_by(key) %>%
-  summarize(value = sum(value)) %>%
-  ungroup()
-
-y <- year_ago %>% bind_rows(this_week) %>%
-  mutate(Date = as.factor(Date)) %>%
-  group_by(key) %>%
-  summarize(value = sum(value)) %>%
-  ungroup()
-
-x %>%
-  ggplot(aes(Date, value, group = basin)) +
-  geom_line() +
-  geom_line(data = y,
-            aes(Date, value, group = basin)) +
-  geom_point(size = 1) +
-  geom_point(data = y,
-             aes(Date, value, group = basin),
-             size = 1)
-```
-
-
-```{r tween_prep, include=FALSE, eval=FALSE}
-# Need the right variables
-t <- master_type %>%
-  select(Basin, PublishDate, hz) %>%
-  rename(x = PublishDate, y = hz, id = Basin)
-
-# Need to ensure that all dates appear in each split
-unique_dates <- t %>% distinct(x)
-
-# tweenr will not accept missing rows (missing dates in this case)
-t <- t %>%
-  split(.$id) %>%
-  map(function(x) {
-    missing_dates <- anti_join(unique_dates, x)
-    if (nrow(missing_dates) > 0) {
-        x <- add_row(x,
-                     id = x$id[1],
-                     x  = missing_dates$x,
-                     y  = rep(0, nrow(missing_dates)))
-    }
-    return(x)
-    }) %>%
-  bind_rows()
-
-# NA's suck...in this case.
-#   How did they even happen?
-t <- t %>%
-  mutate(y = if_else(is.na(y), 0, y))
-
-# tween_states needs a list of data frames
-#   and to make a repeating loop we need
-#   to mesh the beginning and the end (
-#   by repeating the beginning at the end)
-t <- t %>%
-  split(.$id) %>%
-  c(.[1])
-
-# Rows must be in order to be properly
-#   interpolated.
-t <- t %>%
-  map(arrange, x)
-
-
-# Non-numerics need to be protected
-#   by converting to factor
-t <- t %>%
-  map(~mutate(.x,
-              id = as.factor(id),
-              x  = as.factor(x))
-      )
-```
-
-```{r tween_exec, include=FALSE, eval=FALSE}
-t_tween <- t %>%
-  tween_states(1, 0.7, "cubic-in-out", 200) %>%
-  as_tibble()
-
-t_tween <- t_tween %>%
-  mutate(id = as.character(id),
-         x  = as.Date(x))
-```
-
-```{r plot_tweenr_hz, include=FALSE, eval=FALSE}
-td <- tempdir()
-
-  
-map_chr(unique(t_tween$.frame), ~{
-  
-  
-  d <- filter(t_tween, .frame == .x)
-  gg <- ggplot(d, aes(frame = .frame)) +
-    geom_line(aes(x, y)) +
-    labs(title = paste0("Horizontal-rig makeup of various US",
-                        "\noil and gas basins."),
-         subtitle = paste0("Basin: ", unique(d$id), "\n"),
-         x = paste0("Date"),
-         y = paste0("Percent horizontal (%)"),
-         caption = paste0("Source: Baker Hughes Rig Count")) +
-    scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1.0),
-                       limits = c(0, 1),
-                       labels = blg_frmt_percent(0)) +
-    scale_x_date(limits = c(as.Date("2011-01-01"), as.Date("2018-04-01"))) +
-    theme(axis.title.y = element_text(size = 12),
-          plot.caption = element_text(size = 10, color = "gray50"))
-  
-  fil <- file.path(td, sprintf("%04d.png", as.integer(.x)))
-
-  ggsave(fil, gg, , units = "in", width=6, height=3.5)
-  
-  fil
-  
-}) %>% 
-  map(image_read) %>%
-  map(image_scale, geometry = "675x") %>%
-  image_join() %>% 
-  image_animate() %>% 
-  image_write("animated.gif")
-```
-
-```{r plot_tweenr_type, include=FALSE, eval=FALSE}
-td <- tempdir()
-
-map_chr(unique(summ_animate$Date), ~{
-    d <- filter(summ_animate, Date == .x)
-    gg <- ggplot(d) +
-        geom_line(aes(Date, value, color = key), size = 0.7) +
-        geom_text(aes(x, y, group = key, color = key, label = label),
-                  summ_text) +
-        scale_x_date(limits = c(as.Date("2011-01-01"), as.Date("2018-04-01"))) +
-        scale_y_continuous(limits = c(0, 2100),
-                           labels = comma) +
-        scale_color_manual(values = c(
-            # "#004A94",
-            "#01665E",
-            # "#004A94",
-            "#8C510A",
-            "black")) +
-        guides(color = FALSE) +
-        labs(title = "Rig count by well type",
-             y = "Rig count") +
-        blg_theme_default(12)
-    
-    fil <- file.path(td, sprintf("%04d.png", as.integer(.x)))
-    
-    ggsave(fil, gg, , units = "in", width=6, height=3.5)
-    
-    fil
-    
-}) %>%
-    map(image_read) %>%
-    map(image_scale, geometry = "675x") %>%
-    image_join() %>%
-    image_animate() %>%
-    image_write("rig_count_animate.gif")
-```
-
-
-
-
-
-
-
-
-
-
-```{r map_conversion, include=FALSE, eval=FALSE}
-gj_plays_total <- geojson_json(sf_plays_total)
-gj_states_48 <- geojson_json(states_48 %>% st_transform(4326))
-```
 
 ```{r cleanup, include=FALSE}
 rm(list = ls(pattern = "api_key_"))
