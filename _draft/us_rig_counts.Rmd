@@ -336,35 +336,35 @@ sf_plays <- no_dupes %>%
 sf_text <- sf_plays %>%
   st_centroid()
 
-# Extract coordinates
+# Extract coordinates (to use with geom_point())
 sf_text <- sf_text %>%
   st_coordinates() %>%
   cbind(as_tibble(sf_text), .) %>%
   as_tibble()
 
 text_mods <- sf_text %>%
-  cbind(tibble(offset_X = c( 5.8,  1.7, # Ardmore,      Fayetteville
-                             3.5,  5.4, # Barnett,      Arkoma
-                            -5.6,  2.0, # Cana,         Haynesville
-                            -4.8,       # Eagle Ford
+  cbind(tibble(offset_X = c( 5.8,  1.8, # Ardmore,      Fayetteville
+                             4.3,  5.4, # Barnett,      Arkoma
+                            -5.8,  2.0, # Cana,         Haynesville
+                            -4.6,       # Eagle Ford
                             -4.5, -5.7, # DJ-Niobrara, Marcellus
-                            -5.4, -4.1, # Utica, Granite Wash
+                            -5.4, -4.2, # Utica, Granite Wash
                              0.0, -3.8, # Mississippian, Permian
                             -3.7))) %>% # Williston
-  cbind(tibble(offset_Y = c(-0.8,  0.9, # Ardmore,      Fayetteville
-                            -0.87, -0.5, # Barnett,      Arkoma
-                             1.1,  0.0, # Cana,  Haynesville
-                            -0.5,       # Eagle Ford
+  cbind(tibble(offset_Y = c(-0.9,  0.9, # Ardmore,      Fayetteville
+                            -1.0, -0.5, # Barnett,      Arkoma
+                             1.3,  0.0, # Cana,  Haynesville
+                            -0.7,       # Eagle Ford
                             -1.0, -2.7, # DJ-Niobrara, Marcellus
                              0.0,  0.0, # Utica, Granite Wash
                              1.5,  1.0, # Mississippian, Permian
                             -1.0))) %>% # Williston
-  mutate(X = X + offset_X,
-         Y = Y + offset_Y)
+  mutate(new_X = X + offset_X,
+         new_Y = Y + offset_Y)
 
 text_mods <- text_mods %>%
-    mutate(new_X = X + offset_X,
-           new_Y = Y + offset_Y,
+    mutate(new_X = new_X + offset_X,
+           new_Y = new_Y + offset_Y,
 
            new_X = case_when(
              Shale_play == "Ardmore Woodford" ~ new_X * 1.072, #$ + pos
@@ -414,6 +414,30 @@ sf_type_comparison <- sf_plays %>%
   merge(type_comparison, by.x = "Shale_play", by.y = "basin")
 ```
 
+```{r create_lines}
+# Not all text labels can neatly fit next to their respective basins
+line_barnett <- text_mods %>%
+  filter(Shale_play == "Barnett")
+
+line_barnett <- line_barnett[c(1, 1), ]
+
+line_barnett$X[1] <- line_barnett$X[1] - 160000
+line_barnett$Y[1] <- line_barnett$Y[1] + 20000
+line_barnett$X[2] <- line_barnett$X[2] - 260000
+line_barnett$Y[2] <- line_barnett$Y[2] + 170000
+
+line_cana_woodford <- text_mods %>%
+  filter(Shale_play == "Cana Woodford")
+
+line_cana_woodford <- line_cana_woodford[c(1, 1), ]
+
+line_cana_woodford$X[1] <- line_cana_woodford$X[1] + 300000
+line_cana_woodford$Y[1] <- line_cana_woodford$Y[1] - 50000
+line_cana_woodford$X[2] <- line_cana_woodford$X[2] + 450000
+line_cana_woodford$Y[2] <- line_cana_woodford$Y[2] - 130000
+
+```
+
 <!-- Canvas and layouts -->
 
 ```{r plot_canvas}
@@ -428,6 +452,8 @@ gb <- ggplot() +
 map_layout <- ggplot() +
   geom_sf(data = states_48, fill = "white", color = "gray60") +
   geom_text(data = text_mods, aes(X, Y, label = Shale_play), size = 3) +
+  geom_line(data = line_barnett, aes(X, Y), color = "black") +
+  geom_line(data = line_cana_woodford, aes(X, Y), color = "black") +
   theme(axis.title = element_blank()) +
   theme(plot.caption = element_text("Open Sans", colour = "gray30", size = 12),
         legend.position = c(0.85, 0.08),
