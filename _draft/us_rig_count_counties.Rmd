@@ -149,6 +149,12 @@ no_join_check <- rc_master %>%
 
 <!-- Analysis -->
 
+```{r plot_colors}
+blue   <- "#5b63fe"
+yellow <- "#fef65b"
+pink   <- "#f65bfe"
+```
+
 ```{r current_week_location}
 rc_master %>%
   filter(PublishDate == max(PublishDate)) %>%
@@ -195,11 +201,11 @@ rig_type_each %>%
     ggplot() +
     geom_sf(data = counties_2014_adjusted,
             color = "gray40", fill = "gray40") +
-    geom_sf(aes(fill = factor(DrillFor, levels = c("Oil", "Gas", "Both"))), color = "black") +
+    geom_sf(aes(fill = factor(DrillFor, levels = c("Oil", "Gas", "Both"))), color = "black", size = 0.5) +
     coord_sf(datum = NA) +
     labs(title = paste0("US counties where an oil or gas rig is located"),
          subtitle = paste0("For the week of ", max(rc_master$PublishDate))) +
-    scale_fill_manual("Rig type:", values = c(clrs$red, clrs$blue, clrs$purple)) +
+    scale_fill_manual("Rig type:", values = c(blue, yellow, pink)) +
     theme(axis.title = element_blank(),
           axis.text = element_blank(),
           legend.position = "top", legend.direction = "horizontal")
@@ -272,7 +278,44 @@ if (nrow(unresolved) == 0) {
 }
 ```
 
+<!-- Bar charts -->
 
+```{r bar_charts_tibble}
+bc_master <- rc_master %>%
+  filter(Location == "Land" & Country == "UNITED STATES" & PublishDate == max(PublishDate)) %>%
+  mutate(location = paste0(County, ", ", `State/Province`)) %>%
+  group_by(location, DrillFor) %>%
+  summarize(count = n()) %>%
+  ungroup()
+
+bc_master %>%
+  filter(DrillFor == "Oil") %>%
+  {
+      nrow(filter(., count == 1)) / nrow(.)
+  }
+```
+
+```{r rig_count_oil_chart}
+## Big chart
+bc_master %>%
+  filter(DrillFor == "Oil") %>%
+  arrange(desc(count)) %>%
+  ggplot() +
+  geom_col(aes(reorder(location, count, identity), count), fill = blue, color = "black") +
+  coord_flip() +
+  theme(axis.text.y = element_blank())
+```
+
+```{r rig_count_gas_chart}
+## Big chart
+bc_master %>%
+  filter(DrillFor == "Gas") %>%
+  arrange(desc(count)) %>%
+  ggplot() +
+  geom_col(aes(reorder(location, count, identity), count), fill = yellow, color = "black") +
+  coord_flip() +
+  theme(axis.text.y = element_blank(), panel.grid.major.y = element_blank())
+```
 
 <!-- Convert for Vega and D3 -->
 
