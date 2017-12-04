@@ -92,6 +92,11 @@ library(tweenr)
 
 theme_set(blg_theme_default())
 ref <- "~/R/misc/oil/US/rig_counts"
+
+# Rig Type Colors
+blue   <- "#5b63fe"
+yellow <- "#fef65b"
+pink   <- "#f65bfe"
 ```
 
 <!-- Rig count notes -->
@@ -627,16 +632,20 @@ rc_change_52wk <- this_week %>%
 
 
 ##  BAR - Total current rig total
-rc_total <- this_week %>%
-  arrange(value) %>%
-  mutate(basin = factor(basin, levels = basin)) %>%
+rc_total <- total_comparison %>%
+  filter(Date == max(Date) & key %in% c("Oil", "Gas", "Total")) %>%
+  select(basin:value) %>%
+  spread(key, value) %>%
+  gather(... = c(Gas, Oil)) %>%
+  arrange(Total, basin)
+
+rc_total$basin <- factor(rc_total$basin, levels = unique(rc_total$basin))
+
+rc_total_chart <- rc_total %>%
   ggplot() +
-  geom_col(aes(basin, value), fill = clrs$green) +
-  labs(title = "\nTotal rig count",
-       x = NULL,
-       y = NULL) +
-  blg_theme_default(12) +
-  rotateTextX(30, vjust = 1)
+  geom_col(aes(basin, value, fill = key), color = "black", size = 0.5) +
+  scale_fill_manual(values = c(yellow, blue)) +
+  coord_flip()
 ```
 
 ```{r plot_rig_count_build}
@@ -668,11 +677,6 @@ rt_gb <- gb +
 ```
 
 ```{r plot_rig_type_chart}
-# Colors
-blue   <- "#5b63fe"
-yellow <- "#fef65b"
-pink   <- "#f65bfe"
-
 ##  LINE - Rig type
 summ_text <- summ %>%
     ungroup() %>%
