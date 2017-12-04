@@ -100,6 +100,13 @@ yellow <- "#b1ac3f"
 # yellow <- "#f9ba22"
 # pink   <- "#f65bfe"
 pink <- "#ac3fb1"
+
+get_2_colors <- function(x) {
+  x <- Filter(function(i) i != 0, x)
+  map_chr(as.character(x), ~switch(.x,
+                                   "-1" = clrs$red,
+                                   "1"  = clrs$blue))
+}
 ```
 
 <!-- Rig count notes -->
@@ -483,7 +490,8 @@ rc_gb <- gb +
 ##  Map
 wk1_changes <- this_week$percent_1wk %>%
   sign() %>%
-  unique()
+  unique() %>%
+  sort()
 
 map_colors <- wk1_changes %>%
   as.character() %>%
@@ -504,18 +512,10 @@ rc_map <- rc_map  +
   guides(color = FALSE)
 ```
 
-```{r plot_rig_count_charts}
+```{r plot_rig_count_charts_week_ago}
 # Colors for bar charts.
 # Different than map colors since plays with 'no change'
 # are removed from the bar charts.
-
-get_2_colors <- function(x) {
-  x <- Filter(function(i) i != 0, x)
-  map_chr(as.character(x), ~switch(.x,
-                                   "-1" = clrs$red,
-                                   "1"  = clrs$blue))
-}
-
 total_wk1_colors <- wk1_changes %>%
   get_2_colors()
 
@@ -533,9 +533,9 @@ total_wk1_colors <- wk1_changes %>%
 
 ##  Bar chart: Percent change from week ago
 rc_percent_1wk <- this_week %>%
-  filter(percent_1wk != 0 & !is.infinite(percent_52wk)) %>%
+  filter(percent_1wk != 0 & !is.infinite(percent_1wk)) %>%
   ggplot() +
-  geom_col(aes(fct_rev(basin), percent_1wk, fill = percent_1wk < 0)) +
+  geom_col(aes(fct_rev(basin), percent_1wk, fill = percent_1wk > 0)) +
   coord_flip() +
   scale_fill_manual(values = total_wk1_colors) +
   scale_y_continuous(labels = blg_frmt_percent(0),
@@ -547,6 +547,11 @@ rc_percent_1wk <- this_week %>%
   blg_theme_default(12)
 
 # Net change in value
+total_wk1_colors <- this_week$percent_1wk %>%
+  sign() %>%
+  unique() %>%
+  sort() %>%
+  get_2_colors()
 
   # Create levels vector
   change_1wk_levels <- this_week %>%
@@ -559,9 +564,9 @@ rc_percent_1wk <- this_week %>%
 
 ##  Bar chart: Net change in value from week ago
 rc_change_1wk <- this_week %>%
-  filter(change_1wk != 0 & !is.infinite(percent_52wk)) %>%
+  filter(change_1wk != 0 & !is.infinite(percent_1wk)) %>%
   ggplot() +
-  geom_col(aes(fct_rev(basin), change_1wk, fill = change_1wk < 0)) +
+  geom_col(aes(fct_rev(basin), change_1wk, fill = change_1wk > 0)) +
   coord_flip() +
   scale_fill_manual(values = total_wk1_colors) +
   scale_y_continuous(minor_breaks = NULL) +
@@ -570,8 +575,9 @@ rc_change_1wk <- this_week %>%
        x = NULL,
        y = "") +
   blg_theme_default(12)
+```
 
-
+```{r plot_rig_count_charts_year_ago}
 ####  Change from year ago
 # Color setup
 wk52_colors <- this_week$percent_52wk %>%
@@ -632,8 +638,9 @@ rc_change_52wk <- this_week %>%
        x = NULL,
        y = "") +
   blg_theme_default(12)
+```
 
-
+```{r plot_total_chart_build}
 ##  BAR - Total current rig total
 rc_total <- total_comparison %>%
   filter(Date == max(Date) & key %in% c("Oil", "Gas", "Total")) %>%
@@ -646,9 +653,24 @@ rc_total$basin <- factor(rc_total$basin, levels = unique(rc_total$basin))
 
 rc_total_chart <- rc_total %>%
   ggplot() +
-  geom_col(aes(basin, value, fill = key), color = "black", size = 0.5) +
-  scale_fill_manual(values = c(yellow, blue)) +
+  geom_col(aes(basin, value, fill = key)) +
+  scale_fill_manual("Rig type", values = c(yellow, blue)) +
+  labs(title = paste0("Which basins are drillers targetting?"),
+       subtitle = paste0("Week of: ", key_dates[["this_week"]]),
+       x = NULL,
+       y = paste0("Rig Count"),
+       caption = paste0("Source: Baker Hughes Rig Count")) +
+  guides(fill = guide_legend(label.position = "bottom", title.vjust = 1)) +
+  theme(panel.grid.major.y = element_blank(),
+        legend.position = "top",
+        legend.direction = "horizontal",
+        legend.justification = "left",
+        plot.caption = element_text(size = 10, color = "gray50")) +
   coord_flip()
+```
+
+```{r plot_total_chart_draw}
+rc_total_chart
 ```
 
 ```{r plot_rig_count_build}
