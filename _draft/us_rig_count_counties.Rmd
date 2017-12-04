@@ -97,6 +97,14 @@ library(geojsonio)
 theme_set(blg_theme_default())
 ```
 
+```{r plot_colors}
+blue   <- "#5b63fe"
+# yellow <- "#fef65b"
+yellow <- "#b1ac3f"
+# pink   <- "#f65bfe"
+pink <- "#ac3fb1"
+```
+
 <!-- Load data -->
 
 ```{r load_data, include=FALSE}
@@ -148,12 +156,6 @@ no_join_check <- rc_master %>%
 ```
 
 <!-- Analysis -->
-
-```{r plot_colors}
-blue   <- "#5b63fe"
-yellow <- "#fef65b"
-pink   <- "#f65bfe"
-```
 
 ```{r current_week_location}
 rc_master %>%

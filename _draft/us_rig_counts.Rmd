@@ -95,8 +95,11 @@ ref <- "~/R/misc/oil/US/rig_counts"
 
 # Rig Type Colors
 blue   <- "#5b63fe"
-yellow <- "#fef65b"
-pink   <- "#f65bfe"
+# yellow <- "#fef65b"
+yellow <- "#b1ac3f"
+# yellow <- "#f9ba22"
+# pink   <- "#f65bfe"
+pink <- "#ac3fb1"
 ```
 
 <!-- Rig count notes -->
