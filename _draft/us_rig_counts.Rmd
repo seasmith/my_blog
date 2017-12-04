@@ -473,18 +473,16 @@ rc_gb <- gb +
 
 ```{r plot_rig_count_map}
 ##  Map
-wk1_colors <- this_week$percent_1wk %>%
+wk1_changes <- this_week$percent_1wk %>%
   sign() %>%
   unique()
 
-map_colors <- switch(as.character(sum(wk1_colors + c(2, 4, 6))),
-       "2" = clrs$red,
-       "3" = "gray50",
-       "5" = c(clrs$red, "gray50"),
-       "7" = clrs$blue,
-       "9" = c(clrs$red, clrs$blue),
-       "10" = c("gray50", clrs$blue),
-       "12" = c(clrs$red, "gray50", clrs$blue))
+map_colors <- wk1_changes %>%
+  as.character() %>%
+  map_chr(~switch(.x,
+                  "-1" = clrs$red,
+                  "0"  = "gray50",
+                  "1"  = clrs$blue))
 
 rc_map <- map_layout %+% sf_plays_total
 rc_map <- rc_map  +
@@ -502,10 +500,16 @@ rc_map <- rc_map  +
 # Colors for bar charts.
 # Different than map colors since plays with 'no change'
 # are removed from the bar charts.
-wk1_colors <- switch(as.character(sum(wk1_colors) + 2),
-                    "1" =  clrs$red, # when only negative change
-                    "2" =  c(clrs$blue, clrs$red), # when both
-                    "3" =  clrs$blue) # when only positive change
+
+get_2_colors <- function(x) {
+  x <- Filter(function(i) i != 0, x)
+  map_chr(as.character(x), ~switch(.x,
+                                   "-1" = clrs$red,
+                                   "1"  = clrs$blue))
+}
+
+total_wk1_colors <- wk1_changes %>%
+  get_2_colors()
 
 ####  Change from week ago
 # Percent change
@@ -525,7 +529,7 @@ rc_percent_1wk <- this_week %>%
   ggplot() +
   geom_col(aes(fct_rev(basin), percent_1wk, fill = percent_1wk < 0)) +
   coord_flip() +
-  scale_fill_manual(values = wk1_colors) +
+  scale_fill_manual(values = total_wk1_colors) +
   scale_y_continuous(labels = blg_frmt_percent(0),
                      minor_breaks = NULL) +
   guides(fill = FALSE) +
@@ -551,7 +555,7 @@ rc_change_1wk <- this_week %>%
   ggplot() +
   geom_col(aes(fct_rev(basin), change_1wk, fill = change_1wk < 0)) +
   coord_flip() +
-  scale_fill_manual(values = wk1_colors) +
+  scale_fill_manual(values = total_wk1_colors) +
   scale_y_continuous(minor_breaks = NULL) +
   guides(fill = FALSE) +
   labs(title = "Net change from\nprevious week",
@@ -742,23 +746,72 @@ rt_gb_grob$grobs[[which(rt_gb_grob$layout$name == "panel")]] <- rt_gb_grob$grobs
 grid.draw(rt_gb_grob)
 ```
 
-```{r}
-## Percent change - Oil
-bc_base_percent_1wk <- total_comparison %>%
-  filter(key == "Oil" & Date == max(Date) & percent_1wk != 0) %>%
+```{r plot_percent_rig_type}
+##  Percent change - Oil
+oil_dat <- total_comparison %>%
+  filter(key == "Oil" & Date == max(Date) & percent_1wk != 0)
+
+oil_wk1_colors <- oil_dat$percent_1wk %>%
+  sign() %>%
+  unique() %>%
+  get_2_colors()
+
+bc_oil_percent_1wk <- oil_dat %>%
   ggplot() +
   geom_col(aes(reorder(basin, percent_1wk, identity),
                percent_1wk,
                fill = factor(sign(percent_1wk)))) +
-  scale_fill_manual(values = c(clrs$red, clrs$blue)) +
+  scale_y_continuous(minor_breaks = NULL, labels = blg_frmt_percent()) +
+  scale_fill_manual(values = oil_wk1_colors) +
+  guides(fill = FALSE) +
   coord_flip()
 
-# bc_base_percent_1wk +
+##  Percent change - Gas
+gas_dat <- total_comparison %>%
+  filter(key == "Gas" & Date == max(Date) & percent_1wk != 0)
 
+gas_wk1_colors <- gas_dat$percent_1wk %>%
+  sign() %>%
+  unique() %>%
+  get_2_colors()
 
-## Percent change - Gas
-bc_gas_percent_1wk <- bc_base_percent_1wk %+%
-  filter(total_comparison, key == "Gas" & Date == max(Date) & percent_1wk != 0)
+bc_gas_percent_1wk <- bc_oil_percent_1wk %+%
+  gas_dat +
+  scale_fill_manual(values = gas_wk1_colors)
+```
+
+```{r plot_net_change_rig_type}
+##  Percent change - Oil
+oil_dat <- total_comparison %>%
+  filter(key == "Oil" & Date == max(Date) & change_1wk != 0)
+
+oil_wk1_colors <- oil_dat$change_1wk %>%
+  sign() %>%
+  unique() %>%
+  get_2_colors()
+
+bc_oil_change_1wk <- oil_dat %>%
+  ggplot() +
+  geom_col(aes(reorder(basin, change_1wk, identity),
+               change_1wk,
+               fill = factor(sign(change_1wk)))) +
+  scale_y_continuous(minor_breaks = NULL) +
+  scale_fill_manual(values = oil_wk1_colors) +
+  guides(fill = FALSE) +
+  coord_flip()
+
+##  Percent change - Gas
+gas_dat <- total_comparison %>%
+  filter(key == "Gas" & Date == max(Date) & change_1wk != 0)
+
+gas_wk1_colors <- gas_dat$change_1wk %>%
+  sign() %>%
+  unique() %>%
+  get_2_colors()
+
+bc_gas_change_1wk <- bc_oil_change_1wk %+%
+  gas_dat +
+  scale_fill_manual(values = gas_wk1_colors)
 ```
 
 ```{r cleanup, include=FALSE}
