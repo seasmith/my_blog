@@ -663,7 +663,8 @@ rt_gb <- gb +
                          key_dates[["this_week"]], "?"))
 ```
 
-```{r plot_rig_type, fig.height=9.2}
+```{r plot_rig_type_chart}
+# Colors
 blue   <- "#5b63fe"
 yellow <- "#fef65b"
 pink   <- "#f65bfe"
@@ -682,6 +683,7 @@ summ_text <- summ %>%
                                         max(stri_length(paste0("(", comma(value), ")")))),
            label = paste0(label_key, "\n", label_value))
 
+# Labels
 summ_text <- summ_text %>%
   mutate(x = Date + 100,
          y = case_when(
@@ -689,9 +691,6 @@ summ_text <- summ_text %>%
            key == "Oil"   ~ value - 110,
            key == "Gas"   ~ value + 15
          ))
-
-# summ_text$x <- summ_text$Date + 100
-# summ_text$y <- summ_text$value + c(10, -50, 50)
 
 rt_type <- summ %>%
   filter(key != "Misc") %>%
@@ -703,21 +702,16 @@ rt_type <- summ %>%
   geom_label(aes(x, y, group = key, fill = key, label = label),
             filter(summ_text, key != "Total"), color = "black") +
   scale_y_continuous(labels = comma) +
-  scale_color_manual(values = c(
-    # "#004A94",
-    # "#01665E",
-    yellow,
-    # "#940100",
-    # "#8C510A",
-    blue,
-    "black")) +
+  scale_color_manual(values = c(yellow, blue, "black")) +
   scale_fill_manual(values = c(yellow, blue, "black")) +
   guides(color = FALSE,
          fill  = FALSE) +
   labs(title = "Rig count by well type",
        y = "Rig count") +
   blg_theme_default(12)
+```
 
+```{r plot_rig_type_map}
 ##  MAP - Rig type
 rt_map <- map_layout %+% sf_type_comparison
 rt_map <- rt_map +
@@ -725,8 +719,6 @@ rt_map <- rt_map +
           color = "black",
           alpha = 0.9) +
   scale_fill_gradient2(name = NULL,
-                       # low = "#004A94", high = "#940100",
-                       # low = "#01665E", high = "#8C510A",
                        low = yellow, high = blue,
                        mid = "#F5F5F5", midpoint = 0.5,
                        na.value = "gray50",
@@ -734,7 +726,9 @@ rt_map <- rt_map +
                                   "Split",    "",
                                   "100% Oil")) +
   coord_sf(crs = st_crs(102003), datum = NA)
+```
 
+```{r plot_rig_type_build}
 rt_gb_grob <- ggplotGrob(rt_gb)
 
 rt_grobs <- arrangeGrob(rt_map, rt_type, layout_matrix = rbind(c(2, 2),
@@ -742,10 +736,30 @@ rt_grobs <- arrangeGrob(rt_map, rt_type, layout_matrix = rbind(c(2, 2),
 
 rt_gb_grob$grobs[[which(rt_gb_grob$layout$name == "panel")]] <- rt_gb_grob$grobs[[which(rt_gb_grob$layout$name == "panel")]] %>%
   addGrob(rt_grobs)
+```
 
+```{r plot_rig_type_draw, fig.height=9.2}
 grid.draw(rt_gb_grob)
 ```
 
+```{r}
+## Percent change - Oil
+bc_base_percent_1wk <- total_comparison %>%
+  filter(key == "Oil" & Date == max(Date) & percent_1wk != 0) %>%
+  ggplot() +
+  geom_col(aes(reorder(basin, percent_1wk, identity),
+               percent_1wk,
+               fill = factor(sign(percent_1wk)))) +
+  scale_fill_manual(values = c(clrs$red, clrs$blue)) +
+  coord_flip()
+
+# bc_base_percent_1wk +
+
+
+## Percent change - Gas
+bc_gas_percent_1wk <- bc_base_percent_1wk %+%
+  filter(total_comparison, key == "Gas" & Date == max(Date) & percent_1wk != 0)
+```
 
 ```{r cleanup, include=FALSE}
 rm(list = ls(pattern = "api_key_"))
