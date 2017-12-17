@@ -1,0 +1,177 @@
+---
+title  : "Simplify Your Map To Reduce Drawing Time"
+author : "Luke Smith"
+date   : "2017-10-06"
+tags   : [r, maps, geometry, gis]
+description: "Reduce the amount of time you spend printing maps by using one simple function."
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : "US Rig Counts"
+  description : "Simplify Geometry to Reduce Drawing Time"
+  image       : ""
+og :
+  image : ""
+---
+  
+```{r setup_lib_std, include=FALSE}
+# ---- Library_Tidyverse_Setup
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(grid)
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+library(extrafont)
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+# ---- My_Blogging_Setup
+library(blg)
+```
+
+```{r knitr_opts_chunk_std, include=FALSE}
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+```{r knitr_opts_hooks_std, include=FALSE}
+# ---- knitr_Options_Setup
+orig_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+# ---- Hooks_Setup
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+```
+
+```{r r_opts_std, include=FALSE}
+# ---- R_Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+old_digits <- getOption("digits")
+options(digits = 2)
+```
+
+```{r r_misc_std, include=FALSE}
+loadfonts("win")
+
+my_blue   <- "#0059B3"
+my_orange <- "#B35A00"
+my_pink   <- "#B30059"
+my_green  <- "#59B300"
+```
+
+<!-- Extra setup -->
+  
+```{r setup_lib_extra, include=FALSE}
+library(sf)
+library(rmapshaper)
+```
+
+```{r r_misc_extra, include=FALSE}
+theme_set(blg_theme_default())
+```
+
+```{r r_load_maps, include=FALSE}
+load("~/R/misc/maps/states_map.RData")
+load("~/R/misc/maps/states_map_simp.RData")
+
+states_map <- states_map %>%
+  filter(NAME %in% c(state.name, "District of Columbia")) %>%
+  filter(!(NAME %in% c("Alaska", "Hawaii"))) %>%
+  filter(TYPE != "Water") %>%
+  st_transform(crs = 102003)
+
+states_map_simp <- states_map_simp %>%
+  filter(NAME %in% c(state.name, "District of Columbia")) %>%
+  filter(!(NAME %in% c("Alaska", "Hawaii"))) %>%
+  filter(TYPE != "Water") %>%
+  st_transform(crs = 102003)
+```
+
+<!-- Begin writing -->
+
+```{r show map, echo=FALSE, fig.height=5}
+ggplot(states_map) +
+  geom_sf() +
+  coord_sf(datum = NA)
+```
+
+I have a map of the lower-48 United States - a very detailed map - that I use for choropleths.
+
+Its detail means a lengthy print time, and many of the complex geometries within the map are not needed to distinguish individual states.
+
+Recently I switched to a simplified map by way of the [`rmapshaper`](https://CRAN.R-project.org/package=rmapshaper) package.
+
+### Simplifying the map
+
+Since `rmapshaper` has `sf` support, I can load and pass my `sf` class map directly to `ms_simplify()`.
+
+```{r example, eval=FALSE, echo=TRUE}
+library(rmapshaper)
+library(ggplot2)  # devtools::install_github("tidyverse/ggplot2")
+load("states_map.RData")
+
+# keep      = proportion of points to retain (0-1; default 0.05)
+# weighting = Coefficient for weighting Visvalingam simplification (default is
+#   0.7). Higher values produce smoother output. weighting=0 is equivalent to
+#   unweighted Visvalingam simplification.
+
+states_map_simp <- ms_simplify(states_map, keep = 0.0025, weighting = 0.9)
+
+# Print
+ggplot(states_map_simp) +
+  geom_sf()
+```
+
+```{r show_example, echo=FALSE, fig.height=5}
+ggplot(states_map_simp) +
+  geom_sf() +
+  coord_sf(datum = NA)
+```
+
+Benchmarking the drawing time of each map will reveal the savings accrued from this one function.
+
+```{r benchmark, eval=FALSE, echo=TRUE}
+library(microbenchmark)
+
+p1 <- ggplot(states_map) + geom_sf()
+p2 <- ggplot(states_map_simp) + geom_sf()
+
+microbenchmark(
+  detailed_map   = print(p1),
+  simplified_map = print(p2)
+)
+```
+
+```{r show_benchmark, echo=TRUE, results="asis"}
+## Unit: milliseconds
+##            expr  min   lq mean median   uq  max neval
+##    detailed_map 2633 2714 2803   2755 2854 3503   100
+##  simplified_map  775  787  837    798  833 1379   100
+```
+
+And there it is: the simplified map prints 3 times faster than the detailed map.

@@ -1,0 +1,59 @@
+---
+title  : "Simplify Your Map To Reduce Drawing Time"
+author : "Luke Smith"
+date   : "2017-10-06"
+tags   : [r, maps, geometry, gis]
+description: "Reduce the amount of time you spend printing maps by using one simple function."
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : "US Rig Counts"
+  description : "Simplify Geometry to Reduce Drawing Time"
+  image       : ""
+og :
+  image : ""
+---
+
+
+
+<!-- Extra setup -->
+<!-- Begin writing -->
+<p><img src="/blog/simplify_your_map_to_reduce_drawing_time_files/figure-html/show%20map-1.png" width="672" /></p>
+<p>I have a map of the lower-48 United States - a very detailed map - that I use for choropleths.</p>
+<p>Its detail means a lengthy print time, and many of the complex geometries within the map are not needed to distinguish individual states.</p>
+<p>Recently I switched to a simplified map by way of the <a href="https://CRAN.R-project.org/package=rmapshaper"><code>rmapshaper</code></a> package.</p>
+<div id="simplifying-the-map" class="section level3">
+<h3>Simplifying the map</h3>
+<p>Since <code>rmapshaper</code> has <code>sf</code> support, I can load and pass my <code>sf</code> class map directly to <code>ms_simplify()</code>.</p>
+<pre class="r"><code>library(rmapshaper)
+library(ggplot2)  # devtools::install_github(&quot;tidyverse/ggplot2&quot;)
+load(&quot;states_map.RData&quot;)
+
+# keep      = proportion of points to retain (0-1; default 0.05)
+# weighting = Coefficient for weighting Visvalingam simplification (default is
+#   0.7). Higher values produce smoother output. weighting=0 is equivalent to
+#   unweighted Visvalingam simplification.
+
+states_map_simp &lt;- ms_simplify(states_map, keep = 0.0025, weighting = 0.9)
+
+# Print
+ggplot(states_map_simp) +
+  geom_sf()</code></pre>
+<p><img src="/blog/simplify_your_map_to_reduce_drawing_time_files/figure-html/show_example-1.png" width="672" /></p>
+<p>Benchmarking the drawing time of each map will reveal the savings accrued from this one function.</p>
+<pre class="r"><code>library(microbenchmark)
+
+p1 &lt;- ggplot(states_map) + geom_sf()
+p2 &lt;- ggplot(states_map_simp) + geom_sf()
+
+microbenchmark(
+  detailed_map   = print(p1),
+  simplified_map = print(p2)
+)</code></pre>
+<pre class="r"><code>## Unit: milliseconds
+##            expr  min   lq mean median   uq  max neval
+##    detailed_map 2633 2714 2803   2755 2854 3503   100
+##  simplified_map  775  787  837    798  833 1379   100</code></pre>
+<p>And there it is: the simplified map prints 3 times faster than the detailed map.</p>
+</div>

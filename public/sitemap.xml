@@ -2,8 +2,8 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
-    <loc>/blog/getting_data_from_binary_excel_files_on_a_windows_machine/</loc>
-    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
+    <loc>/blog/simplify_your_map_to_reduce_drawing_time/</loc>
+    <lastmod>2017-10-06T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -83,7 +83,7 @@
   
   <url>
     <loc>/blog/</loc>
-    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
+    <lastmod>2017-10-06T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -135,8 +135,14 @@
   </url>
   
   <url>
-    <loc>/tags/excel/</loc>
-    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
+    <loc>/tags/geometry/</loc>
+    <lastmod>2017-10-06T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/gis/</loc>
+    <lastmod>2017-10-06T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -153,14 +159,14 @@
   </url>
   
   <url>
-    <loc>/tags/how-to/</loc>
-    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
+    <loc>/tags/imports/</loc>
+    <lastmod>2017-09-14T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>/tags/imports/</loc>
-    <lastmod>2017-09-14T00:00:00+00:00</lastmod>
+    <loc>/tags/maps/</loc>
+    <lastmod>2017-10-06T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -236,7 +242,7 @@
   
   <url>
     <loc>/tags/r/</loc>
-    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
+    <lastmod>2017-10-06T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -305,14 +311,8 @@
   </url>
   
   <url>
-    <loc>/tags/vbs/</loc>
-    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>/</loc>
-    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
+    <lastmod>2017-10-06T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   

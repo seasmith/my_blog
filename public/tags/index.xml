@@ -84,11 +84,20 @@
     </item>
     
     <item>
-      <title>Excel</title>
-      <link>/tags/excel/</link>
-      <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
+      <title>Geometry</title>
+      <link>/tags/geometry/</link>
+      <pubDate>Fri, 06 Oct 2017 00:00:00 +0000</pubDate>
       
-      <guid>/tags/excel/</guid>
+      <guid>/tags/geometry/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Gis</title>
+      <link>/tags/gis/</link>
+      <pubDate>Fri, 06 Oct 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/gis/</guid>
       <description></description>
     </item>
     
@@ -111,20 +120,20 @@
     </item>
     
     <item>
-      <title>How To</title>
-      <link>/tags/how-to/</link>
-      <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/how-to/</guid>
-      <description></description>
-    </item>
-    
-    <item>
       <title>Imports</title>
       <link>/tags/imports/</link>
       <pubDate>Thu, 14 Sep 2017 00:00:00 +0000</pubDate>
       
       <guid>/tags/imports/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Maps</title>
+      <link>/tags/maps/</link>
+      <pubDate>Fri, 06 Oct 2017 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/maps/</guid>
       <description></description>
     </item>
     
@@ -230,7 +239,7 @@
     <item>
       <title>R</title>
       <link>/tags/r/</link>
-      <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
+      <pubDate>Fri, 06 Oct 2017 00:00:00 +0000</pubDate>
       
       <guid>/tags/r/</guid>
       <description></description>
@@ -314,15 +323,6 @@
       <pubDate>Thu, 14 Sep 2017 00:00:00 +0000</pubDate>
       
       <guid>/tags/united-states/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Vbs</title>
-      <link>/tags/vbs/</link>
-      <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/vbs/</guid>
       <description></description>
     </item>
     
