@@ -8,11 +8,11 @@ twitter :
   card    : "summary_large_image"
   site    : "@lksmth"
   creator : "@lksmth"
-  title   : "US Rig Counts"
-  description : "Simplify Geometry to Reduce Drawing Time"
-  image       : "simplify_your_map_to_reduce_drawing_time_files/figure-html/show_example-1.png"
+  title   : "Simplify Your Map To Reduce Drawing Time"
+  description : "Reduce the amount of time you spend printing maps by using one simple function."
+  image       : "https://seasmith.github.io/blog/simplify_your_map_to_reduce_drawing_time_files/figure-html/show_example-1.png"
 og :
-  image : "simplify_your_map_to_reduce_drawing_time_files/figure-html/show_example-1.png"
+  image : "https://seasmith.github.io/blog/simplify_your_map_to_reduce_drawing_time_files/figure-html/show_example-1.png"
 ---
   
 ```{r setup_lib_std, include=FALSE}
