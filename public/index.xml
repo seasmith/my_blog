@@ -6,7 +6,7 @@
     <description>Recent content on Welcome</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 06 Oct 2017 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 17 Dec 2017 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
@@ -14,7 +14,7 @@
     <item>
       <title>Simplify Your Map To Reduce Drawing Time</title>
       <link>/blog/simplify_your_map_to_reduce_drawing_time/</link>
-      <pubDate>Fri, 06 Oct 2017 00:00:00 +0000</pubDate>
+      <pubDate>Sun, 17 Dec 2017 00:00:00 +0000</pubDate>
       
       <guid>/blog/simplify_your_map_to_reduce_drawing_time/</guid>
       <description>I have a map of the lower-48 United States - a very detailed map - that I use for choropleths.
@@ -189,7 +189,7 @@ ggloop</description>
       
       <guid>/projects/</guid>
       <description>Below is a list of my personal projects - past and present.
-ProjectDescriptionD3 Graphics | My D3.js creations…and some Vega and Vega-Lite US Rig Count Update | Tweets, every Friday, of the new rig count data TexasPrimary2016 | Analysis of the 2016 Texas Presidential Primary</description>
+ProjectDescriptionD3 GraphicsMy D3.js creations…and some Vega and Vega-LiteUS Rig Count UpdateTweets, every Friday, of the new rig count dataTexasPrimary2016Analysis of the 2016 Texas Presidential Primary</description>
     </item>
     
   </channel>
