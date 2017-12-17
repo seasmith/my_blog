@@ -238,6 +238,42 @@ map_chr(unique(summ_animate$Date), ~{
 
 
 ```{r map_conversion, include=FALSE, eval=FALSE}
-gj_plays_total <- geojson_json(sf_plays_total)
-gj_states_48 <- geojson_json(states_48 %>% st_transform(4326))
+# Dissolved USA map
+usa_map <- states_48 %>%
+  st_union()
+
+usa_map <- tibble(thing = "Other US Basins", geometry = st_geometry(usa_map)) %>%
+  st_sf() %>%
+  st_transform(4269) %>%
+  st_set_crs(4269)
+
+geojson_write(usa_map, file = "C:/Users/Luke/D3/data/geo_usa_map.json")
+
+## Plays with dissolved USA map
+
+basins_map <- sf_plays_total %>%
+  select(Shale_play, geometry) %>%
+  rename(thing = Shale_play) %>%
+  st_transform(4269) %>%
+  st_set_crs(4269)
+
+basins_map[8, ]$geometry <- st_geometry(st_union(basins_map[8, ],
+                                                 basins_map[8, ]))
+
+geojson_write(basins_map, file = "C:/Users/Luke/D3/data/geo_basins_map.json")
+
+new_map <- usa_map %>%
+  rbind(basins_map)
+
+geojson_write(new_map, file = "C:/Users/Luke/D3/data/geo_new_map.json")
+
+## USA map with holes
+
+new_usa_map <- usa_map %>%
+  st_difference(st_union(basins_map))
+
+newest_map <- basins_map %>%
+  rbind(new_usa_map)
+
+geojson_write(st_transform(newest_map, 4269), file = "C:/Users/Luke/D3/data/geo_newest_map.json")
 ```

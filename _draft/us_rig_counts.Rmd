@@ -90,6 +90,8 @@ library(kableExtra)
 library(magick)
 library(tweenr)
 
+library(rmapshaper)
+
 theme_set(blg_theme_default())
 ref <- "~/R/misc/oil/US/rig_counts"
 
@@ -233,7 +235,7 @@ sf_plays_orig <- st_read("~/R/misc/oil/US/eia_shape/TightOil_ShaleGas_Plays_Lowe
 
 sf_basins <- st_read("~/R/misc/oil/US/eia_shape/SedimentaryBasins_US_EIA/SedimentaryBasins_US_May2011_v2.shp")
 
-load("~/R/misc/maps/states_map.RData")
+load("~/R/misc/maps/states_map_simp.RData")
 ```
 
 ```{r import_drawn_mapedit_data, include=FALSE}
@@ -287,7 +289,7 @@ NA_integer_), class = "factor", .Label = c("constant", "aggregate",
 
 ```{r wrangle_sf_data, include=FALSE}
 # Keep only 48 states (no lakes)
-states_48 <- states_map %>%
+states_48 <- states_map_simp %>%
   filter(NAME %in% c(state.name, "District of Columbia")) %>%
   filter(!(NAME %in% c("Alaska", "Hawaii"))) %>%
   filter(TYPE != "Water")
@@ -483,7 +485,9 @@ rc_gb <- gb +
   labs(title    = paste0("Rigging up, rigging down"),
        subtitle = paste0("Where did rig counts change from the week of ",
                          key_dates[["week_ago"]], " to\n",
-                         key_dates[["this_week"]], "?"))
+                         key_dates[["this_week"]], "?"),
+       caption = paste0("Source: Baker Hughes Rig Count")) +
+  theme(plot.caption = element_text(size = 10, color = "gray50"))
 ```
 
 ```{r plot_rig_count_map}
@@ -640,44 +644,11 @@ rc_change_52wk <- this_week %>%
   blg_theme_default(12)
 ```
 
-```{r plot_total_chart_build}
-##  BAR - Total current rig total
-rc_total <- total_comparison %>%
-  filter(Date == max(Date) & key %in% c("Oil", "Gas", "Total")) %>%
-  select(basin:value) %>%
-  spread(key, value) %>%
-  gather(... = c(Gas, Oil)) %>%
-  arrange(Total, basin)
-
-rc_total$basin <- factor(rc_total$basin, levels = unique(rc_total$basin))
-
-rc_total_chart <- rc_total %>%
-  ggplot() +
-  geom_col(aes(basin, value, fill = key)) +
-  scale_fill_manual("Rig type", values = c(yellow, blue)) +
-  labs(title = paste0("Which basins are drillers targetting?"),
-       subtitle = paste0("Week of: ", key_dates[["this_week"]]),
-       x = NULL,
-       y = paste0("Rig Count"),
-       caption = paste0("Source: Baker Hughes Rig Count")) +
-  guides(fill = guide_legend(label.position = "bottom", title.vjust = 1)) +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "top",
-        legend.direction = "horizontal",
-        legend.justification = "left",
-        plot.caption = element_text(size = 10, color = "gray50")) +
-  coord_flip()
-```
-
-```{r plot_total_chart_draw}
-rc_total_chart
-```
-
 ```{r plot_rig_count_build}
 ##  GROBS
 rc_grobs <- arrangeGrob(rc_map,
-                        rc_percent_1wk, rc_percent_52wk,
                         rc_change_1wk,  rc_change_52wk,
+                        rc_percent_1wk, rc_percent_52wk,
                         layout_matrix = rbind(c(1, 1),
                                               c(2, 3),
                                               c(4, 5)))
@@ -698,7 +669,9 @@ grid.draw(rc_gb_grob)
 rt_gb <- gb +
   labs(title = "Focal point",
        subtitle = paste0("Which resource are rigs after for the week of ",
-                         key_dates[["this_week"]], "?"))
+                         key_dates[["this_week"]], "?"),
+       caption = paste0("Source: Baker Hughes Rig Count")) +
+  theme(plot.caption = element_text(size = 10, color = "gray50"))
 ```
 
 ```{r plot_rig_type_chart}
@@ -744,6 +717,34 @@ rt_type <- summ %>%
   blg_theme_default(12)
 ```
 
+```{r plot_total_chart_build}
+##  BAR - Total current rig total
+rc_total <- total_comparison %>%
+  filter(Date == max(Date) & key %in% c("Oil", "Gas", "Total")) %>%
+  select(basin:value) %>%
+  spread(key, value) %>%
+  gather(... = c(Gas, Oil)) %>%
+  arrange(Total, basin)
+
+rc_total$basin <- factor(rc_total$basin, levels = unique(rc_total$basin))
+
+rc_total_chart <- rc_total %>%
+  ggplot() +
+  geom_col(aes(basin, value, fill = key)) +
+  scale_fill_manual("Rig type", values = c(yellow, blue)) +
+  labs(x = NULL,
+       y = paste0("Rig Count")) +
+  # guides(fill = guide_legend(label.position = "bottom", title.vjust = 1)) +
+  guides(fill = FALSE) +
+  blg_theme_default(12) +
+  theme(panel.grid.major.y = element_blank()#,
+        # legend.position = "top",
+        # legend.direction = "horizontal",
+        # legend.justification = "left"
+        ) +
+  coord_flip()
+```
+
 ```{r plot_rig_type_map}
 ##  MAP - Rig type
 rt_map <- map_layout %+% sf_type_comparison
@@ -764,15 +765,30 @@ rt_map <- rt_map +
 ```{r plot_rig_type_build}
 rt_gb_grob <- ggplotGrob(rt_gb)
 
-rt_grobs <- arrangeGrob(rt_map, rt_type, layout_matrix = rbind(c(2, 2),
-                                                               c(1, 1)))
+rt_grobs <- arrangeGrob(rt_map, rt_type, rc_total_chart,
+                        layout_matrix = rbind(c(2, 2),
+                                              c(1, 1),
+                                              c(3, 3)))
 
 rt_gb_grob$grobs[[which(rt_gb_grob$layout$name == "panel")]] <- rt_gb_grob$grobs[[which(rt_gb_grob$layout$name == "panel")]] %>%
   addGrob(rt_grobs)
 ```
 
-```{r plot_rig_type_draw, fig.height=9.2}
+```{r plot_rig_type_draw, fig.height=13}
+# old fig.height=9.2
 grid.draw(rt_gb_grob)
+```
+
+<!-- Rig type other plots -->
+
+```{r plot_rig_type_other_canvas}
+##  LAYOUT - Rig type
+rto_gb <- gb +
+  labs(title = paste0("Which resource are drillers after and how is it changing?"),
+       subtitle = paste0("Week of: ",
+                         key_dates[["this_week"]], "?"),
+       caption = paste0("Source: Baker Hughes Rig Count")) +
+  theme(plot.caption = element_text(size = 10, color = "gray50"))
 ```
 
 ```{r plot_percent_rig_type}
@@ -787,13 +803,13 @@ oil_wk1_colors <- oil_dat$percent_1wk %>%
 
 bc_oil_percent_1wk <- oil_dat %>%
   ggplot() +
-  geom_col(aes(reorder(basin, percent_1wk, identity),
-               percent_1wk,
-               fill = factor(sign(percent_1wk)))) +
+  geom_col(aes(reorder(basin, percent_1wk, identity), percent_1wk, fill = TRUE)) +
   scale_y_continuous(minor_breaks = NULL, labels = blg_frmt_percent()) +
-  scale_fill_manual(values = oil_wk1_colors) +
+  scale_fill_manual(values = blue) +
   guides(fill = FALSE) +
-  coord_flip()
+  coord_flip() +
+  blg_theme_default(12) +
+  theme(axis.title = element_blank())
 
 ##  Percent change - Gas
 gas_dat <- total_comparison %>%
@@ -806,7 +822,7 @@ gas_wk1_colors <- gas_dat$percent_1wk %>%
 
 bc_gas_percent_1wk <- bc_oil_percent_1wk %+%
   gas_dat +
-  scale_fill_manual(values = gas_wk1_colors)
+  scale_fill_manual(values = yellow)
 ```
 
 ```{r plot_net_change_rig_type}
@@ -821,13 +837,13 @@ oil_wk1_colors <- oil_dat$change_1wk %>%
 
 bc_oil_change_1wk <- oil_dat %>%
   ggplot() +
-  geom_col(aes(reorder(basin, change_1wk, identity),
-               change_1wk,
-               fill = factor(sign(change_1wk)))) +
+  geom_col(aes(reorder(basin, change_1wk, identity), change_1wk, fill = TRUE)) +
   scale_y_continuous(minor_breaks = NULL) +
-  scale_fill_manual(values = oil_wk1_colors) +
+  scale_fill_manual(values = blue) +
   guides(fill = FALSE) +
-  coord_flip()
+  coord_flip() +
+  blg_theme_default(12) +
+  theme(axis.title = element_blank())
 
 ##  Percent change - Gas
 gas_dat <- total_comparison %>%
@@ -840,7 +856,52 @@ gas_wk1_colors <- gas_dat$change_1wk %>%
 
 bc_gas_change_1wk <- bc_oil_change_1wk %+%
   gas_dat +
-  scale_fill_manual(values = gas_wk1_colors)
+  scale_fill_manual(values = yellow)
+```
+
+```{r plot_rig_type_other_build}
+rto_gb_grob <- ggplotGrob(rto_gb)
+
+rto_grobs <- arrangeGrob(rc_total_chart,
+                         bc_gas_percent_1wk, bc_oil_percent_1wk,
+                         bc_gas_change_1wk,  bc_oil_change_1wk,
+                         layout_matrix = rbind(c(1, 1),
+                                               c(1, 1),
+                                               c(2, 3),
+                                               c(4, 5)))
+
+rto_gb_grob$grobs[[which(rto_gb_grob$layout$name == "panel")]] <- rto_gb_grob$grobs[[which(rto_gb_grob$layout$name == "panel")]] %>%
+  addGrob(rto_grobs)
+```
+
+```{r plot_rig_type_other_draw, fig.height=9.2}
+grid.draw(rto_gb_grob)
+```
+
+```{r plot_misc}
+x <- map(unique(rc_basin$basin), ~{
+    rc_basin %>%
+        filter(basin == .x & key == "Total") %>%
+        mutate(change = value - lag(value, 1L)) %>%
+        filter(!is.na(change)) %>%
+        filter(change < 1) %>%
+        filter(lubridate::year(Date) == 2017L)
+           }) %>%
+  map_int(nrow)
+
+y <- tibble(Basin = unique(rc_basin$basin), Weeks = x)
+
+y %>%
+    arrange(Weeks) %>%
+    mutate(Basin = factor(Basin, levels = rev(Basin))) %>%
+    ggplot() +
+    geom_col(aes(Basin, Weeks, fill = Weeks)) +
+    geom_text(aes(Basin, Weeks, label = Weeks), nudge_y = 1.7) +
+    coord_flip() +
+    guides(fill = FALSE) +
+    labs(title = "Top Performers",
+         subtitle = paste0("Which basins have had the fewest", "\nno-growth weeks during 2017?"),
+         x = NULL)
 ```
 
 ```{r cleanup, include=FALSE}
