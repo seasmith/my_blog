@@ -2,9 +2,12 @@
 title: "R Projects"
 ---
   
-Below is a list of all of my R projects.
+Below is a list of my personal projects - past and present.
 
 
 Project | Description
 --------|------------
+
+[D3 Graphics](https://bl.ocks.org/seasmith) | My D3.js creations...and some Vega and Vega-Lite
+[US Rig Count Update](https://twitter.com/lksmth/status/941732791649275904) | Tweets, every Friday, of the new rig count data
 [TexasPrimary2016](https://github.com/seasmith/TexasPrimary2016) | Analysis of the 2016 Texas Presidential Primary

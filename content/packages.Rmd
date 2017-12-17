@@ -5,6 +5,8 @@ author: "Luke Smith"
 
 [AlignAssign](/packages/AlignAssign)
 
+[blg](/packages/blg)
+
 [seasmith](/packages/seasmith)
 
 [ggloop](/packages/ggloop)
