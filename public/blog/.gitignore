@@ -5,5 +5,4 @@ api_key_nyt.R
 setup_std.R
 comb.RData
 all.RData
-*.html
 *.Rmd
