@@ -94,22 +94,33 @@ library(geojsonio)
 ```
 
 ```{r map_conversion, include=FALSE, eval=FALSE}
+# Load map
+load("~/R/misc/maps/states_map_simp.RData")
+
+states_48 <- states_map_simp %>%
+  filter(NAME %in% c(state.name, "District of Columbia")) %>%
+  filter(!(NAME %in% c("Alaska", "Hawaii"))) %>%
+  filter(TYPE != "Water")
+
 # Dissolved USA map
 usa_map <- states_48 %>%
-  st_union()
-
-usa_map <- tibble(thing = "Others",
-                  display_name = "Other US Basins",
-                  value = this_week[this_week$basin == "Others", ]$value,
-                  change_1wk = this_week[this_week$basin == "Others", ]$change_1wk,
-                  geometry = st_geometry(usa_map)) %>%
-  st_sf() %>%
+  st_union() %>%
   st_transform(4269) %>%
   st_set_crs(4269)
 
+# usa_map <- tibble(thing = "Others",
+#                   display_name = "Other US Basins",
+#                   value = this_week[this_week$basin == "Others", ]$value,
+#                   change_1wk = this_week[this_week$basin == "Others", ]$change_1wk,
+#                   geometry = st_geometry(usa_map)) %>%
+#   st_sf() %>%
+#   st_transform(4269) %>%
+#   st_set_crs(4269)
+
 ## Basins map
 basins_map <- sf_plays_total %>%
-  select(Shale_play, value, change_1wk, geometry) %>%
+  # select(Shale_play, value, change_1wk, geometry) %>%
+  select(Shale_play, geometry) %>%
   rename(thing = Shale_play) %>%
   st_transform(4269) %>%
   st_set_crs(4269)
