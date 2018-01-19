@@ -158,15 +158,15 @@ load("~/R/misc/income/worldbank/remittances_paid/remittances_paid_raw.RData")
 load("~/R/misc/income/worldbank/gdp/gdp_raw.RData")
 
 gdp <- gdp_raw %>%
-  select(-(`Country Code`:`Indicator Code`), -X62) %>%
+  select(-(`Country Code`:`Indicator Code`), -X63) %>%
   gather(... = -`Country Name`, year, gdp)
 
 remittances_received <- remittances_received_raw %>%
-    select(-(`Country Code`:`Indicator Code`), -X62) %>%
+    select(-(`Country Code`:`Indicator Code`), -X63) %>%
     gather(... = -`Country Name`, year, received)
 
 remittances_paid <- remittances_paid_raw %>%
-    select(-(`Country Code`:`Indicator Code`), -X62) %>%
+    select(-(`Country Code`:`Indicator Code`), -X63) %>%
     gather(... = -`Country Name`, year, paid)
 
 
@@ -193,10 +193,10 @@ my_percent_0 <- blg::blg_frmt_percent(i = 0)
 #     scale_y_continuous(labels = my_percent_0)
 
 wb_summ <- wb %>%
-    mutate_at(vars(year:paid), as.double) %>%
+    mutate_at(vars(year:gdp), as.double) %>%
     mutate(net_remittances = received - paid,
            net_prcnt_gdp = net_remittances / gdp) %>%
-    select(`Country Name`:gdp, net_prcnt_gdp)
+    select(`Country Name`:gdp, net_remittances, net_prcnt_gdp)
 
 wb_summ_10_years <- wb_summ %>%
     filter(!grepl("small states|Arab World", `Country Name`, ignore.case = TRUE)) %>%
@@ -217,7 +217,7 @@ bottom_recipients <- wb_summ_10_years %>%
 
 top_12 <- wb %>%
   filter(year >= 1970) %>%
-  mutate_at(vars(year:paid), as.double) %>%
+  mutate_at(vars(year:gdp), as.double) %>%
   mutate(net_remittances = received - paid,
          net_prcnt_gdp = net_remittances / gdp) %>%
   filter(`Country Name` %in% top_recipients[1:9]) %>%
@@ -233,7 +233,7 @@ top_12 <- wb %>%
 
 bottom_12 <- wb %>%
   filter(year >= 1970) %>%
-  mutate_at(vars(year:paid), as.double) %>%
+  mutate_at(vars(year:gdp), as.double) %>%
   mutate(net_remittances = received - paid,
          net_prcnt_gdp = net_remittances / gdp) %>%
   filter(`Country Name` %in% bottom_recipients[1:9]) %>%
@@ -255,20 +255,34 @@ plot_grid(top_12, bottom_12)
 <br>
 
 ```{r plot_by_total}
-outs <- c("World", "High income", "OECD members",
-          "Post-demographic dividend", "Europe & Central Asia",
-          "European Union", "Euro area", "Late-demographic dividend",
-          "Middle East & North Africa", "North America", "Arab World",
-          "IDA & IBRD total", "IBRD only",
-          "Early-demographic dividend", "Low & middle income",
-          "Middle income", "East Asia & Pacific",
+outs <- c("World",
+          "High income",
+          "OECD members",
+          "Post-demographic dividend",
+          "Europe & Central Asia",
+          "European Union",
+          "Euro area",
+          "Late-demographic dividend",
+          "Middle East & North Africa",
+          "North America",
+          "Arab World",
+          "IDA & IBRD total",
+          "IBRD only",
+          "Early-demographic dividend",
+          "Low & middle income",
+          "Middle income",
+          "East Asia & Pacific",
           "Upper middle income",
           "East Asia & Pacific (excluding high income)",
           "East Asia & Pacific (IDA & IBRD countries)",
           "Europe & Central Asia (IDA & IBRD countries)",
           "Europe & Central Asia (excluding high income)",
-          "Small states", "Other small states", "Lower middle income",
-          "South Asia", "South Asia (IDA & IBRD)", "IDA total",
+          "Small states",
+          "Other small states",
+          "Lower middle income",
+          "South Asia",
+          "South Asia (IDA & IBRD)",
+          "IDA total",
           "Latin America & Caribbean",
           "Latin America & the Caribbean (IDA & IBRD countries)",
           "Latin America & Caribbean (excluding high income)",
@@ -283,24 +297,25 @@ outs <- c("World", "High income", "OECD members",
           "Pre-demographic dividend",
           "Central Europe and the Baltics",
           "Fragile and conflict affected situations",
-          "Heavily indebted poor countries (HIPC)", "Low income")
+          "Heavily indebted poor countries (HIPC)",
+          "Low income")
 
 top_paid <- wb %>%
-  mutate_at(vars(received:paid), as.double) %>%
+  mutate_at(vars(received:gdp), as.double) %>%
   filter(year == 2016) %>%
   filter(!(`Country Name` %in% outs)) %>%
   arrange(desc(paid)) %>%
   slice(1:9)
 
 top_received <- wb %>%
-  mutate_at(vars(received:paid), as.double) %>%
+  mutate_at(vars(received:gdp), as.double) %>%
   filter(year == 2016) %>%
   filter(!(`Country Name` %in% outs)) %>%
   arrange(desc(received)) %>%
   slice(1:9)
 
 plot_top_paid <- wb %>%
-  mutate_at(vars(received:paid), as.double) %>%
+  mutate_at(vars(received:gdp), as.double) %>%
   mutate_at(vars(year), as.integer) %>%
   filter(year >= 1970L) %>%
   semi_join(top_paid, by = "Country Name") %>%
@@ -315,7 +330,7 @@ plot_top_paid <- wb %>%
        y = NULL)
 
 plot_top_received <- wb %>%
-  mutate_at(vars(received:paid), as.double) %>%
+  mutate_at(vars(received:gdp), as.double) %>%
   mutate_at(vars(year), as.integer) %>%
   filter(year >= 1970L) %>%
   semi_join(top_received, by = "Country Name") %>%
@@ -364,4 +379,48 @@ wb %>%
     mutate(is_cont = sign(net_prcnt_gdp) - lag(sign(net_prcnt_gdp))) %>%
     tail(n = 15) %>%
     select(1,2, net_prcnt_gdp, 10)
+```
+
+```{r el_salvador}
+wb %>%
+    filter(year >= 1977) %>%
+    mutate_at(vars(year:gdp), as.double) %>%
+    mutate(net_remittances = received - paid,
+           net_prcnt_gdp = net_remittances / gdp) %>%
+    filter(`Country Name` == "El Salvador") %>%
+    ggplot() +
+    geom_line(aes(year, net_prcnt_gdp)) +
+    geom_hline(yintercept = 0, color = "black") +
+    #scale_x_continuous(labels = blg_frmt_stagger()) +
+    scale_y_continuous(labels = my_percent_0) +
+    scale_color_manual(values = c(my_red, my_blue)) +
+    guides(color = FALSE) +
+    labs(x = paste0("Year"), y = "Percent of GDP",
+         title = paste0("El Salvador"),
+         subtitle = paste0("Remittances received"))
+```
+
+```{r select_countries}
+wb_summ %>%
+  filter(year >= 1970) %>%
+  filter(!(`Country Name` %in% outs)) %>%
+  ggplot() +
+  geom_line(aes(year, net_remittances / 1000000000, group = `Country Name`, color = `Country Name` == "United States"), alpha = 0.8) +
+  scale_y_continuous(label = comma) +
+  scale_color_manual(values = c("black", "red"))
+
+
+nafta <- c("United States", "Mexico", "Canada")
+nafta_others <- c(nafta, "El Salvador", "Honduras",
+                  "Nicaragua", "Belize", "Panama", "Costa Rica")
+
+wb_summ %>%
+    filter(year >= 1970) %>%
+    filter(!(`Country Name` %in% outs)) %>%
+    mutate(group = if_else(`Country Name` %in% nafta_others, "NAFTA", "NOT_NAFTA")) %>%
+    ggplot() +
+    geom_line(aes(year, net_remittances / 1000000000, group = `Country Name`, color = group, alpha = group)) +
+    scale_y_continuous(label = comma) +
+    scale_color_manual(values = c("red", "black")) +
+    scale_alpha_manual(values = c(1, 0.2))
 ```
