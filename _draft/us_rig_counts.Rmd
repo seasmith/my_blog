@@ -1,7 +1,7 @@
 ---
 title  : "US Rig Counts"
 author : "Luke Smith"
-date   : "2017-10-06"
+date   : r Sys.Date()
 tags   : [r, oil, gas, oil and gas, rig counts]
 description: ""
 twitter :
@@ -72,11 +72,6 @@ knit_hooks$set(inline = function(x) {
 })
 
 old_inline <- knit_hooks$get("inline")
-
-my_blue   <- "#0059B3"
-my_orange <- "#B35A00"
-my_pink   <- "#B30059"
-my_green  <- "#59B300"
 ```
 
 ```{r setup_extra, include=FALSE}
@@ -86,16 +81,14 @@ library(httr)
 library(curl)
 library(zeallot)
 library(kableExtra)
+library(ggridges)
 
 theme_set(blg_theme_default())
 ref <- "~/R/misc/oil/US/rig_counts"
 
 # Rig Type Colors
 blue   <- "#5b63fe"
-# yellow <- "#fef65b"
 yellow <- "#b1ac3f"
-# yellow <- "#f9ba22"
-# pink   <- "#f65bfe"
 pink <- "#ac3fb1"
 
 get_2_colors <- function(x) {
@@ -104,6 +97,8 @@ get_2_colors <- function(x) {
                                    "-1" = "#a52a2a",
                                    "1"  = "#4682b4"))
 }
+
+pretty_date <- function(n) format(n, "%B %d, %Y")
 ```
 
 <!-- Rig count notes -->
@@ -142,6 +137,8 @@ get_2_colors <- function(x) {
 ref <- "~/R/misc/oil/US/rig_counts"
 load(file.path(ref, "rc_basin.RData"))
 load(file.path(ref, "rc_master.RData"))
+load(file.path(ref, "rc_og.RData"))
+load("~/R/misc/oil/price/oil_price.RData")
 ```
 
 ```{r analyze_data_rig_counts, include=FALSE}
@@ -293,9 +290,10 @@ map_layout <- ggplot() +
 ```{r plot_rig_count_canvas}
 rc_gb <- gb +
   labs(title    = paste0("Rigging up, rigging down"),
-       subtitle = paste0("Where did rig counts change from the week of ",
-                         key_dates[["week_ago"]], " to\n",
-                         key_dates[["this_week"]], "?"),
+       subtitle = paste0("Rig count change from ",
+                         pretty_date(key_dates[["week_ago"]]),
+                         " to ",
+                         pretty_date(key_dates[["this_week"]]), "?"),
        caption = paste0("Source: Baker Hughes Rig Count")) +
   theme(plot.caption = element_text(size = 10, color = "gray50"))
 ```
@@ -323,7 +321,11 @@ rc_map <- rc_map  +
                     values = map_colors,
                     labels = c("Decrease", "No Change", "Increase")) +
   coord_sf(crs = st_crs(102003), datum = NA) +
-  guides(color = FALSE)
+  guides(color = FALSE) +
+  theme(plot.margin = margin(0, 0, 0, 0, "pt"),
+        legend.position = c(0.81, 0.13),
+        axis.title = element_blank(),
+        axis.text = element_blank())
 ```
 
 ```{r plot_rig_count_charts_week_ago}
@@ -353,7 +355,9 @@ rc_percent_1wk <- this_week %>%
   coord_flip() +
   scale_fill_manual(values = total_wk1_colors) +
   scale_y_continuous(labels = blg_frmt_percent(0),
-                     minor_breaks = NULL) +
+                     breaks = pretty_breaks(3),
+                     minor_breaks = NULL,
+                     expand = expand_scale()) +
   guides(fill = FALSE) +
   labs(title = "Percent change from\nprevious week",
        x = NULL,
@@ -383,7 +387,9 @@ rc_change_1wk <- this_week %>%
   geom_col(aes(fct_rev(basin), change_1wk, fill = change_1wk > 0)) +
   coord_flip() +
   scale_fill_manual(values = total_wk1_colors) +
-  scale_y_continuous(minor_breaks = NULL) +
+  scale_y_continuous(breaks = pretty_breaks(3),
+                     minor_breaks = NULL,
+                     expand = expand_scale()) +
   guides(fill = FALSE) +
   labs(title = "Net change from\nprevious week",
        x = NULL,
@@ -421,7 +427,9 @@ rc_percent_52wk <- this_week %>%
   geom_col(aes(fct_rev(basin), percent_52wk, fill = percent_52wk < 0)) +
   coord_flip() +
   scale_fill_manual(values = wk52_colors) +
-  scale_y_continuous(labels = blg_frmt_percent(0)) +
+  scale_y_continuous(labels = blg_frmt_percent(0),
+                     breaks = pretty_breaks(3),
+                     expand = expand_scale()) +
   guides(fill = FALSE) +
   labs(title = "Percent change from\nprevious year",
        x = NULL,
@@ -446,7 +454,9 @@ rc_change_52wk <- this_week %>%
   geom_col(aes(fct_rev(basin), change_52wk, fill = change_52wk < 0)) +
   coord_flip() +
   scale_fill_manual(values = wk52_colors) +
-  scale_y_continuous(minor_breaks = NULL) +
+  scale_y_continuous(breaks = pretty_breaks(3),
+                     minor_breaks = NULL,
+                     expand = expand_scale()) +
   guides(fill = FALSE) +
   labs(title = "Net change from\nprevious year",
        x = NULL,
@@ -478,8 +488,8 @@ grid.draw(rc_gb_grob)
 ##  LAYOUT - Rig type
 rt_gb <- gb +
   labs(title = "Focal point",
-       subtitle = paste0("Which resource are rigs after for the week of ",
-                         key_dates[["this_week"]], "?"),
+       subtitle = paste0("Which resource did rigs target for the week of ",
+                         pretty_date(key_dates[["this_week"]]), "?"),
        caption = paste0("Source: Baker Hughes Rig Count")) +
   theme(plot.caption = element_text(size = 10, color = "gray50"))
 ```
@@ -501,30 +511,39 @@ summ_text <- summ %>%
 
 # Labels
 summ_text <- summ_text %>%
-  mutate(x = Date + 100,
+  mutate(x = Date + 50,
          y = case_when(
            key == "Total" ~ value + 20,
            key == "Oil"   ~ value - 110,
            key == "Gas"   ~ value + 15
          ))
 
+cut_off_date <- as.Date("2014-01-01")
+
 rt_type <- summ %>%
   filter(key != "Misc") %>%
   mutate(Date = as.Date(Date)) %>%
+  filter(Date >= cut_off_date) %>%
   ggplot() +
   geom_line(aes(Date, value, color = key), size = 0.7) +
   geom_label(aes(x, y, group = key, fill = key, label = label),
-            filter(summ_text, key == "Total"), color = "white") +
+            filter(summ_text, key == "Total"), color = "white", nudge_x = 20) +
   geom_label(aes(x, y, group = key, fill = key, label = label),
-            filter(summ_text, key != "Total"), color = "black") +
-  scale_y_continuous(labels = comma) +
+            filter(summ_text, key != "Total"), color = "black", nudge_x = 20) +
+  scale_x_date(expand = expand_scale(),
+               limits = c(cut_off_date - 50, key_dates[["this_week"]] + 140)) +
+  scale_y_continuous(labels = comma,
+                     expand = expand_scale()) +
   scale_color_manual(values = c(yellow, blue, "black")) +
   scale_fill_manual(values = c(yellow, blue, "black")) +
   guides(color = FALSE,
          fill  = FALSE) +
   labs(title = "Rig count by well type",
-       y = "Rig count") +
-  blg_theme_default(12)
+       x = NULL,
+       y = NULL) +
+  blg_theme_default(12) +
+  theme(plot.title = element_text(size = 12, hjust = -0.052),
+        axis.text.y = element_text(margin = margin(0, -14, 0, 0, "pt"), vjust = -1.0))
 ```
 
 ```{r plot_total_chart_build}
@@ -542,20 +561,19 @@ rc_total_chart <- rc_total %>%
   ggplot() +
   geom_col(aes(basin, value, fill = key)) +
   scale_fill_manual("Rig type", values = c(yellow, blue)) +
-  labs(x = NULL,
-       y = paste0("Rig Count")) +
-  # guides(fill = guide_legend(label.position = "bottom", title.vjust = 1)) +
+  labs(title = "Rig count by basin",
+       x = NULL,
+       y = NULL) +
+  scale_y_continuous(expand = expand_scale()) +
   guides(fill = FALSE) +
   blg_theme_default(12) +
-  theme(panel.grid.major.y = element_blank()#,
-        # legend.position = "top",
-        # legend.direction = "horizontal",
-        # legend.justification = "left"
-        ) +
+  theme(plot.margin = unit(c(20, 0, 0, 0), "pt"),
+        plot.title = element_text(size = 12, hjust = -0.318),
+        panel.grid.major.y = element_blank()) +
   coord_flip()
 ```
 
-```{r plot_rig_type_map}
+```{r plot_rig_type_map, eval=FALSE}
 ##  MAP - Rig type
 rt_map <- map_layout %+% sf_type_comparison
 rt_map <- rt_map +
@@ -569,126 +587,92 @@ rt_map <- rt_map +
                        labels = c("100% Gas", "",
                                   "Split",    "",
                                   "100% Oil")) +
-  coord_sf(crs = st_crs(102003), datum = NA)
+  scale_x_continuous(expand = expand_scale()) +
+  scale_y_continuous(expand = expand_scale()) +
+  coord_sf(crs = st_crs(102003), datum = NA) +
+  theme(legend.position = c(0.855, 0.02))
 ```
 
 ```{r plot_rig_type_build}
 rt_gb_grob <- ggplotGrob(rt_gb)
 
-rt_grobs <- arrangeGrob(rt_map, rt_type, rc_total_chart,
-                        layout_matrix = rbind(c(2, 2),
-                                              c(1, 1),
-                                              c(3, 3)))
+rt_grobs <- arrangeGrob(rt_type, rc_total_chart,
+                        layout_matrix = rbind(c(1, 1),
+                                              c(2, 2)))
 
 rt_gb_grob$grobs[[which(rt_gb_grob$layout$name == "panel")]] <- rt_gb_grob$grobs[[which(rt_gb_grob$layout$name == "panel")]] %>%
   addGrob(rt_grobs)
 ```
 
-```{r plot_rig_type_draw, fig.height=13}
+```{r plot_rig_type_draw, fig.height=9}
 # old fig.height=9.2
 grid.draw(rt_gb_grob)
 ```
 
 <!-- Rig type other plots -->
 
-```{r plot_rig_type_other_canvas}
-##  LAYOUT - Rig type
-rto_gb <- gb +
-  labs(title = paste0("Which resource are drillers after and how is it changing?"),
-       subtitle = paste0("Week of: ",
-                         key_dates[["this_week"]], "?"),
-       caption = paste0("Source: Baker Hughes Rig Count")) +
-  theme(plot.caption = element_text(size = 10, color = "gray50"))
-```
-
-```{r plot_percent_rig_type}
-##  Percent change - Oil
-oil_dat <- total_comparison %>%
-  filter(key == "Oil" & Date == max(Date) & percent_1wk != 0)
-
-oil_wk1_colors <- oil_dat$percent_1wk %>%
-  sign() %>%
-  unique() %>%
-  get_2_colors()
-
-bc_oil_percent_1wk <- oil_dat %>%
+```{r past_six_months_panel, eval=FALSE}
+summ %>%
+  filter(key == "Total") %>%
+  mutate(Date = as.Date(Date)) %>%
+  filter(Date >= key_dates[["this_week"]] - (365 / 2)) %>%
   ggplot() +
-  geom_col(aes(reorder(basin, percent_1wk, identity), percent_1wk, fill = TRUE)) +
-  scale_y_continuous(minor_breaks = NULL, labels = blg_frmt_percent()) +
-  scale_fill_manual(values = blue) +
-  guides(fill = FALSE) +
-  coord_flip() +
+  geom_line(aes(Date, value), size = 1.2) +
+  scale_y_continuous(breaks = pretty_breaks(2),
+                     expand = expand_scale()) +
+  scale_x_date(breaks = pretty_breaks(6),
+               labels = function(x) format(x, "%b %Y"),
+               expand = expand_scale()) +
+  labs(x = NULL, y = NULL) +
   blg_theme_default(12) +
-  theme(axis.title = element_blank())
-
-##  Percent change - Gas
-gas_dat <- total_comparison %>%
-  filter(key == "Gas" & Date == max(Date) & percent_1wk != 0)
-
-gas_wk1_colors <- gas_dat$percent_1wk %>%
-  sign() %>%
-  unique() %>%
-  get_2_colors()
-
-bc_gas_percent_1wk <- bc_oil_percent_1wk %+%
-  gas_dat +
-  scale_fill_manual(values = yellow)
+  theme(plot.title  = element_text(size = 12, hjust = -0.052),
+        axis.text.y = element_text(),
+        panel.grid.major.x = element_blank())
 ```
 
-```{r plot_net_change_rig_type}
-##  Percent change - Oil
-oil_dat <- total_comparison %>%
-  filter(key == "Oil" & Date == max(Date) & change_1wk != 0)
+```{r oil_and_gas_split}
+og_labels <- seq.int(1987, 2017, 1)
+og_labels[c(FALSE, TRUE)] <- ""
 
-oil_wk1_colors <- oil_dat$change_1wk %>%
-  sign() %>%
-  unique() %>%
-  get_2_colors()
-
-bc_oil_change_1wk <- oil_dat %>%
+og_ridge <- rc_og %>%
+  select(Date, Oil, Gas) %>%
+  filter(lubridate::year(Date) != 2018) %>%
+  gather(... = -Date) %>%
+  mutate(year = factor(lubridate::year(Date))) %>%
   ggplot() +
-  geom_col(aes(reorder(basin, change_1wk, identity), change_1wk, fill = TRUE)) +
-  scale_y_continuous(minor_breaks = NULL) +
-  scale_fill_manual(values = blue) +
-  guides(fill = FALSE) +
-  coord_flip() +
-  blg_theme_default(12) +
-  theme(axis.title = element_blank())
+  ggridges::geom_density_ridges(aes(value, year, fill = key), alpha = 0.8) +
+  scale_x_continuous(expand = expand_scale(),
+                     breaks = c(400, 1200)) +
+  scale_y_discrete(NULL,
+                   expand = expand_scale(),
+                   labels = og_labels) +
+  scale_fill_brewer(palette = "Set1") +
+  theme(legend.direction = "horizontal", legend.position = "top") +
+  guides(fill = FALSE)
 
-##  Percent change - Gas
-gas_dat <- total_comparison %>%
-  filter(key == "Gas" & Date == max(Date) & change_1wk != 0)
+price_ridge <- oil_price %>% 
+  filter(between(date, min(rc_og$Date), max(rc_og$Date))) %>%
+  filter(lubridate::year(date) != 2018) %>%
+  mutate(year = year(date)) %>%
+  ggplot() +
+  geom_density_ridges(aes(price, factor(year)), fill = "#66947f") +
+  scale_x_continuous(expand = expand_scale()) +
+  scale_y_discrete(NULL,
+                   expand = expand_scale(),
+                   labels = og_labels) +
+  # labs(subtitle = paste0("Price",
+  #                        "\nDollars ($) Per Barrel"),
+  #      x = NULL, y = NULL) +
+  theme(plot.subtitle = element_text(size = 11, margin = margin(b = 8, unit = "pt")),
+        plot.margin = unit(c(0, 0, 0, 0), "pt"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 11))
 
-gas_wk1_colors <- gas_dat$change_1wk %>%
-  sign() %>%
-  unique() %>%
-  get_2_colors()
-
-bc_gas_change_1wk <- bc_oil_change_1wk %+%
-  gas_dat +
-  scale_fill_manual(values = yellow)
+grid.arrange(og_ridge, price_ridge, ncol = 2)
 ```
 
-```{r plot_rig_type_other_build}
-rto_gb_grob <- ggplotGrob(rto_gb)
-
-rto_grobs <- arrangeGrob(rc_total_chart,
-                         bc_gas_percent_1wk, bc_oil_percent_1wk,
-                         bc_gas_change_1wk,  bc_oil_change_1wk,
-                         layout_matrix = rbind(c(1, 1),
-                                               c(1, 1),
-                                               c(2, 3),
-                                               c(4, 5)))
-
-rto_gb_grob$grobs[[which(rto_gb_grob$layout$name == "panel")]] <- rto_gb_grob$grobs[[which(rto_gb_grob$layout$name == "panel")]] %>%
-  addGrob(rto_grobs)
-```
-
-```{r plot_rig_type_other_draw, fig.height=9.2}
-grid.draw(rto_gb_grob)
-```
-
-```{r plot_misc}
+```{r plot_no_growth_weeks, eval=FALSE}
+# Which basins have had the fewest "no growth" weeks?
 x <- map(unique(rc_basin$basin), ~{
     rc_basin %>%
         filter(basin == .x & key == "Total") %>%

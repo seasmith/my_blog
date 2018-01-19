@@ -43,7 +43,7 @@ library(kableExtra)
 library(blg)
 ```
 
-```{r knitr_opts_chunk_std, include=FALSE}
+```{r setup_knitr_opts_chunk_std, include=FALSE}
 # ---- Opts_Setup
 knitr::opts_chunk$set(echo =  FALSE)
 knitr::opts_chunk$set(fig.height = 7)
@@ -51,7 +51,7 @@ knitr::opts_chunk$set(message = FALSE)
 knitr::opts_chunk$set(warning = FALSE)
 ```
 
-```{r knitr_opts_hooks_std, include=FALSE}
+```{r setup_knitr_opts_hooks_std, include=FALSE}
 # ---- knitr_Options_Setup
 orig_inline <- knit_hooks$get("inline")
 old_plot   <- knit_hooks$get("plot")
@@ -66,7 +66,7 @@ knit_hooks$set(inline = function(x) {
 old_inline <- knit_hooks$get("inline")
 ```
 
-```{r r_opts_std, include=FALSE}
+```{r setup_r_opts_std, include=FALSE}
 # ---- R_Options_Setup
 old_scipen <- getOption("scipen")
 options(scipen = 100)
@@ -75,13 +75,8 @@ old_digits <- getOption("digits")
 options(digits = 2)
 ```
 
-```{r r_misc_std, include=FALSE}
+```{r setup_r_misc_std, include=FALSE}
 loadfonts("win")
-
-my_blue   <- "#0059B3"
-my_orange <- "#B35A00"
-my_pink   <- "#B30059"
-my_green  <- "#59B300"
 ```
 
 <!-- Extra setup -->
@@ -91,17 +86,18 @@ library(sf)
 library(httr)
 library(magick)
 library(geojsonio)
+library(readxl)
 ```
 
-```{r r_misc_extra, include=FALSE}
+```{r setup_r_misc_extra, include=FALSE}
 theme_set(blg_theme_default())
+
+pretty_date <- function(n) format(n, "%B %d, %Y")
 ```
 
-```{r plot_colors}
+```{r setup_plot_colors}
 blue   <- "#5b63fe"
-# yellow <- "#fef65b"
 yellow <- "#b1ac3f"
-# pink   <- "#f65bfe"
 pink <- "#ac3fb1"
 ```
 
@@ -114,11 +110,20 @@ ref2 <- "~/R/misc/maps"
 # Rig count - master
 load(file.path(ref1, "rc_master.RData"))
 
+# Rig count - state
+load("~/R/misc/oil/US/rig_counts/rc_state.RData")
+
 # US counties map (Albers projection)
-load(file.path(ref2, "counties_2014_adjusted.RData"))
+load(file.path(ref2, "counties_2014_adjusted_simp.RData"))
 
 # US states map (Albers projection)
-load("~/R/misc/maps/states_map_adjusted.RData")
+load("~/R/misc/maps/states_map_adjusted_simp.RData")
+
+# EIA Region counties
+cols <- c("state", "county", "state_id", "county_id", "region")
+xl_path <- "~/R/misc/oil/US/production/eia_drilling_report.xlsx"
+sh_names <- excel_sheets(xl_path)
+xl_regions <- read_excel(xl_path, sh_names[sh_names == "RegionCounties"], NULL, cols, c(rep("text", 2), "numeric", rep("text", 2)), skip = 1L)
 ```
 
 ```{r tidy_rc_master, include=FALSE}
@@ -127,24 +132,26 @@ rc_master <- rc_master %>%
            County = str_replace(County, "DE WITT", "DEWITT"))
 ```
 
-```{r tidy_counties_2014_adjusted, include=FALSE}
-counties_2014_adjusted <- counties_2014_adjusted %>%
+```{r tidy_counties_2014_adjusted_simp, include=FALSE}
+counties_2014_adjusted_simp <- counties_2014_adjusted_simp %>%
   filter(!(STATE == "PR" | STATE == "VI")) %>%
   filter(!is.na(NAME)) %>%
   left_join(state_lookup, c("STATE" = "state_abb")) %>%
   mutate_at(vars(state_name, NAME), toupper)
 ```
 
-```{r tidy_states_map_adjusted}
-us_map <- states_map_adjusted %>%
-  filter(!(STATE_ABBR == "PR" | STATE_ABBR == "VI") & TYPE == "Land") %>%
+```{r tidy_states_map_adjusted_simp}
+rm_state <- c("PR", "VI")
+us_map   <- states_map_adjusted_simp %>%
+  filter(!(STATE_ABBR %in% rm_state) & TYPE == "Land") %>%
   select(-(STATE_FIPS:PRIM_MILES))
 ```
+
 <!-- Pre-Analysis Checks -->
 
 ```{r checks, include=FALSE}
-## Do all rig count counties match a corresponding
-#  county in the map?
+## - Do all rig count counties match
+#  - a corresponding county in the map?
 no_join_check <- rc_master %>%
   filter(Location == "Land") %>%
   filter(Country == "UNITED STATES") %>%
@@ -152,25 +159,114 @@ no_join_check <- rc_master %>%
   group_by(`State/Province`, County) %>%
   summarize(n = n()) %>%
   ungroup() %>%
-  anti_join(counties_2014_adjusted, c("County" = "NAME", "State/Province" = "state_name"))
+  anti_join(counties_2014_adjusted_simp, c("County" = "NAME", "State/Province" = "state_name"))
+
+if (nrow(no_join_check) > 0) stop("Some rows did not join. Check anti_join for more details.", call. = FALSE)
 ```
 
 <!-- Analysis -->
 
+<!-- Where are the rigs at? -->
 ```{r current_week_location}
 rc_master %>%
   filter(PublishDate == max(PublishDate)) %>%
-  inner_join(counties_2014_adjusted, c("County" = "NAME", "State/Province" = "state_name")) %>%
+  filter(DrillFor == "Oil" | DrillFor == "Gas") %>%
+  inner_join(counties_2014_adjusted_simp, c("County" = "NAME", "State/Province" = "state_name")) %>%
   ggplot() +
-  geom_sf(data = counties_2014_adjusted, color = "black", fill = "gray40") +
+  geom_sf(data = counties_2014_adjusted_simp, color = "black", fill = "gray40") +
   geom_sf(aes(fill = "1"), color = "black") +
   coord_sf(datum = NA) +
   scale_fill_manual(values = clrs$orange) +
   labs(title = paste0("US counties where an oil or gas rig is located"),
-       subtitle = paste0("For the week of ", max(rc_master$PublishDate))) +
+       subtitle = paste0(pretty_date(max(rc_master$PublishDate)))) +
   guides(fill = FALSE)
 ```
 
+```{r every_county}
+every_county <- rc_master %>%
+  filter(Country == "UNITED STATES") %>%
+  filter(DrillFor == "Oil" | DrillFor == "Gas") %>%
+  distinct(County, `State/Province`) %>%
+  inner_join(counties_2014_adjusted_simp, c("County" = "NAME", "State/Province" = "state_name")) %>%
+  ggplot() +
+  geom_sf(data = counties_2014_adjusted_simp, color = "black", fill = "gray40") +
+  geom_sf(aes(fill = "1"), color = "black") +
+  coord_sf(datum = NA) +
+  scale_fill_manual(values = clrs$orange) +
+  labs(title = paste0("Where have they been drilling?"),
+       subtitle = paste0("US counties where an oil or gas rig has been present at some time",
+                         "\n",
+                         "from ",
+                         pretty_date(min(rc_master$PublishDate)), " to ", pretty_date(max(rc_master$PublishDate))),
+       caption = paste0("Source: Baker Hughes")) +
+  guides(fill = FALSE) +
+  theme(plot.caption = element_text(size = 10, color = "gray50",
+                                    margin = margin(0, 2, 1, 0, "lines"),
+                                    vjust = 2, hjust = 0.9),
+        plot.margin = unit(c(0.2, 0, 0, 0), "lines"))
+
+every_county
+ec_path <- "C:/Users/Luke/Downloads/every_county.png"
+ggsave(ec_path, every_county, width = 8, height = 5, units = "in")
+
+image_read(ec_path) %>%
+    image_scale("675x") %>%
+    image_crop("600x") %>%
+    image_crop("-55x") %>%
+    image_crop("x410") %>%
+    image_write(ec_path)
+
+image_read(ec_path) %>%
+    image_annotate("Rig present", location = geometry_point(140, 140),
+                   color = "white", font = "Open Sans", size = 16) %>%
+    image_annotate("__", location = geometry_point(227, 133),
+                   color = "white", font = "Open Sans", size = 16) %>%
+    image_annotate("No rig\npresent", location = geometry_point(315, 135),
+                   color = "white", font = "Open Sans", size = 16) %>%
+    image_annotate("__", location = geometry_point(293, 137),
+                   color = "white", font = "Open Sans", size = 16) %>%
+  image_write(ec_path)
+```
+
+```{r not_every_state}
+rc_state %>%
+  mutate(location = stringr::str_replace(location, "^N\\.", "North"),
+         location = stringr::str_replace(location, "^S\\.", "South"),
+         location = stringr::str_replace(location, "^W\\.", "West"),
+         location = stringr::str_replace(location, "^Mass\\.", "Massachusetts"),
+         location = stringr::str_replace(location, "^Wash\\.", "Washington"),
+         location = stringr::str_replace(location, "Is\\.", "Island"),
+         location = stringr::str_replace(location, "^Penn\\.", "Pennsylvania"),
+         location = stringr::str_replace(location, "^D\\.C\\.", "District of Columbia"),
+         location = stringr::str_replace(location, "^North Hamp\\.", "New Hampshire"),
+         location = stringr::str_replace(location, "^North Jersey", "New Jersey"),
+         location = stringr::str_replace(location, "^North Mexico", "New Mexico"),
+         location = stringr::str_replace(location, "^North York", "New York"),
+         location = stringr::str_replace(location, "^Tennesee", "Tennessee"),
+         location = stringr::str_replace(location, "^West Virgina", "West Virginia"),
+         location = stringr::str_replace(location, "^Minn\\.", "Minnesota")) %>%
+  mutate(land = if_else(is.na(land), 0L, land),
+         offshore = if_else(is.na(offshore), 0L, offshore)) %>%
+  group_by(location) %>%
+  summarize_at(vars(total), sum, na.rm = TRUE) %>%
+  filter(total > 0) %>%
+  distinct(location) %>%
+  inner_join(us_map, c("location" = "NAME")) %>%
+  ggplot() +
+  geom_sf(data = us_map, color = "black", fill = clrs$orange) +
+  geom_sf(aes(fill = "1"), color = "black") +
+  coord_sf(datum = NA) +
+  scale_fill_manual(values = "gray40") +
+  labs(title = paste0("Rigless"),
+       subtitle = paste0("These lower 48 US states have not had an oil or gas rig present",
+                         "\n",
+                         "within their borders from ",
+                         pretty_date(min(rc_state$date)), " to ", pretty_date(max(rc_state$date)))) +
+  guides(fill = FALSE) +
+    theme(plot.margin = unit(c(0, -100, -10, -100), "pt"))
+```
+
+<!-- Are they oil or gas? Or both? -->
 ```{r rig_type}
 ## Plot each
 rig_type_each <- rc_master %>%
@@ -193,30 +289,22 @@ rig_type_both <- rc_master %>%
   ungroup() %>%
   mutate(DrillFor = "Both")
 
-if (nrow(no_join_check) == 0) {
-  
 rig_type_each %>%
     anti_join(rig_type_both, c("State/Province", "County")) %>%
     bind_rows(rig_type_both) %>%
-    left_join(counties_2014_adjusted, c("County" = "NAME", "State/Province" = "state_name")) %>%
+    left_join(counties_2014_adjusted_simp, c("County" = "NAME", "State/Province" = "state_name")) %>%
     st_as_sf() %>%
     ggplot() +
-    geom_sf(data = counties_2014_adjusted,
+    geom_sf(data = counties_2014_adjusted_simp,
             color = "gray40", fill = "gray40") +
     geom_sf(aes(fill = factor(DrillFor, levels = c("Oil", "Gas", "Both"))), color = "black", size = 0.5) +
     coord_sf(datum = NA) +
     labs(title = paste0("US counties where an oil or gas rig is located"),
          subtitle = paste0("For the week of ", max(rc_master$PublishDate))) +
-    scale_fill_manual("Rig type:", values = c(blue, yellow, pink)) +
+    scale_fill_brewer("Rig type:", palette = "Set1") +
     theme(axis.title = element_blank(),
           axis.text = element_blank(),
           legend.position = "top", legend.direction = "horizontal")
-
-  } else {
-  
-    warning("Please check anti-join status. There are counties NOT BEING JOINED.")
-      
-  }
 ```
 
 ```{r rig_count_change}
@@ -255,29 +343,109 @@ unresolved <- summ_loc %>%
   filter(n() != 2)
 
 ## Plot if none are unresolved
-if (nrow(unresolved) == 0) {
+if (nrow(unresolved) != 0) stop("Please check unresolved locations. There are locations for one date but not for the other.", call. = FALSE)
+
   
-  summ_loc %>%
-    filter(PublishDate == max(PublishDate)) %>%
-    inner_join(counties_2014_adjusted, c("State/Province" = "state_name", "County" = "NAME")) %>%
-    st_as_sf() %>%
-    ggplot() +
-    geom_sf(data = us_map, fill = "gray80", color = "gray90") +
-    geom_sf(aes(fill = factor(sign(change)))) +
-    coord_sf(datum = NA) +
-    scale_fill_manual(paste0("Change from", "\nprevious week:"), values = c(clrs$red, "gray50", clrs$blue), labels = c("Decrease", "No Change", "Increase")) +
-    facet_wrap(~DrillFor, ncol = 1) +
-    labs(title = paste0("Weekly change in US county oil and gas", "\nrig count"),
-         subtitle = paste0("Current week: ", max(rc_master$PublishDate))) +
-    theme(strip.text = element_text(size = 14),
-          legend.position = "top",
-          legend.direction = "horizontal")
-  
-} else {
-  
-  warning("Please check unresolved locations. There are locations for one date but not for the other.")
-  
-}
+county_change <- summ_loc %>%
+  filter(PublishDate == max(PublishDate)) %>%
+  inner_join(counties_2014_adjusted_simp, c("State/Province" = "state_name", "County" = "NAME")) %>%
+  mutate(DrillFor = factor(DrillFor, levels = c("Oil", "Gas"))) %>%
+  st_as_sf() %>%
+  ggplot() +
+  geom_sf(data = us_map, fill = "gray80", color = "gray90") +
+  geom_sf(aes(fill = factor(sign(change)), color = factor(sign(change)))) +
+  coord_sf(datum = NA) +
+  scale_fill_manual(NULL, values = c("#a52a2a", "gray50", "#4682b4"), labels = c("Decrease", "No Change", "Increase")) +
+  scale_color_manual(NULL, values = c("#a52a2a", "gray50", "#4682b4"), labels = c("Decrease", "No Change", "Increase")) +
+  facet_wrap(~DrillFor, ncol = 2) +
+  labs(title = paste0("Weekly change in US county oil and gas rig count"),
+       subtitle = paste0(pretty_date(max(rc_master$PublishDate))),
+       caption = paste0("Source: Baker Hughes")) +
+  theme(strip.text = element_text(size = 14, margin = margin(0, 0, 0, 0, "pt")),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 11),
+        legend.position = c(0.5, 1.1),
+        legend.direction = "horizontal",
+        panel.spacing = unit(0, "lines"),
+        plot.caption = element_text(size = 10, color = "gray50", hjust = 0.9, vjust = 3),
+        plot.margin = unit(c(0,0,0,0.1), "lines"))
+
+county_change
+cc_path <- "C:/Users/Luke/Downloads/count_change.png"
+ggsave(cc_path, county_change, width = 8, height = 5, units = "in")
+image_read(cc_path) %>%
+    image_resize("900x") %>%
+    image_crop("882x370+0-90") %>%
+    image_write(cc_path)
+```
+
+```{r region_counties}
+non_basin_counties <- counties_2014_adjusted_simp %>%
+    mutate_at(vars(NAME), toupper) %>%
+    mutate_at(vars(STATE_FIPS), as.integer) %>%
+    anti_join(xl_regions, c("STATE" = "state", "NAME" = "county"))
+
+basin_counties <- counties_2014_adjusted_simp %>%
+  mutate_at(vars(NAME), toupper) %>%
+  mutate_at(vars(STATE_FIPS), as.integer) %>%
+  inner_join(xl_regions, c("STATE" = "state", "NAME" = "county")) %>%
+  mutate(region = str_replace(region, " Region$", ""))
+
+basin_counties_dissolved <- basin_counties %>%
+    split(.$region) %>%
+    map(st_union) %>%
+    map(~st_sf(geometry = .)) %>%
+    imap(~data.frame(.x, region = .y)) %>%
+    reduce(rbind) %>%
+    st_sf()
+
+basin_counties_dissolved2 <- basin_counties_dissolved %>%
+  st_cast("LINESTRING")
+
+rc_presence_region <- rc_master %>%
+  filter(Country == "UNITED STATES") %>%
+  filter(PublishDate == max(PublishDate)) %>%
+  distinct(County, `State/Province`) %>%
+  left_join(basin_counties, c("County" = "NAME", "State/Province" = "state_name")) %>%
+  ggplot() +
+  geom_sf(data = filter(counties_2014_adjusted_simp, !grepl("AK|HI", STATE)), fill = "gray20", color = "gray10") +
+  geom_sf(aes(fill = region), basin_counties, alpha = 0.3, color = "gray10") +
+  geom_sf(aes(fill = region), color = "gray10") +
+  geom_sf(aes(color = region), basin_counties_dissolved2) +
+  scale_fill_brewer("Region", palette = "Accent") +
+  scale_color_brewer("Region", palette = "Accent") +
+  coord_sf(datum = NA) +
+  guides(color = FALSE)
+
+region_counties <- rc_presence_region +
+    labs(title = "Rig Presence By Region And County",
+         subtitle = "January 12, 2018",
+         caption = "Source: EIA Drilling Productivity Report") +
+    theme(legend.position = c(.99, 0.35),
+          plot.caption = element_text(size = 10, color = "gray50",
+                                      margin = margin(-0, 0, 0, 0, "lines")), plot.margin = unit(c(0.2,0,0,-2), "lines"))
+
+region_counties
+rc_path <- "C:/Users/Luke/Downloads/region_counties.png"
+ggsave(plot = region_counties, filename = rc_path, width = 8, height = 5, units = "in")
+
+
+image_read(rc_path) %>%
+  image_resize("675x") %>%
+  image_crop("655x") %>%
+  image_crop("-30x") %>%
+  image_write(rc_path)
+# 
+# image_read("C:/Users/Luke/Downloads/tmap.png") %>%
+#     image_annotate("Rig present", , geometry_point(65, 210),
+#                    color = "White", size = 16, font = "Open Sans") %>%
+#     image_annotate("No rig present", ,
+#                    geometry_point(265, 210), color = "White", size = 16, font = "Open Sans") %>%
+#     image_annotate("___",, geometry_point(155, 204),
+#                    color = "White", size = 16, font = "Open Sans") %>%
+#     image_annotate("___",, geometry_point(240, 204),
+#                    color = "White", size = 16, font = "Open Sans") %>%
+#   image_write("C:/Users/Luke/Downloads/tmap.png")
 ```
 
 <!-- Bar charts -->
@@ -328,7 +496,7 @@ main <- rig_type_each %>%
   group_by(`State/Province`, County) %>%
   mutate(num = n()) %>%
   ungroup() %>%
-  left_join(counties_2014_adjusted, c("County" = "NAME", "State/Province" = "state_name"))
+  left_join(counties_2014_adjusted_simp, c("County" = "NAME", "State/Province" = "state_name"))
 
 main$id <- seq_len(nrow(main))
 
@@ -341,14 +509,14 @@ geo_with_data <- rig_type_each %>%
     group_by(`State/Province`, County) %>%
     mutate(num = n()) %>%
     ungroup() %>%
-    semi_join(counties_2014_adjusted, ., c("NAME" = "County", "state_name" = "State/Province"))
+    semi_join(counties_2014_adjusted_simp, ., c("NAME" = "County", "state_name" = "State/Province"))
 
 ## These counties have no associated rig count data
 geo_without_data <- rig_type_each %>%
     group_by(`State/Province`, County) %>%
     mutate(num = n()) %>%
     ungroup() %>%
-    anti_join(counties_2014_adjusted, ., c("NAME" = "County", "state_name" = "State/Province"))
+    anti_join(counties_2014_adjusted_simp, ., c("NAME" = "County", "state_name" = "State/Province"))
 
 ## Create id column in sf data which has associated
 #  data
