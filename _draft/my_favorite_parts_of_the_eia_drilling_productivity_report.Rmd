@@ -1,0 +1,493 @@
+---
+title  : "My Favorite Parts Of The EIA Drilling Productivity Report"
+author : "Luke Smith"
+date   : "2018-01-15"
+tags   : [r, oil and gas, oil, united states]
+description: ""
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : ""
+  description : ""
+image       : ""
+og :
+  image : ""
+---
+
+```{r setup_std, include=FALSE}
+# source("setup_std.R")
+
+# ---- Library_Tidyverse_Setup
+library(tidyverse)
+library(lubridate)
+library(forcats)
+library(stringi)
+
+# ---- Library_ploting_Setup
+library(grid)
+library(gridExtra)
+library(ggExtra)
+library(GGally)
+library(ggalt)
+library(scales)
+library(extrafont)
+loadfonts("win")
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+# ---- My_Blogging_Setup
+library(blg)
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+# ---- R_Options_Setup
+old_scipen <- getOption("scipen")
+options(scipen = 100)
+
+old_digits <- getOption("digits")
+options(digits = 2)
+
+
+# ---- knitr_Options_Setup
+orig_inline <- knit_hooks$get("inline")
+old_plot   <- knit_hooks$get("plot")
+
+
+# ---- Hooks_Setup
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+old_inline <- knit_hooks$get("inline")
+
+my_blue   <- "#0059B3"
+my_orange <- "#B35A00"
+my_pink   <- "#B30059"
+my_green  <- "#59B300"
+```
+
+```{r setup_extra, include=FALSE}
+library(magick)
+library(httr)
+#library(zoo)
+library(ggridges)
+library(readxl)
+# Mask rvest::pluck with purrr:pluck
+pluck <- purrr::pluck
+
+load("~/R/misc/maps/counties_2014_adjusted_simp.RData")
+
+purp0 <- "#a6819c"
+purp1 <- "#814b72"
+purp2 <- "#5a344f"
+
+# Path to save/read excel files
+xl_path <- "~/R/misc/oil/US/production/eia_drilling_report.xlsx"
+
+pretty_date <- function(n) format(n, "%B %d, %Y")
+```
+
+```{r download_report_data, eval=FALSE}
+url_raw <- parse_url("https://www.eia.gov/petroleum/drilling/")
+url <- build_url(url_raw)
+
+links <- url %>%
+  read_html() %>%
+  html_nodes("a")
+
+text <- links %>% html_text()
+href <- links %>% html_attr("href")
+
+dlink <- href[text == "Report data"]
+
+url_raw$path <- paste0(url_raw$path, dlink)
+
+url <- build_url(url_raw)
+
+curl::curl_download(url, xl_path)
+```
+
+```{r import_sheets_report_data}
+sh_names <- excel_sheets(xl_path)
+sh_to_import <- sh_names[sh_names != "RegionCounties"]
+
+cols <- c("date", "rig_count", "oil_prod_per_rig", "oil_legacy_prod_change",
+          "oil_total_prod", "gas_prod_per_rig", "gas_legacy_prod_change",
+          "gas_total_prod")
+
+xl_sh <- sh_to_import %>%
+  map(~read_excel(xl_path, .x, NULL, cols, c("date", rep("numeric", 7)), trim_ws = TRUE, skip = 2L))
+
+names(xl_sh) <- sh_to_import
+
+xl_sh <- bind_rows(xl_sh, .id = "basin")
+```
+
+```{r import_sheets_regions_data}
+cols <- c("state", "county", "state_id", "county_id", "region")
+
+xl_regions <- read_excel(xl_path, sh_names[sh_names == "RegionCounties"], NULL, cols, c(rep("text", 2), "numeric", rep("text", 2)), skip = 1L)
+```
+
+
+```{r new_columns}
+xl_sh <- xl_sh %>%
+    mutate(year = factor(year(date)),
+           type = case_when(
+             basin == "Anadarko Region" ~ "Oil",
+             basin == "Appalachia Region" ~ "Gas",
+             basin == "Bakken Region" ~ "Mixed",
+             basin == "Eagle Ford Region" ~ "Mixed",
+             basin == "Haynesville Region" ~ "Gas",
+             basin == "Niobrara Region" ~ "Oil",
+             basin == "Permian Region" ~ "Mixed"
+           ))
+```
+
+
+```{r plots}
+xl_sh %>%
+    filter(year(date) < 2018) %>%
+    mutate(basin = factor(basin, levels = c("Permian Region", "Eagle Ford Region", "Bakken Region", "Niobrara Region", "Anadarko Region", "Appalachia Region", "Haynesville Region"))) %>%
+    ggplot() +
+    geom_density_ridges(aes(oil_total_prod, basin, fill = basin), alpha = 0.8) +
+    facet_grid(year ~ .) +
+    scale_y_discrete(labels = NULL) +
+    labs(y = NULL) +
+    theme(legend.position = c(0.65, 0.70))
+
+
+xl_sh %>%
+    filter(year(date) != 2018) %>%
+    mutate(basin = factor(basin, levels = c("Permian Region", "Eagle Ford Region", "Bakken Region", "Niobrara Region", "Anadarko Region", "Appalachia Region", "Haynesville Region"))) %>%
+    ggplot() +
+    geom_density_ridges(aes(rig_count, year, fill = basin), alpha = 0.8) +
+    scale_y_discrete(labels = NULL) +
+    scale_fill_brewer(palette = "Set3") +
+    labs(y = NULL) +
+    theme(legend.position = c(0.75, 0.80))
+```
+
+```{r total_oil_prod}
+pal_name <- "Set2"
+
+total_oil_prod <- xl_sh %>%
+    filter(year(date) < 2018) %>%
+    mutate(basin = stringr::str_replace(basin, "\\sRegion$", "")) %>%
+    mutate(basin = factor(basin, levels = c("Permian", "Eagle Ford", "Bakken", "Niobrara", "Anadarko", "Appalachia", "Haynesville"), ordered = TRUE))
+
+
+top_clr <- total_oil_prod %>%
+    pull(basin) %>%
+    unique() %>%
+    sort() %>%
+    as.character()
+
+top_plot <- total_oil_prod %>%
+  ggplot() +
+  geom_density_ridges(aes(oil_total_prod, year, fill = basin), alpha = 0.8) +
+  labs(x = paste0("Barrels Per Day"),
+       y = NULL,
+       title = paste0("Catching Up To The Permian"),
+       subtitle = paste0("Total Oil Production By Year"),
+       caption = paste0("Source: EIA Drilling Productivity Report")) +
+  scale_x_continuous(labels = comma) +
+  scale_fill_manual("Basin", values = RColorBrewer::brewer.pal(7, pal_name)) +
+  theme(legend.position = c(0.895, 0.30),
+        legend.background = element_rect(fill = "white"),
+        plot.caption = element_text(size = 11, color = "gray50"),
+        plot.margin = margin(5.5, 5.5, 5.5, 5.5, "pt"),
+        panel.grid.major.y = element_blank())
+```
+
+```{r total_gas_prod}
+total_gas_prod <- xl_sh %>%
+  filter(year(date) < 2018) %>%
+  mutate(basin = stringr::str_replace(basin, "\\sRegion$", "")) %>%
+  mutate(basin = factor(basin, levels = c("Appalachia", "Permian", "Haynesville", "Eagle Ford", "Anadarko", "Niobrara", "Bakken"), ordered = TRUE))
+
+tgp_clr <- total_gas_prod %>%
+    pull(basin) %>%
+    unique() %>%
+    sort() %>%
+    as.character()
+
+clr_order <- as.integer(factor(tgp_clr, levels = top_clr, ordered = TRUE))
+
+tgp_plot <- total_gas_prod %>%
+  ggplot() +
+  geom_density_ridges(aes(gas_total_prod, year, fill = basin), alpha = 0.8) +
+  labs(x = paste0("Thousand Cubic Feet Per Day"),
+       y = NULL,
+       title = paste0("Not Just An Oil Basin"),
+       subtitle = paste0("Total Gas Production By Year"),
+       caption = paste0("Source: EIA Drilling Productivity Report")) +
+  scale_x_continuous(labels = comma) +
+  scale_fill_manual("Basin", values = RColorBrewer::brewer.pal(7, pal_name)[clr_order]) +
+  theme(legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        legend.position = c(0.92, 0.28),
+        legend.background = element_rect(fill = "white"),
+        plot.caption = element_text(size = 11, color = "gray50"),
+        plot.margin = margin(5.5, 5.5, 5.5, 5.5, "pt"),
+        panel.grid.major.y = element_blank())
+```
+
+```{r combine_total_prods, fig.height=7}
+pos <- tibble(x = -750000, y = (1:11 + 0.5), year = 2007:2017)
+
+top_plot2 <- total_oil_prod %>%
+  ggplot() +
+  geom_density_ridges(aes(oil_total_prod, year, fill = basin), alpha = 0.8) +
+  labs(y = NULL,
+       x = NULL,
+       subtitle = paste0("Total Oil Production By Year (Barrels Per Day)"),
+       caption = paste0("Source: EIA Drilling Productivity Report")) +
+  scale_x_continuous(labels = comma) +
+  scale_fill_manual("Basin", values = RColorBrewer::brewer.pal(7, pal_name)) +
+  guides(fill = FALSE) +
+  theme(axis.text.y  = element_blank(),
+        legend.position = c(0.80, 0.30),
+        legend.background = element_rect(fill = "white"),
+        plot.caption = element_text(size = 11, color = "gray50"),
+        plot.margin = margin(5.5, 5.5, 5.5, 5.5, "pt"),
+        panel.grid.major.y = element_blank()) #+
+  # geom_text(aes(x, y, label = year), pos, family = "Open Sans", color = "gray30")
+
+tgp_plot2 <- total_gas_prod %>%
+  ggplot() +
+  geom_density_ridges(aes(gas_total_prod, year, fill = basin), alpha = 0.8) +
+  labs(y = NULL,
+       x = NULL,
+       subtitle = paste0("Total Gas Production By Year (Thousand Cubic Feet Per Day)"),
+       caption = paste0("Source: EIA Drilling Productivity Report")) +
+  scale_x_continuous(labels = comma) +
+  scale_fill_manual("Basin", values = RColorBrewer::brewer.pal(7, pal_name)[clr_order]) +
+  # guides(fill = FALSE) +
+  theme(axis.text.y = element_blank(),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        legend.position = c(0.90, 0.30),
+        legend.background = element_rect(fill = "white"),
+        plot.caption = element_text(size = 11, color = "gray50"),
+        plot.margin = margin(5.5, 5.5, 5.5, 5.5, "pt"),
+        panel.grid.major.y = element_blank())
+
+grid.arrange(top_plot2, tgp_plot2, ncol = 1)
+```
+
+```{r exp}
+total_gas_prod %>%
+    ggplot() +
+    geom_density_ridges(aes(gas_total_prod, year, fill = basin), alpha = 0.8) +
+    labs(x = paste0("Thousand Cubic Feet Per Day"),
+         y = "NULL",
+         title = paste0("Not Just An Oil Basin"),
+         subtitle = paste0("Total Gas Production By Year"),
+         caption = paste0("Source: EIA Drilling Productivity Report")) +
+    scale_x_continuous(labels = comma) +
+    scale_fill_manual("Basin", values = RColorBrewer::brewer.pal(7, pal_name)[clr_order]) +
+    theme(plot.subtitle = element_text(margin = margin(0, 0, 15, 0, "pt")),
+          legend.position = c(0.895, 0.30),
+          legend.background = element_rect(fill = "white"),
+          plot.caption = element_text(size = 11, color = "gray50"),
+          plot.margin = margin(5.5, 5.5, 5.5, 5.5, "pt"),
+          panel.grid.major.y = element_blank(),
+          axis.title.y = element_text(angle = 0, vjust = 1.1, margin = margin(0, -40, 0, 0, "pt")))
+
+```
+
+```{r oil_diff}
+ef_perm_diff <- xl_sh %>%
+    filter(grepl("Eagle Ford Region|Permian Region", basin)) %>%
+    filter(between(year(date), 2007, 2017)) %>%
+    select(basin, date, oil_total_prod) %>%
+    spread(basin, oil_total_prod) %>%
+    mutate(ef_perm_diff = `Eagle Ford Region` - `Permian Region`) %>%
+    select(date, ef_perm_diff)
+
+bk_perm_diff <- xl_sh %>%
+    filter(grepl("Bakken Region|Permian Region", basin)) %>%
+    filter(between(year(date), 2007, 2017)) %>%
+    select(basin, date, oil_total_prod) %>%
+    spread(basin, oil_total_prod) %>%
+    mutate(bk_perm_diff = `Bakken Region` - `Permian Region`) %>%
+    select(date, bk_perm_diff)
+
+diff_data <- ef_perm_diff %>%
+    left_join(bk_perm_diff) %>%
+    tidyr::gather(... = -date)
+
+ef_labels <- diff_data %>%
+  filter(date == max(date)) %>%
+  filter(key == "ef_perm_diff") %>%
+  mutate(date = date + days(100),
+         value = value + 150000,
+         label = "Eagle\nFord")
+
+bk_labels <- diff_data %>%
+  filter(date == max(date)) %>%
+  filter(key == "bk_perm_diff") %>%
+  mutate(date = date - days(15),
+         value = value - 50000,
+         label = "Bakken")
+
+diff_data %>%
+    ggplot() +
+    geom_line(aes(date, value, group = key, color = key), size = 0.8) +
+    geom_text(aes(date, value, label = label), ef_labels) +
+    geom_text(aes(date, value, label = label), bk_labels) +
+    scale_color_manual(values = c(purp0, purp2)) +
+    scale_y_continuous(labels = comma) +
+    scale_x_datetime(date_labels = "%b %Y") +
+    guides(color = FALSE) +
+    theme(plot.margin = margin(5.5, 35, 5.5, 5.5, "pt"),
+          plot.caption = element_text(size = 11, color = "gray50")) +
+    labs(x = paste0("Days"), y = paste0("Barrels Per Day"),
+         title = paste0("What's The Difference?"),
+         subtitle = paste0("Production Gap Between Top Producing Basins and The Permian"),
+         caption = paste0("Source: EIA Drilling Productivity Report"))
+
+diff_data %>%
+    mutate_at(vars(date), as.Date) %>%
+    ggplot() +
+    geom_line(aes(date, value, group = key, color = rev(key)), size = 0.8) +
+    scale_color_manual(NULL, values = c(purp0, purp2), labels = c("Eagle Ford", "Bakken")) +
+    scale_y_continuous(labels = comma) +
+    
+    theme(plot.margin = margin(5.5, 35, 5.5, 5.5, "pt"),
+          plot.caption = element_text(size = 11, color = "gray50"),
+          legend.position = c(0.30, 0.90)) +
+    labs(x = paste0("Date"), y = paste0("Barrels Per Day"),
+         title = paste0("What's The Difference?"),
+         subtitle = paste0("Production Gap Between Top Producing Basins and The Permian"),
+         caption = paste0("Source: EIA Drilling Productivity Report"))
+
+```
+
+```{r rig_count_range}
+xs <- xl_sh %>%
+  mutate(basin = str_replace(basin, " Region$", "")) %>%
+  filter(!is.na(rig_count)) %>%
+  group_by(basin, date) %>%
+  summarize(rig_count = sum(rig_count, na.rm = TRUE)) %>%
+  arrange(rig_count)
+
+start_week <- xs %>%
+  filter(date == min(date)) %>%
+  pull(date) %>%
+  unique()
+
+this_week <- xs %>%
+  filter(date == max(date)) %>%
+  pull(date) %>%
+  unique()
+
+xs_current <- xs %>%
+    filter(date == this_week)
+
+xs_current <- xs_current %>%
+    ungroup()
+
+xs <- xs %>%
+    filter(row_number() == 1 | row_number() == n()) %>%
+    ungroup()
+
+basin_levels <- xs_current %>%
+    arrange(desc(rig_count)) %>%
+    pull(basin) %>%
+    unique()
+
+xs <- xs %>%
+    mutate(rank = as.integer(factor(basin, levels = rev(basin_levels)), ordered = TRUE))
+
+xs <- xs %>%
+    select(-date) %>%
+    group_by(basin) %>%
+    mutate(cat = if_else(rig_count == max(rig_count), "max", "min")) %>%
+    ungroup() %>%
+    spread(cat, rig_count)
+
+xs <- xs %>%
+    inner_join(xs_current, "basin")
+
+xs_label <- tibble(x = 317, y = 3.5, label = "= current rig count")
+
+
+
+# -- PLOT
+xs %>%
+    ggplot() +
+    geom_rect(aes(ymin = rank + 0.25, ymax = rank - 0.25, xmin = min, xmax = max, fill = "1")) +
+    geom_rect(aes(ymin = rank + 0.4, ymax = rank - 0.4, xmin = rig_count - 2.5, xmax = rig_count + 2.5), fill = clrs$green_4) +
+    geom_text(aes(x, y, label = label), xs_label, nudge_x = 90) +
+    geom_rect(aes(ymin = y + 0.25, ymax = y - 0.25, xmin = x - 2.5, xmax = x + 2.5), xs_label, fill = clrs$green_4) +
+    scale_y_continuous(breaks = seq_along(basin_levels),
+                       labels = rev(basin_levels),
+                       expand = expand_scale()) +
+    scale_x_continuous(expand = expand_scale(),
+                       labels = comma) +
+    scale_fill_manual(values = clrs$lightgreen_3) +
+    labs(title = paste0("Room to grow"),
+         subtitle = paste0("Rig count ranges per region", " (",
+                           pretty_date(start_week), " to ",
+                           pretty_date(this_week), ")"),
+         caption = paste0("Source: US EIA"),
+         x = NULL, y = NULL) +
+    guides(fill = FALSE) +
+    theme(plot.title = element_text(hjust = -0.38),
+          plot.subtitle = element_text(size = 12, hjust = 0.93, margin = margin(7, 0, 5, 0, "pt")),
+          plot.caption = element_text(size = 10, color = "gray50", margin = margin(5, 0, 0, 0, "pt")),
+          axis.title.x = element_text(size = 14, hjust = 0.3),
+          axis.text.y = element_text(size = 11),
+          axis.text.x = element_text(size = 11),
+          panel.grid.major.y = element_blank())
+```
+
+```{r region_counties}
+counties_2014_adjusted_simp <- counties_2014_adjusted_simp %>%
+  filter(!grepl("AK|HI|PR|VI", STATE)) %>%
+  filter(!is.na(SUFFIX)) %>%
+  left_join(state_lookup, c("STATE" = "state_abb")) %>%
+  mutate_at(vars(state_name, NAME), toupper)
+
+basin_counties <- counties_2014_adjusted_simp %>%
+  mutate_at(vars(NAME), toupper) %>%
+  mutate_at(vars(STATE_FIPS), as.integer) %>%
+  inner_join(xl_regions, c("STATE" = "state", "NAME" = "county")) %>%
+  mutate(region = str_replace(region, " Region$", ""))
+
+non_basin_counties <- counties_2014_adjusted_simp %>%
+    mutate_at(vars(NAME), toupper) %>%
+    mutate_at(vars(STATE_FIPS), as.integer) %>%
+    anti_join(xl_regions, c("STATE" = "state", "NAME" = "county"))
+
+ggplot() +
+    geom_sf(data = non_basin_counties, fill = "gray30") +
+    geom_sf(aes(fill = region), data = basin_counties) +
+    scale_fill_brewer("Region", palette = "Accent") +
+    coord_sf(datum = NA) +
+    labs(title = paste0("Counties Within The EIA's Drilling Productivity Report"),
+         caption = paste0("Source: US EIA")) +
+    theme(legend.title = element_text(size = 10),
+          legend.text = element_text(size = 8),
+          legend.position = c(0.97, 0.3),
+          plot.title = element_text(size = 14, color = "black", margin = margin(0, 0, 0, 0, "pt")),
+          plot.caption = element_text(size = 10, color = "gray50", margin = margin(0, 0, 5, 0, "pt")),
+          plot.margin = unit(c(2, -20, 0, -50), "pt"))
+```
