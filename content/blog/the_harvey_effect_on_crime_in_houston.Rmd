@@ -20,27 +20,27 @@ og :
 library(tidyverse)
 library(lubridate)
 library(forcats)
-library(stringi)
+# library(stringi)
 
 # ---- Library_ploting_Setup
-library(grid)
-library(gridExtra)
-library(ggExtra)
-library(GGally)
-library(ggalt)
-library(scales)
-library(extrafont)
+# library(grid)
+# library(gridExtra)
+# library(ggExtra)
+# library(GGally)
+# library(ggalt)
+# library(scales)
+# library(extrafont)
 
 # ---- Library_Web_Setup
-library(rvest)
-library(jsonlite)
+# library(rvest)
+# library(jsonlite)
 
 # ---- Library_Reporting_Setup
 library(knitr)
-library(kableExtra)
+# library(kableExtra)
 
 # ---- My_Blogging_Setup
-library(blg)
+# library(blg)
 ```
 
 ```{r setup_knitr_opts_chunk_std, include=FALSE}
@@ -76,88 +76,44 @@ options(digits = 2)
 ```
 
 ```{r setup_r_misc_std, include=FALSE}
-loadfonts("win")
+# loadfonts("win")
 ```
 
 <!-- Extra setup -->
-  
-```{r setup_lib_extra, include=FALSE}
-library(zoo)
-library(magick)
-```
 
-```{r setup_r_misc_extra, include=FALSE}
-theme_dk <- function() theme(plot.background = element_rect(fill = "gray10", color = "gray10"),
-                             text = element_text(color = "white", family = "Open Sans"),
-                             plot.caption = element_text(color = "gray70", size = 8),
-                             axis.text = element_text(color = "white", size = 10),
-                             strip.text = element_text(color = "white", 10),
-                             axis.title.x = element_blank(),
-                             axis.title.y = element_blank(),
-                             panel.grid = element_line(color = "gray80"))
-
-theme_set(theme_dk())
-
-pretty_date <- function(n) format(n, "%B %d, %Y")
-```
-
-```{r load_data, eval=FALSE}
-load("~/R/misc/violence/hou_cr.RData")
-```
-
-```{r setup_plot_colors}
-plt_colors <- c("#984807", "#e15c39", "#008348", "#4c7093", "#d6a300", "#ce1141", 
-  "#8E3694")
-```
-
-<!-- Begin mutating data -->
-
-```{r mutate_data, eval=FALSE}
-# Filtered data set:
-#   * no NA `Date` rows
-#   * between June 2009 and end 2017
-#   * no `Offense Type` "1"
-hou_cr_filtered <- hou_cr %>%
-  filter(!is.na(as.yearmon(Date))) %>%
-  filter(as.yearmon(Date) >= 2009.5 & as.yearmon(Date) < 2018) %>%
-  filter(`Offense Type` != "1") %>%
-  mutate(Hour = if_else(Hour == "24", "00", Hour)) %>%
-  mutate(Hour = str_replace(Hour, "'", ""))
-
-# Summary data:
-#   * Group by: crime type and year-month
-hou_cr_summ <- hou_cr_filtered %>%
-  group_by(`Offense Type`,
-           Date = as.yearmon(Date)) %>%
-  summarize(`Total number of offenses` = sum(`# Of Offenses`, na.rm = TRUE)) %>%
-  ungroup() %>%
-  group_by(`Offense Type`) %>%
-  mutate(`Number of offenses` = rollmean(`Total number of offenses`, 6, fill = NA, align = "right")) %>%
-  ungroup()
-```
-
-```{r create_harvey_dates}
+```{r create_harvey_dates, eval=FALSE}
 harvey <- tibble(start = as.Date("2017-08-24"), end = as.Date("2017-08-29"))
+```
+```{r daily_crime_averages_twitter, fig.align="center"}
+include_graphics("../daily_crime_averages_twitter.png")
+```
+
+```{r yearly_lines, fig.align="center"}
+include_graphics("../yearly_lines.png")
+```
+
+```{r splines_hourly, fig.align="center"}
+include_graphics("../splines_hourly.png")
+```
+
+```{r img_xsplines_daily, fig.align="center"}
+# include_graphics("../xsplines_daily_twitter.png")
 ```
 
 ```{r img_lines, fig.align="center"}
-img_lines <- image_read("../../harvey_effect_fat3.png")
-image_write(img_lines, "the_harvey_effect_on_crime_in_houston_files/figure-html/img_lines.png")
-include_graphics("./the_harvey_effect_on_crime_in_houston_files/figure-html/img_lines.png")
+include_graphics("../lines_fat.png")
 ```
 
 ```{r img_ridges, fig.align="center"}
-img_ridges <- image_read("../../ridges_fat.png")
-image_write(img_ridges, "the_harvey_effect_on_crime_in_houston_files/figure-html/img_ridges.png")
-include_graphics("./the_harvey_effect_on_crime_in_houston_files/figure-html/img_ridges.png")
+include_graphics("../ridges_fat.png")
 ```
 
 ```{r img_ribbons, fig.align="center"}
-img_ribbons <- image_read("../../ribbon_fat.png")
-image_write(img_ribbons, "the_harvey_effect_on_crime_in_houston_files/figure-html/img_ribbons.png")
-include_graphics("./the_harvey_effect_on_crime_in_houston_files/figure-html/img_ribbons.png")
+include_graphics("../ribbons_fat.png")
 ```
+
 <!-- ![Daily Crime Activity For 2017](../harvey_effect.png) -->
-<!-- <img src="../harvey_effect_fat.png" style="display:block;margin-left:auto;margin-right:auto" title="Daily Crime Activity For 2017"> -->
-<!-- <br> -->
-<!-- <img src="../ridges_fat.png" style="display:block;margin-left:auto;margin-right:auto" title="Daily Crime Activity By Year"> -->
+  <!-- <img src="../harvey_effect_fat.png" style="display:block;margin-left:auto;margin-right:auto" title="Daily Crime Activity For 2017"> -->
+  <!-- <br> -->
+  <!-- <img src="../ridges_fat.png" style="display:block;margin-left:auto;margin-right:auto" title="Daily Crime Activity By Year"> -->
+  
