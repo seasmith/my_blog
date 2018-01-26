@@ -7,3 +7,4 @@ setup_std.R
 all.RData
 other_us_prod.RData
 *.csv
+*.html

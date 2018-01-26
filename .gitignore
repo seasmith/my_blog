@@ -9,3 +9,5 @@ derby.log
 *.gif
 *.png
 desktop.ini
+oil_price.RData
+price_and_rigs.svg
