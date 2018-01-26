@@ -48,6 +48,15 @@
     </item>
     
     <item>
+      <title>Crime</title>
+      <link>/tags/crime/</link>
+      <pubDate>Mon, 22 Jan 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/crime/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>Economics</title>
       <link>/tags/economics/</link>
       <pubDate>Fri, 19 May 2017 00:00:00 +0000</pubDate>
@@ -120,6 +129,24 @@
     </item>
     
     <item>
+      <title>Hurricane Harvey</title>
+      <link>/tags/hurricane-harvey/</link>
+      <pubDate>Mon, 22 Jan 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/hurricane-harvey/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Hurricanes</title>
+      <link>/tags/hurricanes/</link>
+      <pubDate>Mon, 22 Jan 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/hurricanes/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>Imports</title>
       <link>/tags/imports/</link>
       <pubDate>Thu, 14 Sep 2017 00:00:00 +0000</pubDate>
@@ -176,7 +203,7 @@
     <item>
       <title>Oil</title>
       <link>/tags/oil/</link>
-      <pubDate>Thu, 14 Sep 2017 00:00:00 +0000</pubDate>
+      <pubDate>Mon, 08 Jan 2018 00:00:00 +0000</pubDate>
       
       <guid>/tags/oil/</guid>
       <description></description>
@@ -185,7 +212,7 @@
     <item>
       <title>Oil And Gas</title>
       <link>/tags/oil-and-gas/</link>
-      <pubDate>Thu, 14 Sep 2017 00:00:00 +0000</pubDate>
+      <pubDate>Mon, 08 Jan 2018 00:00:00 +0000</pubDate>
       
       <guid>/tags/oil-and-gas/</guid>
       <description></description>
@@ -197,6 +224,15 @@
       <pubDate>Thu, 13 Apr 2017 00:00:00 +0000</pubDate>
       
       <guid>/tags/oil-imports/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Opec</title>
+      <link>/tags/opec/</link>
+      <pubDate>Mon, 08 Jan 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/opec/</guid>
       <description></description>
     </item>
     
@@ -239,7 +275,7 @@
     <item>
       <title>R</title>
       <link>/tags/r/</link>
-      <pubDate>Sun, 17 Dec 2017 00:00:00 +0000</pubDate>
+      <pubDate>Mon, 22 Jan 2018 00:00:00 +0000</pubDate>
       
       <guid>/tags/r/</guid>
       <description></description>
@@ -320,9 +356,18 @@
     <item>
       <title>United States</title>
       <link>/tags/united-states/</link>
-      <pubDate>Thu, 14 Sep 2017 00:00:00 +0000</pubDate>
+      <pubDate>Mon, 08 Jan 2018 00:00:00 +0000</pubDate>
       
       <guid>/tags/united-states/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Weather</title>
+      <link>/tags/weather/</link>
+      <pubDate>Mon, 22 Jan 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/weather/</guid>
       <description></description>
     </item>
     
