@@ -467,3 +467,61 @@ image_write(k, "oil_price_crash3.png")
 #         panel.grid.major = element_blank())
 # 
 # ggsave("price_and_rigs.svg", a)
+
+
+
+#   -----------------------------------------------------------------------
+#   -----------------------------------------------------------------------
+#   -----------------------------------------------------------------------
+#  PRICE AND RIG COUNT ----------------------------------------------------
+#   -----------------------------------------------------------------------
+#   -----------------------------------------------------------------------
+#   -----------------------------------------------------------------------
+
+og_labels <- seq.int(1987, 2017, 1)
+og_labels[c(FALSE, TRUE)] <- ""
+
+og_ridge <- rc_og %>%
+  select(Date, Oil, Gas) %>%
+  filter(lubridate::year(Date) != 2018) %>%
+  gather(... = -Date) %>%
+  mutate(year = factor(lubridate::year(Date))) %>%
+  ggplot() +
+  ggridges::geom_density_ridges(aes(value, year, fill = key), alpha = 0.8) +
+  scale_x_continuous(expand = expand_scale(),
+                     breaks = c(400, 1200)) +
+  scale_y_discrete(NULL,
+                   expand = expand_scale(),
+                   labels = og_labels) +
+  scale_fill_brewer(palette = "Set1") +
+  theme(legend.direction = "horizontal", legend.position = "top") +
+  guides(fill = FALSE)
+
+price_ridge <- oil_price %>% 
+  filter(between(date, min(rc_og$Date), max(rc_og$Date))) %>%
+  filter(lubridate::year(date) != 2018) %>%
+  mutate(year = year(date)) %>%
+  ggplot() +
+  geom_density_ridges(aes(price, factor(year)), fill = "#66947f") +
+  scale_x_continuous(expand = expand_scale()) +
+  scale_y_discrete(NULL,
+                   expand = expand_scale(),
+                   labels = og_labels) +
+  # labs(subtitle = paste0("Price",
+  #                        "\nDollars ($) Per Barrel"),
+  #      x = NULL, y = NULL) +
+  theme(plot.subtitle = element_text(size = 11, margin = margin(b = 8, unit = "pt")),
+        plot.margin = unit(c(0, 0, 0, 0), "pt"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 11))
+
+grid.arrange(og_ridge, price_ridge, ncol = 2)
+
+
+#   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#  PRICE AND RIG COUNT ----------------------------------------------------
+#   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
