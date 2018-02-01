@@ -1,0 +1,108 @@
+```{r}
+library(ggalt)
+library(cowplot)
+library(ggrepel)
+library(gtable)
+library(magick)
+```
+
+```{r}
+theme_dk <- function() {
+  theme_minimal() +
+    theme(text = element_text(color = "white", family = "Open Sans"),
+          plot.background = element_rect(fill = "gray10", color = "gray10"),
+          plot.margin = unit(c(0, 0, 0.2, 0.2), "lines"),
+          plot.title = element_text(color = "gray90", size = 14, hjust = 0,
+                                    margin = margin(0.5, 0, -0.8, -0.1, "lines")),
+          plot.caption = element_text(color = "gray60", size = 8),
+          panel.grid.major = element_line(color = "gray50"),
+          panel.grid.minor = element_blank(),
+          axis.text = element_text(color = "gray90", size = 10),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          strip.text = element_text(color = "white", 10),
+          panel.ontop = FALSE)}
+```
+
+```{r}
+rc_basin %>%
+  filter(grepl("Total", key) & Date >= as.Date("2014-12-01")) %>%
+  ggplot() +
+  geom_line(aes(Date, value, group = key),
+            color = nord::nord_palettes$lake_superior[2L]) +
+  facet_wrap(~basin, scales = "free") +
+  theme_dk() +
+  theme(panel.grid.major = element_blank(),
+        axis.line.x = element_line(color = "gray50"),
+        axis.line.y = element_line(color = "gray50"))
+```
+
+```{r}
+
+# LEFT ALIGN TITLE: https://stackoverflow.com/questions/25401111/left-adjust-title-in-ggplot2-or-absolute-position-for-ggtitle
+
+recovery <- rc_basin %>%
+    mutate(basin = if_else(basin == "Others", "Other Basins", basin)) %>%
+    filter(grepl("Total", key) & Date >= as.Date("2014-12-01")) %>%
+    group_by(basin) %>%
+    arrange(Date) %>%
+    mutate(index = (value / value[1L]) * 100,
+           col = if_else(index[max(row_number())] >= 100, "positive", "negative")) %>%
+    ungroup()
+
+recovery_last_row <- recovery %>%
+  group_by(basin) %>%
+  arrange(Date) %>%
+  filter(row_number() == max(row_number()))
+
+rec_plot <- recovery %>%
+    ggplot() +
+    ggalt::geom_xspline(aes(Date, index, group = basin, color = col), alpha = 0.8) +
+    geom_text_repel(aes(Date, index, group = basin, label = basin),
+                    recovery_last_row, color = "gray90", hjust = 0, box.padding = 0.05, direction = "y", size = 3, nudge_x = 60, segment.alpha = 0.3) +
+    scale_color_manual(values = c("brown", "steelblue")) +
+    scale_x_date(limits = c(as.Date("2014-12-01"), as.Date("2018-06-01"))) +
+    guides(color = FALSE) +
+    labs(y = "Index (Start = 2014-01-01)",
+         title = "Recovery In The Oil And Gas Basins",
+         subtitle = "Three basins have managed to recover since the 2014 price crash.",
+         caption = "Source: Baker Hughes") +
+    theme_dk() +
+    theme(plot.title = element_text(margin = margin(0.1,0,0.2,0, "lines")),
+          plot.subtitle = element_text(margin = margin(0,0,0,0, "lines")),
+          axis.title.x.top = element_text(color = "gray90", hjust = 0,
+                                          margin = margin(2, 0, 0, 0, "lines")),
+          plot.caption = element_text(hjust = 0))
+
+rec_grob <- ggplotGrob(rec_plot)
+
+title_row <- which(rec_grob$layout$name == "title")
+subtitle_row <- which(rec_grob$layout$name == "subtitle")
+
+rec_grob$layout$l[title_row] <- 2
+rec_grob$layout$l[subtitle_row] <- 2
+
+y_lab <- textGrob("\nIndexed Rig Count\n(Start = 2014-12-01)",
+                  unit(0, "npc"), unit(0, "npc"), hjust = 0, vjust = 0.75,
+                  # hjust = 0,
+                  gp = gpar(fontsize = 9, family = "Open Sans", col = "gray90"))
+
+xlabt_row <- which(rec_grob$layout$name == "xlab-t")
+rec_grob$grobs[[xlabt_row]] <- y_lab
+rec_grob$layout$l[xlabt_row] <- 2
+rec_grob$grobs[[xlabt_row]]$gp$fill <- "gray10"
+
+caption_row <- which(rec_grob$layout$name == "caption")
+rec_grob$layout$l[caption_row] <- 2
+
+grid.newpage()
+grid.draw(rec_grob)
+
+ggsave("_draft/recovery.png", rec_grob, width = 850 / 100, height = 500 / 100, dpi = 100)
+
+image_read("_draft/recovery.png") %>%
+    image_annotate("Luke Smith (@lksmth)",
+                   location = geometry_point(715, 479),
+                   color = "gray90", size = 13, font = "Open Sans") %>%
+    image_write("_draft/recovery.png")
+```
