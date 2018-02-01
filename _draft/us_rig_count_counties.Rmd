@@ -182,6 +182,20 @@ rc_master %>%
   guides(fill = FALSE)
 ```
 
+```{r current_week_choropleth}
+rc_master %>%
+    filter(Country == "UNITED STATES" & PublishDate == max(PublishDate) & grepl("Oil|Gas", DrillFor)) %>%
+    group_by(County, `State/Province`) %>%
+    summarize(RigCount = sum(RigCount)) %>%
+    ungroup() %>%
+    inner_join(counties_2014_adjusted_simp, c("County" = "NAME", "State/Province" = "state_name")) %>%
+    ggplot() +
+    geom_sf(data = counties_2014_adjusted_simp, color = "black", fill = "gray80") +
+    geom_sf(aes(fill = RigCount), color = "black") +
+    coord_sf(datum = NA) +
+    scale_fill_viridis_c()
+```
+
 ```{r every_county}
 every_county <- rc_master %>%
   filter(Country == "UNITED STATES") %>%
