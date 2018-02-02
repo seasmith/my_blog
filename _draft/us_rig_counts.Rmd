@@ -259,13 +259,13 @@ load("line_barnett2.RData")
 load("line_cana_woodford2.RData")
 load("~/R/misc/maps/raster/us_48_only_no_ocean_gray_raster.RData")
 
-# us48 <- SpatialPixelsDataFrame(us_48_only_no_ocean_gray_raster[, c("x", "y")],
-#                                    us_48_only_no_ocean_gray_raster[, c("ele"), drop = FALSE],
-#                                    proj4string = CRS(st_crs(4326)$proj4string))
-# us48 <- spTransform(us48, CRSobj = CRS(st_crs(102003)$proj4string))
-# us48 <- as.data.frame(us48)
-# 
-# states_48 <- st_transform(states_48, crs = st_crs(102003))
+us48 <- SpatialPixelsDataFrame(us_48_only_no_ocean_gray_raster[, c("x", "y")],
+                                   us_48_only_no_ocean_gray_raster[, c("ele"), drop = FALSE],
+                                   proj4string = CRS(st_crs(4326)$proj4string))
+us48 <- spTransform(us48, CRSobj = CRS(st_crs(102003)$proj4string))
+us48 <- as.data.frame(us48)
+
+states_48 <- st_transform(states_48, crs = st_crs(102003))
 
 # ggplot() +
 #     geom_point(aes(x, y, color = ele), us_48_only_no_ocean_gray_raster, size = 0.4) +
@@ -334,16 +334,17 @@ gb <- ggplot() +
 
 ```{r plot_map_layout}
 map_layout <- ggplot() +
-  geom_raster(aes(x = x, y = y, fill = ele), us_48_only_no_ocean_gray_raster) +
-  geom_sf(data = states_48, fill = "#00000000",
-          color = nord_palettes$polarnight[4L]) +
-  geom_text(data = text_mods2, aes(X, Y, label = Shale_play),
+  geom_point(aes(x = x, y = y, color = ele), us48, size = 0.01) +
+  geom_sf(data = states_48, fill = "#00000000",color = nord_palettes$polarnight[4L]) +
+  geom_text(data = text_mods, aes(X, Y, label = Shale_play),
             size = 3.5, family = "Open Sans", color = "gray90") +
-  geom_line(data = line_barnett2, aes(X, Y), color = "gray80") +
-  geom_line(data = line_cana_woodford2, aes(X, Y), color = "gray80") +
-    scale_fill_gradient(low = nord_palettes$polarnight[1L], high = nord_palettes$polarnight[4L]) +
-  # scale_x_continuous(expand = expand_scale()) +
-  # scale_y_continuous(expand = expand_scale()) +
+  geom_line(data = line_barnett, aes(X, Y), color = "gray80") +
+  geom_line(data = line_cana_woodford, aes(X, Y), color = "gray80") +
+    scale_color_gradient(low = nord_palettes$polarnight[1L],
+                         high = nord_palettes$polarnight[4L]) +
+  scale_x_continuous(expand = expand_scale()) +
+  scale_y_continuous(expand = expand_scale()) +
+  guides(color = FALSE, alpha = FALSE, fill = FALSE) +
   theme_nord(16) +
   theme(axis.title = element_blank()) +
   theme(legend.position = c(0.85, 0.08),
@@ -352,26 +353,6 @@ map_layout <- ggplot() +
         legend.text = element_text(color = "gray80"),
         plot.background = element_rect(fill = nord_palettes$polarnight[1L],
                                        color = nord_palettes$polarnight[1L]))
-
-# map_layout <- ggplot() +
-#   geom_point(aes(x = x, y = y, color = ele), us48) +
-#   geom_sf(data = states_48, fill = "#00000000",
-#           color = nord_palettes$polarnight[4L]) +
-#   geom_text(data = text_mods, aes(X, Y, label = Shale_play),
-#             size = 3.5, family = "Open Sans", color = "gray90") +
-#   geom_line(data = line_barnett, aes(X, Y), color = "gray80") +
-#   geom_line(data = line_cana_woodford, aes(X, Y), color = "gray80") +
-#     scale_color_gradient(low = nord_palettes$polarnight[1L], high = nord_palettes$polarnight[4L]) +
-#   # scale_x_continuous(expand = expand_scale()) +
-#   # scale_y_continuous(expand = expand_scale()) +
-#   theme_nord(16) +
-#   theme(axis.title = element_blank()) +
-#   theme(legend.position = c(0.85, 0.08),
-#         legend.justification = c("left", "bottom"),
-#         legend.box.just = "right",
-#         legend.text = element_text(color = "gray80"),
-#         plot.background = element_rect(fill = nord_palettes$polarnight[1L],
-#                                        color = nord_palettes$polarnight[1L]))
 ```
 
 <!-- Rig count plots -->
@@ -400,28 +381,22 @@ map_colors <- wk1_changes %>%
                   "0"  = neutral,
                   "1"  = positive))
 
-# sf_plays_total <- st_transform(sf_plays_total, crs = st_crs(102003))
+sf_plays_total <- st_transform(sf_plays_total, crs = st_crs(102003))
 
 plays_positive <- filter(sf_plays_total, sign(change_1wk) == 1)
 plays_neutral  <- filter(sf_plays_total, sign(change_1wk) == 0)
 plays_negative <- filter(sf_plays_total, sign(change_1wk) == -1)
 
-# rc_map <- map_layout %+% sf_plays_total
 rc_map <- map_layout  +
   geom_sf(data = plays_neutral, color = "#00000000", alpha = 0.7, fill = neutral) +
   geom_sf(data = plays_negative, color = "#00000000", alpha = 0.7, fill = negative) +
   geom_sf(data = plays_positive, color = "#00000000", alpha = 0.7, fill = positive) +
-  # scale_fill_manual(name = NULL,
-  #                   values = map_colors,
-  #                   labels = c("Decrease", "No Change", "Increase")) +
-  scale_alpha_continuous(range = c(0.01, 0.6)) +
-  coord_sf(datum = NA, crs = st_crs(4326)) +
-  # coord_sf(crs = st_crs(102003), datum = NA) +
-  guides(color = FALSE, alpha = FALSE, fill = FALSE) +
+  coord_sf(datum = NA, crs = st_crs(102003)) +
   theme(plot.margin = margin(0, 0, 0, 0, "pt"),
         legend.position = c(0.81, 0.13),
         axis.title = element_blank(),
-        axis.text = element_blank())
+        axis.text = element_blank(),
+        plot.caption = element_text(vjust = -1))
 
 ###
 # Sacraficial plot (for map legend)
@@ -576,10 +551,12 @@ rc_change_52wk <- this_week %>%
 
 ```{r plot_rig_count_build}
 ##  GROBS
-rc_map_grob <- ggplotGrob(rc_map)
-rc_map_grob$grobs[[which(rc_map_grob$layout$name == "caption")]] <- lgnd
+# rc_map_grob <- ggplotGrob(rc_map)
+# rc_map_grob$grobs[[which(rc_map_grob$layout$name == "title")]] <- lgnd
+rc_map <- rc_map +
+    annotation_custom(lgnd, xmin = 0, xmax = 10000, ymin = -1280000, ymax = -1180000)
 
-rc_grobs <- arrangeGrob(rc_map_grob,
+rc_grobs <- arrangeGrob(rc_map,
                         rc_change_1wk,  rc_change_52wk,
                         rc_percent_1wk, rc_percent_52wk,
                         layout_matrix = rbind(c(1, 1),
