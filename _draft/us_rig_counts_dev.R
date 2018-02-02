@@ -61,22 +61,3 @@ save(us_48_only_no_ocean_gray_raster, file = "~/R/misc/maps/raster/us_48_only_no
 
 rm(us_48_gray_raster_spdf)
 rm(ge)
-
-load("~/R/misc/maps/raster/us_48_no_ocean_gray_raster.RData")
-load("~/R/misc/maps/raster/us_48_only_no_ocean_gray_raster.RData")
-
-p1 <- ggplot() +
-  geom_raster(aes(x = x, y = y, fill = ele), us_48_only_no_ocean_gray_raster) +
-  scale_fill_gradient(low = nord_palettes$polarnight[1L], high = "#515b6f") +
-  geom_sf(data = states_48, fill = "#00000000", color = "#515b6f") +
-  coord_sf(datum = NA) +
-  guides(fill = FALSE) +
-  theme_nord()
-
-p2 <- ggplot() +
-  geom_raster(aes(x = x, y = y, fill = ele), us_48_no_ocean_gray_raster) +
-  scale_fill_gradient(low = nord_palettes$polarnight[1L], high = nord_palettes$polarnight[4L]) +
-  geom_sf(data = states_48, fill = "#00000000", color = nord_palettes$polarnight[4L]) +
-  coord_sf(datum = NA) +
-  guides(fill = FALSE) +
-  theme_nord()
