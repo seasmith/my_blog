@@ -2,11 +2,6 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
-    <loc>/blog/the_harvey_effect_on_crime_in_houston/</loc>
-    <lastmod>2018-01-22T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
     <loc>/blog/is_the_united_states_crashing_opecs_deal/</loc>
     <lastmod>2018-01-08T00:00:00+00:00</lastmod>
   </url>
@@ -93,7 +88,7 @@
   
   <url>
     <loc>/blog/</loc>
-    <lastmod>2018-01-22T00:00:00+00:00</lastmod>
+    <lastmod>2018-01-08T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -117,12 +112,6 @@
   <url>
     <loc>/tags/climate/</loc>
     <lastmod>2016-12-20T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/crime/</loc>
-    <lastmod>2018-01-22T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -171,18 +160,6 @@
   <url>
     <loc>/tags/graphs/</loc>
     <lastmod>2017-03-22T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/hurricane-harvey/</loc>
-    <lastmod>2018-01-22T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/hurricanes/</loc>
-    <lastmod>2018-01-22T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -275,13 +252,13 @@
   </url>
   
   <url>
-    <loc>/tags/r/</loc>
-    <lastmod>2018-01-22T00:00:00+00:00</lastmod>
-    <priority>0</priority>
+    <loc>/projects/</loc>
   </url>
   
   <url>
-    <loc>/projects/</loc>
+    <loc>/tags/r/</loc>
+    <lastmod>2018-01-08T00:00:00+00:00</lastmod>
+    <priority>0</priority>
   </url>
   
   <url>
@@ -345,14 +322,8 @@
   </url>
   
   <url>
-    <loc>/tags/weather/</loc>
-    <lastmod>2018-01-22T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>/</loc>
-    <lastmod>2018-01-22T00:00:00+00:00</lastmod>
+    <lastmod>2018-01-08T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   

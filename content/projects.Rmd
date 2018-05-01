@@ -1,12 +1,12 @@
 ---
-title: "R Projects"
+title: "Projects"
+description: "List of my personal projects - past and present."
 ---
-  
-Below is a list of my personal projects - past and present.
 
 
-Project | Description
---------|------------
+Project        | Description
+---------------|-------------------------------------------------------------------
+[US Rig Count Update](https://twitter.com/lksmth/status/941732791649275904) | Weekly tweets of new rig count data
+[Houston Crime Viewer](https://github.com/seasmith/HoustonCrimeViewer) ([shiny app](https://seasmith.shinyapps.io/HoustonCrimeViewer/)) | An interactive map of Houston crime data. Bult with R packages: shiny and leaflet
 [D3 Graphics](https://bl.ocks.org/seasmith) | My D3.js creations...and some Vega and Vega-Lite
-[US Rig Count Update](https://twitter.com/lksmth/status/941732791649275904) | Tweets, every Friday, of the new rig count data
 [TexasPrimary2016](https://github.com/seasmith/TexasPrimary2016) | Analysis of the 2016 Texas Presidential Primary

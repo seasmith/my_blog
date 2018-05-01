@@ -1,12 +1,13 @@
 ---
 title : "Packages"
 author: "Luke Smith"
+description: "R packages which I have built"
 ---
 
-[AlignAssign](/packages/AlignAssign)
-
-[blg](/packages/blg)
-
-[seasmith](/packages/seasmith)
-
-[ggloop](/packages/ggloop)
+Package | Description
+--------|-----------------------------------------------------------------------
+[AlignRegex](https://github.com/seasmith/AlignRegex) | Align characters in a script using regulard expressions. A port of AlignAssign
+[AlignAssign](/packages/AlignAssign) | Align the assignment operatos in a script
+[blg](/packages/blg) | Personal package of utility functions used for blogging
+[seasmith](/packages/seasmith) | Personal package of miscellaneous utility functions
+[ggloop](/packages/ggloop) | Create multiple charts using non-standard evaluation

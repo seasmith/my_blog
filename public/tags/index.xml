@@ -48,15 +48,6 @@
     </item>
     
     <item>
-      <title>Crime</title>
-      <link>/tags/crime/</link>
-      <pubDate>Mon, 22 Jan 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/crime/</guid>
-      <description></description>
-    </item>
-    
-    <item>
       <title>Economics</title>
       <link>/tags/economics/</link>
       <pubDate>Fri, 19 May 2017 00:00:00 +0000</pubDate>
@@ -125,24 +116,6 @@
       <pubDate>Wed, 22 Mar 2017 00:00:00 +0000</pubDate>
       
       <guid>/tags/graphs/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Hurricane Harvey</title>
-      <link>/tags/hurricane-harvey/</link>
-      <pubDate>Mon, 22 Jan 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/hurricane-harvey/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Hurricanes</title>
-      <link>/tags/hurricanes/</link>
-      <pubDate>Mon, 22 Jan 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/hurricanes/</guid>
       <description></description>
     </item>
     
@@ -275,7 +248,7 @@
     <item>
       <title>R</title>
       <link>/tags/r/</link>
-      <pubDate>Mon, 22 Jan 2018 00:00:00 +0000</pubDate>
+      <pubDate>Mon, 08 Jan 2018 00:00:00 +0000</pubDate>
       
       <guid>/tags/r/</guid>
       <description></description>
@@ -359,15 +332,6 @@
       <pubDate>Mon, 08 Jan 2018 00:00:00 +0000</pubDate>
       
       <guid>/tags/united-states/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Weather</title>
-      <link>/tags/weather/</link>
-      <pubDate>Mon, 22 Jan 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/weather/</guid>
       <description></description>
     </item>
     
