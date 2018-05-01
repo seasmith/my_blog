@@ -6,8 +6,8 @@ description: "R packages which I have built"
 
 Package | Description
 --------|-----------------------------------------------------------------------
-[AlignRegex](https://github.com/seasmith/AlignRegex) | Align characters in a script using regulard expressions. A port of AlignAssign
-[AlignAssign](/packages/AlignAssign) | Align the assignment operatos in a script
+[AlignRegex](https://github.com/seasmith/AlignRegex) | Align characters in a script using regular expressions. A port of AlignAssign.
+[AlignAssign](/packages/AlignAssign) | Align the assignment operators in a script
 [blg](/packages/blg) | Personal package of utility functions used for blogging
 [seasmith](/packages/seasmith) | Personal package of miscellaneous utility functions
 [ggloop](/packages/ggloop) | Create multiple charts using non-standard evaluation

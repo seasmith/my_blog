@@ -189,7 +189,7 @@ Check me out on Twitter and GitHub.</description>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>/packages/</guid>
-      <description>PackageDescriptionAlignRegexAlign characters in a script using regulard expressions. A port of AlignAssignAlignAssignAlign the assignment operatos in a scriptblgPersonal package of utility functions used for bloggingseasmithPersonal package of miscellaneous utility functionsggloopCreate multiple charts using non-standard evaluation</description>
+      <description>PackageDescriptionAlignRegexAlign characters in a script using regular expressions. A port of AlignAssign.AlignAssignAlign the assignment operators in a scriptblgPersonal package of utility functions used for bloggingseasmithPersonal package of miscellaneous utility functionsggloopCreate multiple charts using non-standard evaluation</description>
     </item>
     
     <item>
@@ -198,7 +198,7 @@ Check me out on Twitter and GitHub.</description>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>/projects/</guid>
-      <description>ProjectDescriptionUS Rig Count UpdateWeekly tweets of new rig count dataHouston Crime Viewer (shiny app)An interactive map of Houston crime data. Bult with R packages: shiny and leafletD3 GraphicsMy D3.js creations…and some Vega and Vega-LiteTexasPrimary2016Analysis of the 2016 Texas Presidential Primary</description>
+      <description>ProjectDescriptionUS Rig Count UpdateWeekly tweets of new rig count data.Houston Crime Viewer (shiny app)An interactive map of Houston crime data. Built with R packages: shiny and leaflet.D3 GraphicsMy D3.js creations…and some Vega and Vega-Lite.TexasPrimary2016Analysis of the 2016 Texas Presidential Primary.</description>
     </item>
     
   </channel>
