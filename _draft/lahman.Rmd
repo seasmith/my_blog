@@ -1,0 +1,139 @@
+---
+---
+
+```{r load_dep}
+library(tidyverse)
+library(lubridate)
+library(Lahman)
+library(sf)
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+```{r import_map}
+load("~/R/oil/data/maps/states_map.RData")
+```
+
+```{r tidy_data}
+m <- as_tibble(Master)
+```
+
+```{r state_choropleth}
+total_count <- m %>%
+    filter(birthCountry == "USA") %>%
+    group_by(birthState) %>%
+    summarise(n = n()) %>%
+    ungroup()
+
+decades <- function(x) cut(x, breaks = seq(1820, 2000, by = 10),
+                           include.lowest = TRUE, right = FALSE, dig.lab = 10)
+
+decadal_count <- m %>%
+  filter(birthCountry == "USA") %>%
+  group_by(decade = decades(birthYear),
+           birthState) %>%
+  summarize(n = n()) %>%
+  ungroup()
+
+decadal_percent <- m %>%
+  filter(birthCountry == "USA") %>%
+  group_by(decade = decades(birthYear),
+           birthState) %>%
+  summarize(n = n()) %>%
+  mutate(n = n / sum(n)) %>%
+  ungroup()
+
+decadal_percent_1820 <- m %>%
+  filter(birthCountry == "USA") %>%
+  filter(between(birthYear, 1820, 1849)) %>%
+  group_by(decade = decades(birthYear),
+           birthState) %>%
+  summarize(n = n()) %>%
+  mutate(n = n / sum(n)) %>%
+  ungroup()
+
+decadal_percent_1850 <- m %>%
+  filter(birthCountry == "USA") %>%
+  filter(between(birthYear, 1850, 1899)) %>%
+  group_by(decade = decades(birthYear),
+           birthState) %>%
+  summarize(n = n()) %>%
+  mutate(n = n / sum(n)) %>%
+  ungroup()
+
+decadal_percent_1900 <- m %>%
+  filter(birthCountry == "USA") %>%
+  filter(between(birthYear, 1900, 1949)) %>%
+  group_by(decade = decades(birthYear),
+           birthState) %>%
+  summarize(n = n()) %>%
+  mutate(n = n / sum(n)) %>%
+  ungroup()
+
+decadal_percent_1950 <- m %>%
+  filter(birthCountry == "USA") %>%
+  filter(birthYear >= 1950) %>%
+  group_by(decade = decades(birthYear),
+           birthState) %>%
+  summarize(n = n()) %>%
+  mutate(n = n / sum(n)) %>%
+  ungroup()
+
+
+count_choro <- . %>%
+  left_join(states_map, by = c("birthState" = "STUSPS")) %>%
+  st_sf() %>%
+  {
+    ggplot(.) +
+      geom_sf(data = states_map, fill = "gray50") +
+      geom_sf(aes(fill = n)) +
+      scale_fill_viridis_c() +
+      coord_sf(datum = NA, crs = st_crs(2163)) +
+      theme_void()
+  }
+
+dec_maker <- function(x, y) seq(x, y, by = 10) %>% {paste(., . + 9, sep = "-")}
+dec_all  <- dec_maker(1820, 1990) %>% c(NA) %>% set_names(unique(decadal_percent$decade))
+dec_1820 <- dec_maker(1820, 1840) %>% set_names(unique(decadal_percent_1820$decade))
+dec_1850 <- dec_maker(1850, 1890) %>% set_names(unique(decadal_percent_1850$decade))
+dec_1900 <- dec_maker(1900, 1940) %>% set_names(unique(decadal_percent_1900$decade))
+dec_1950 <- dec_maker(1950, 1990) %>% set_names(unique(decadal_percent_1950$decade))
+
+count_choro(total_count)
+count_choro(decadal_count) +
+  facet_wrap(~decade, labeller = labeller(decade = dec_all))
+count_choro(decadal_percent) +
+  facet_wrap(~decade, labeller = labeller(decade = dec_all))
+count_choro(decadal_percent_1820) +
+  facet_wrap(~decade, labeller = labeller(decade = dec_1820))
+count_choro(decadal_percent_1850) +
+  facet_wrap(~decade, labeller = labeller(decade = dec_1850))
+count_choro(decadal_percent_1900) +
+  facet_wrap(~decade, labeller = labeller(decade = dec_1900))
+count_choro(decadal_percent_1950) +
+  facet_wrap(~decade, labeller = labeller(decade = dec_1950))
+```
+
+```{r}
+# Total debuts
+m %>%
+  ggplot() +
+  stat_count(aes(year(debut)), geom = "line") +
+  theme_minimal()
+
+# Total debuts split by American/Foreign-born
+m %>%
+  ggplot() +
+  stat_count(aes(year(debut)), geom = "line") +
+  scale_color_manual(values = c("brown", "steelblue")) +
+  facet_wrap(~birthCountry == "USA") +
+  theme_minimal()
+
+m %>%
+  ggplot() +
+  geom_line(aes(year(debut), y = ..count.., color = birthCountry == "USA"), stat = "count") +
+  scale_color_manual(values = c("brown", "steelblue"), na.value = "gray50") +
+  theme_minimal()
+```

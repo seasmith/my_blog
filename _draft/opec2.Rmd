@@ -4,6 +4,7 @@ Links:
   * https://www.reuters.com/article/us-opec-meeting/opec-heading-for-oil-cut-extension-with-a-caveat-idUSKBN1DS14Z
   * https://www.reuters.com/article/us-oil-iea/warmer-weather-rising-non-opec-output-threaten-oil-market-balance-idUSKBN1DE10F
   * https://www.reuters.com/article/us-global-oil/oil-gains-on-pipeline-outage-tempered-by-robust-u-s-output-idUSKBN1EC03J
+  * https://www.bloomberg.com/news/articles/2018-01-24/glut-busting-opec-cuts-expose-oil-once-more-to-global-strife
 
 ```{r plot_post_recession, include=FALSE, eval=FALSE}
 # Jordan and Slovenia have no production value (all NA)

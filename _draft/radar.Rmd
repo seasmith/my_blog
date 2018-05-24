@@ -1,0 +1,314 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+* [GIS site](https://radar.weather.gov/GIS.html)
+    * NAD 83 (`Each RIDGE radar image is created separately without backgrounds on the image and in a standard geographic projection referenced to North American Datum 1983 (NAD83)`)
+    * [Radar gifs](https://radar.weather.gov/ridge/Conus/RadarImg/)
+    * [Latest radar-only gif](https://radar.weather.gov/ridge/Conus/RadarImg/latest_radaronly.gif)
+    * [Latest radar-only word file](https://radar.weather.gov/ridge/Conus/RadarImg/latest_radaronly.gfw)
+        * Line 1: x-dimension of a pixel in map units
+        * Line 2: rotation parameter
+        * Line 3: rotation parameter
+        * Line 4: NEGATIVE of y-dimension of a pixel in map units
+        * Line 5: x-coordinate of center of upper left pixel
+        * Line 6: y-coordinate of center of upper left pixel
+    
+  * [Mosaic times](https://radar.weather.gov/ridge/Conus/RadarImg/mosaic_times.txt)
+
+* General format of a radar-only gif: https://radar.weather.gov/ridge/Conus/RadarImg/Conus_20180211_0208_N0Ronly.gif
+```{r}
+
+```
+
+* Other:
+  * [Precipitation data](https://water.weather.gov/precip/download.php)
+
+```{r}
+library(tidyverse)
+library(curl)
+library(raster)
+library(sf)
+library(blg)
+library(extrafont)
+library(magick)
+
+loadfonts("win", TRUE)
+load("states_48.RData")
+
+this_font <- "Bitstream Vera Sans Mono"
+```
+
+```{r test_download}
+url <- "https://radar.weather.gov/ridge/Conus/RadarImg/latest_radaronly.gif"
+curl_download(url, "latest_radaronly.gif")
+```
+
+```{r read_and_define_raster}
+radar <- raster("latest_radaronly.gif")
+raster_crs <- st_crs(4269)$proj4string
+crs(radar) <- raster_crs
+
+x_1 <- -127.620375523875420
+y_1 <- 50.406626367301044
+x_2 <- x_1 + (attributes(extent(radar))$xmax * 0.017971305190311)
+y_2 <- y_1 + (attributes(extent(radar))$ymax * -0.017971305190311)
+
+extent(radar) <- c(x_1, x_2, y_2, y_1)
+```
+
+```{r convert_to_data_frame}
+radar_sp <- as(radar, "SpatialPixelsDataFrame")
+radar_df <- as.data.frame(radar_sp) %>% as_tibble()
+```
+
+```{r plot_raster}
+ggplot() +
+  geom_raster(aes(x, y, fill = latest_radaronly), radar_df,
+             alpha = 1)+
+  geom_sf(data = states_48, fill = "#00000000", color = "gray50") +
+  scale_fill_viridis_c("DBZ") +
+  coord_sf(datum = NA) +
+  guides(color = guide_colorbar(raster = FALSE, ticks = FALSE)) +
+  labs(title = "Viridis color scale",
+       subtitle = "No modification") +
+  theme_g10() +
+  theme(axis.title = element_blank())
+```
+
+```{r rainbow_scale}
+radar_colortable <- radar@legend@colortable
+
+radar_min <- min(radar_df$latest_radaronly)
+radar_max <- max(radar_df$latest_radaronly)
+
+radar_scale <- radar_colortable[seq(radar_min, radar_max)]
+radar_scale[1:8] <- sprintf("gray%s", 11:18)
+
+radar_labels <- seq(-35, 75, 5)
+
+ggplot() +
+  geom_sf(data = states_48, fill = "gray10", color = "gray90") +
+  geom_raster(aes(x, y, fill = factor(latest_radaronly, levels = seq_along(radar_scale), ordered = TRUE)), radar_df,
+             alpha = 0.8) +
+  scale_fill_manual("DBZ", values = radar_scale,
+                    drop = FALSE,
+                    guide = guide_legend(reverse = TRUE)) +
+  coord_sf(datum = NA) +
+  theme_g10() +
+  theme(axis.title = element_blank())
+
+# All the way to 75 DBZ
+radar_max <- 23
+radar_scale <- radar_colortable[seq(radar_min, radar_max)]
+radar_scale[1:8] <- sprintf("gray%s", 11:18)
+
+ggplot() +
+  geom_raster(aes(x, y, fill = factor(latest_radaronly, levels = seq_along(radar_scale), ordered = TRUE)), radar_df,
+             alpha = 0.8) +
+  geom_sf(data = states_48, fill = "#00000000", color = "gray90") +
+  scale_fill_manual("DBZ", values = radar_scale,
+                    drop = FALSE,
+                    guide = guide_legend(reverse = TRUE),
+                    labels = radar_labels) +
+  coord_sf(datum = NA) +
+  theme_g10() +
+  theme(axis.title = element_blank())
+
+```
+
+```{r rainbow_scale_2}
+# https://forecast.weather.gov/jetstream/doppler/radarfaq.htm#reflcolor
+# https://forecast.weather.gov/jetstream/doppler/baserefl.htm#rainrate
+
+radar_df <- radar_df %>%
+  mutate(radar = case_when(
+    latest_radaronly <= 8 ~ 1,
+    TRUE  ~ latest_radaronly - 7
+  ))
+
+radar_scale2 <- radar_colortable[8:23]
+radar_scale2[1] <- "gray20"
+
+radar_labels2 <- c("<= 0", seq(5, 75, 5))
+n_distinct(radar_df$radar) == length(radar_scale2)
+
+ggplot() +
+  geom_sf(data = states_48, fill = "gray10", color = "gray50") +
+  geom_raster(aes(x, y, fill = factor(radar, levels = 1:16, ordered = TRUE)), radar_df,
+             alpha = 0.7) +
+  scale_fill_manual("DBZ", values = radar_scale2,
+                    drop = FALSE,
+                    guide = guide_legend(reverse = TRUE),
+                    labels = radar_labels2) +
+  coord_sf(datum = NA) +
+  theme_g10() +
+  theme(axis.title = element_blank())
+```
+
+```{r viridis_scale}
+## DBZ is logarithmic (log10)
+
+# Normal order
+ggplot() +
+  geom_raster(aes(x, y, fill = factor(radar, levels = 1:16, ordered = TRUE)), radar_df) +
+  geom_sf(data = states_48, fill = "#00000000", color = "gray50") +
+  scale_fill_manual("DBZ", values = c("gray20", viridis::viridis(14), "#FDFDFD"),
+                    drop = FALSE,
+                    labels = c(seq(0, 75, by = 5)),
+                    guide = guide_legend(reverse = TRUE)) +
+  coord_sf(datum = NA) +
+  theme_g10() +
+  theme(axis.title = element_blank())
+
+# Better scaling
+ggplot() +
+    geom_raster(aes(x, y, fill = factor(radar, levels = 1:16, ordered = TRUE)), radar_df) +
+    geom_sf(data = states_48, fill = "#00000000", color = "gray50") +
+    scale_fill_manual("DBZ", values = c("gray20", viridis::viridis(14^(1.5))[(1:14)^(1.5)], "#FDFDFD"),
+                      drop = FALSE,
+                      labels = radar_labels2,
+                      guide = guide_legend(reverse = TRUE)) +
+    coord_sf(datum = NA) +
+    theme_g10() +
+    theme(axis.title = element_blank())
+
+# Another better scaling
+first  <- seq(1, 2000, length.out = 5)
+second <- seq(1, 2000, length.out = 5) + (250/1.25)
+third  <- seq(1, 2000, length.out = 5) + (250/2.25)
+radar_scale3 <- c(first, second, third) %>% sort() %>% .[-15L]
+
+
+ggplot() +
+    geom_raster(aes(x, y, fill = factor(radar, levels = 1:16, ordered = TRUE)), radar_df) +
+    geom_sf(data = states_48, fill = "#00000000", color = "gray50") +
+    scale_fill_manual("DBZ", values = c("gray20", viridis::viridis(max(radar_scale3))[radar_scale3], "#FDFDFD"),
+                      drop = FALSE,
+                      labels = radar_labels2,
+                      guide = guide_legend(reverse = TRUE)) +
+    coord_sf(datum = NA) +
+    theme_g10() +
+    theme(axis.title = element_blank())
+
+# Reversed
+ggplot() +
+  geom_raster(aes(x, y, fill = factor(radar, levels = 1:16, ordered = TRUE)), radar_df) +
+  geom_sf(data = states_48, fill = "#00000000", color = "gray30") +
+  scale_fill_manual("DBZ", values = c("gray20", viridis::viridis(14, direction = -1), "#FDFDFD"),
+                    drop = FALSE,
+                    labels = radar_labels2,
+                    guide = guide_legend(reverse = TRUE)) +
+  coord_sf(datum = NA) +
+  theme_g10() +
+  theme(axis.title = element_blank())
+```
+
+```{r}
+w <- 1200
+h <- 616
+
+# viridis
+radar_viridis <- ggplot() +
+    geom_raster(aes(x, y, fill = factor(radar, levels = 1:16, ordered = TRUE)), radar_df) +
+    geom_sf(data = states_48, fill = "#00000000", color = "gray50") +
+    scale_fill_manual("DBZ", values = c("gray20", viridis::viridis(max(radar_scale3))[radar_scale3], "#FDFDFD"),
+                      drop = FALSE,
+                      labels = radar_labels2,
+                      guide = guide_legend(reverse = TRUE)) +
+    labs(title = "Radar Mosaic: Viridis\n") +
+    coord_sf(datum = NA) +
+    theme_g10(base_family = this_font) +
+    theme(axis.title = element_blank(),
+          plot.title = element_text(margin = margin(0, 0, -1, 0, "lines")))
+
+ggsave("radar_viridis.png", radar_viridis,
+       width = w / 100, height = h / 100, dpi = 100)
+
+# magma
+radar_magma <- ggplot() +
+    geom_raster(aes(x, y, fill = factor(radar, levels = 1:16, ordered = TRUE)), radar_df) +
+    geom_sf(data = states_48, fill = "#00000000", color = "gray50") +
+    scale_fill_manual("DBZ", values = c("gray20", viridis::magma(max(radar_scale3))[radar_scale3], "#FDFDFD"),
+                      drop = FALSE,
+                      labels = radar_labels2,
+                      guide = guide_legend(reverse = TRUE)) +
+    labs(title = "Radar Mosaic: Magma\n") +
+    coord_sf(datum = NA) +
+    theme_g10(base_family = this_font) +
+    theme(axis.title = element_blank(),
+          plot.title = element_text(margin = margin(0, 0, -1, 0, "lines")))
+
+ggsave("~/R/my_blog/radar_magma.png", radar_magma,
+       width = w / 100, height = h / 100, dpi = 100)
+
+# inferno
+radar_inferno <- ggplot() +
+    geom_raster(aes(x, y, fill = factor(radar, levels = 1:16, ordered = TRUE)), radar_df) +
+    geom_sf(data = states_48, fill = "#00000000", color = "gray50") +
+    scale_fill_manual("DBZ", values = c("gray20", viridis::inferno(max(radar_scale3))[radar_scale3], "#FDFDFD"),
+                      drop = FALSE,
+                      labels = radar_labels2,
+                      guide = guide_legend(reverse = TRUE)) +
+    labs(title = "Radar Mosaic: Inferno\n") +
+    coord_sf(datum = NA) +
+    theme_g10(base_family = this_font) +
+    theme(axis.title = element_blank(),
+          plot.title = element_text(margin = margin(0, 0, -1, 0, "lines")))
+
+ggsave("~/R/my_blog/radar_inferno.png", radar_inferno,
+       width = w / 100, height = h / 100, dpi = 100)
+
+# plasma
+radar_plasma <- ggplot() +
+    geom_raster(aes(x, y, fill = factor(radar, levels = 1:16, ordered = TRUE)), radar_df) +
+    geom_sf(data = states_48, fill = "#00000000", color = "gray50") +
+    scale_fill_manual("DBZ", values = c("gray20", viridis::plasma(max(radar_scale3))[radar_scale3], "#FDFDFD"),
+                      drop = FALSE,
+                      labels = radar_labels2,
+                      guide = guide_legend(reverse = TRUE)) +
+    labs(title = "Radar Mosaic: Plasma\n") +
+    coord_sf(datum = NA) +
+    theme_g10(base_family = this_font) +
+    theme(axis.title = element_blank(),
+          plot.title = element_text(margin = margin(0, 0, -1, 0, "lines")))
+
+ggsave("~/R/my_blog/radar_plasma.png", radar_plasma,
+       width = w / 100, height = h / 100, dpi = 100)
+
+# rainbow
+radar_rainbow <- ggplot() +
+  geom_raster(aes(x, y, fill = factor(radar, levels = 1:16, ordered = TRUE)), radar_df,
+             alpha = 0.7) +
+  geom_sf(data = states_48, fill = "#00000000", color = "gray50") +
+  scale_fill_manual("DBZ", values = radar_scale2,
+                    drop = FALSE,
+                    guide = guide_legend(reverse = TRUE),
+                    labels = radar_labels2) +
+  labs(title = "Radar Mosaic: Rainbow (default)\n") +
+  coord_sf(datum = NA) +
+  theme_g10(base_family = this_font) +
+  theme(axis.title = element_blank(),
+          plot.title = element_text(margin = margin(0, 0, -1, 0, "lines")))
+
+ggsave("~/R/my_blog/radar_rainbow.png", radar_rainbow,
+       width = w / 100, height = h / 100, dpi = 100)
+```
+
+```{r add_caption}
+list.files("~/R/my_blog", "^radar_[[:alpha:]]*\\.png$") %>%
+  image_read() %>%
+  .[c(4, 5, 3, 1, 2)] %>%
+  image_annotate("Source: National Weather Service",
+                 font = this_font, color = "springgreen", size = 12,
+                 location = geometry_point(3, 560)) %>%
+    image_annotate("Luke Smith (@lksmth)",
+                 font = this_font, color = "gray50", size = 12,
+                 location = geometry_point(1055, 560)) %>%
+  image_crop("x580+0+0") %>%
+  image_join() %>%
+  image_animate(1/2) %>%
+  image_write("radar_mosaic_combined.gif")
+```
