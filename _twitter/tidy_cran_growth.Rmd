@@ -1,0 +1,220 @@
+---
+title  : "Growth of 'tidyverse' extensions on CRAN"
+author : "Luke Smith"
+date   : "`r Sys.Date()`"
+tags   : [r, tidyverse, cran]
+---
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+```{r load_deps}
+library(tidyverse)
+library(rvest)
+```
+
+
+```{r, eval=FALSE}
+base_url <- "https://cran.r-project.org/src/contrib/Archive/"
+# url <- parse_url(base_url)
+ap <- available.packages() %>% as_tibble()
+
+ap_tidy <- ap %>% filter(grepl("^tidy.*$", Package))
+ap_gg <- ap %>% filter(grepl("^gg.*$", Package, ignore.case = TRUE))
+
+# Filter non-ggplot2 related packages
+not_gg <- c("gge", "GGEBiplotGUI", "GGEBiplots", "GGIR", "gglasso", "ggm",
+            "GGMM", "GGMridge", "GGMselect", "GGUM")
+
+ap_gg <- ap_gg %>% filter(!grepl(paste0("^", not_gg, "$", collapse = "|"), Package))
+
+# Get CRAN archive data for packages
+get_data <- . %>%
+  map(~{
+    tryCatch(
+      {
+        i <- read_html(.x)
+        attr(i, "status") <- "success"
+        i
+      },
+      error = function(e) {
+        i <- read_html(paste0("https://CRAN.R-project.org/package=", basename(.x)))
+        attr(i, "status") <- "fail"
+        i
+      }
+    )
+  })
+
+tidy_arch <- ap_tidy$Package %>% 
+  paste0(base_url, .) %>%
+  get_data()
+
+gg_arch <- ap_gg$Package %>% 
+  paste0(base_url, .) %>%
+  get_data()
+
+# Extract first release-date for successful tries
+fn_success <- . %>%
+  html_nodes("table") %>%
+  .[[1]] %>%
+  html_nodes("tr") %>%
+  .[4] %>%
+  html_nodes("td") %>%
+  html_text() %>%
+  {as.character(.[3])}
+
+# Extract first release data for failed tries
+fn_fail <- . %>%
+  html_nodes("table") %>%
+  .[[1]] %>%
+  html_nodes("td") %>%
+  html_text() %>%
+  {
+    i <- which(grepl("Published", .))
+    as.character(.[i + 1])
+  }
+
+# Extract 'tidy' first dates
+tidy_date <- tidy_arch %>%
+  map_chr(~{
+    if (attr(.x, "status") == "success") fn_success(.x) else fn_fail(.x)
+  }) %>%
+  as.Date()
+
+names(tidy_date) <- ap_tidy$Package
+tidy_date <- tidy_date %>% enframe()
+
+# Extract 'gg' first dates
+gg_date <- gg_arch %>%
+  map_chr(~{
+    if (attr(.x, "status") == "success") fn_success(.x) else fn_fail(.x)
+  }) %>%
+  as.Date()
+
+names(gg_date) <- ap_gg$Package
+gg_date <- gg_date %>% enframe()
+```
+
+```{r actual_data, echo=FALSE}
+tidy_date <- structure(list(name = c("tidyr", "tidytext", "tidyverse", "tidyquant", 
+"tidyxl", "tidyRSS", "tidycensus", "tidygenomics", "tidygraph", 
+"tidyselect", "tidystringdist", "tidyboot", "tidystats", "tidyposterior", 
+"tidyinftheo", "tidytree", "tidyhydat", "tidypredict", "tidyLPA", 
+"tidyimpute"), value = structure(c(16272, 16919, 17053, 17166, 
+17195, 17221, 17337, 17342, 17354, 17371, 17438, 17442, 17468, 
+17484, 17500, 17514, 17515, 17548, 17576, 17595), class = "Date")), class = c("tbl_df", 
+"tbl", "data.frame"), row.names = c(NA, -20L))
+
+gg_date <- structure(list(name = c("ggallin", "ggalluvial", "GGally", "ggalt", 
+"ggbeeswarm", "ggbuildr", "ggChernoff", "ggconf", "ggcorrplot", 
+"ggdag", "ggdendro", "ggdmc", "ggedit", "ggeffects", "ggenealogy", 
+"ggExtra", "ggFacetSample", "ggfan", "ggfittext", "ggforce", 
+"ggformula", "ggfortify", "gggenes", "ggghost", "ggguitar", "gghalfnorm", 
+"gghighlight", "ggimage", "ggiraph", "ggiraphExtra", "ggjoy", 
+"gglogo", "ggloop", "gglorenz", "ggmap", "ggmcmc", "ggmosaic", 
+"ggmuller", "ggnetwork", "ggparallel", "ggplot2", "ggplot2movies", 
+"ggplotAssist", "ggplotgui", "ggplotify", "ggpmisc", "ggpol", 
+"ggpolypath", "ggpubr", "ggpval", "ggQC", "ggQQunif", "ggquickeda", 
+"ggquiver", "ggRandomForests", "ggraph", "ggraptR", "ggrepel", 
+"ggridges", "ggROC", "ggsci", "ggseas", "ggseqlogo", "ggsignif", 
+"ggsn", "ggspatial", "ggspectra", "ggstance", "ggstatsplot", 
+"ggswissmaps", "ggtern", "ggThemeAssist", "ggthemes", "ggversa", 
+"ggvis"), value = structure(c(17441, 17496, 14641, 16804, 16852, 
+17567, 17353, 17407, 16812, 17617, 15733, 17102, 17256, 17282, 
+16496, 16521, 17498, 17484, 17399, 17127, 17339, 16712, 17402, 
+17020, 17135, 17166, 17444, 17218, 16828, 17138, 17361, 16981, 
+17094, 17574, 15308, 15588, 17165, 17410, 16885, 15937, 13674, 
+16672, 17463, 17355, 17645, 16830, 17647, 17023, 17002, 17330, 
+17254, 17604, 17646, 17393, 16358, 17221, 16864, 16809, 17423, 
+15851, 16895, 16849, 17330, 17261, 16669, 17258, 16837, 17121, 
+17624, 16381, 16057, 16869, 15696, 17383, 16245), class = "Date")), row.names = c(NA, 
+-75L), class = c("tbl_df", "tbl", "data.frame"))
+```
+
+```{r plot_colors}
+cols <- c(RColorBrewer::brewer.pal(5, "Set1"), RColorBrewer::brewer.pal(2, "Set2"))
+```
+
+```{r}
+# Add cumulative total
+tidy_date <- tidy_date %>%
+  arrange(value) %>%
+  mutate(n = row_number())
+
+# Add text locations
+tidy_date <- tidy_date %>%
+  mutate(x = case_when(
+    name == "tidyr" ~value + 10,
+    name == "tidytext" ~value - 10,
+    name == "tidyverse" ~value - 10,
+    name == "tidycensus" ~value - 100,
+    name == "tidyimpute" ~value - 90,
+    TRUE ~as.Date(NA)
+  )) %>%
+  mutate(y = case_when(
+    name == "tidyr" ~2,
+    name == "tidytext" ~3,
+    name == "tidyverse" ~4,
+    name == "tidycensus" ~7.2,
+    name == "tidyimpute" ~20.1,
+    TRUE ~NA_real_
+  ))
+
+tidy_date %>%
+  ggplot() +
+  geom_line(aes(value, y = n), lty = "dashed") +
+  geom_point(aes(value, y = n, fill = factor(y)), size = 2.2, pch = 21) +
+  geom_text(aes(x, y, label = name, color = factor(y))) +
+  scale_fill_manual(values = cols, na.value = "black", guide = FALSE) +
+  scale_color_manual(values = cols, na.value = "black", guide = FALSE) +
+  labs(title = "Growth of 'tidy' pre-fixed package names on CRAN by first release-date",
+       subtitle = "Total number of packages",
+       caption = "Source: CRAN",
+       x = NULL, y = NULL) +
+  theme_classic()
+```
+
+```{r}
+gg_date <- gg_date %>%
+  arrange(value) %>%
+  mutate(n = row_number())
+
+gg_date <- gg_date %>%
+  mutate(x = case_when(
+    name == "ggplot2" ~value + 10,
+    name == "GGally" ~value - 10,
+    name == "ggmap" ~value - 10,
+    name == "ggvis" ~value - 30,
+    name == "ggalt" ~value - 160,
+    name == "ggraph" ~value - 200,
+    name == "ggpol" ~value - 190,
+    TRUE ~as.Date(NA)
+  )) %>%
+  mutate(n = as.double(n),
+         y = case_when(
+           name == "ggplot2" ~n + 3,
+           name == "GGally" ~n + 3,
+           name == "ggmap" ~n + 3,
+           name == "ggvis" ~n + 3,
+           name == "ggalt" ~n + 1.5,
+           name == "ggraph" ~n + 0.8,
+           name == "ggpol" ~n + 0.75,
+           TRUE ~NA_real_
+         ))
+
+
+gg_date %>%
+  ggplot() +
+  geom_line(aes(value, y = n), lty = "dashed") +
+  geom_point(aes(value, y = n, fill = factor(y)), size = 2.2, pch = 21) +
+  geom_text(aes(x, y, label = name, color = factor(y))) +
+  scale_fill_manual(values = cols, na.value = "black", guide = FALSE) +
+  scale_color_manual(values = cols, na.value = "black", guide = FALSE) +
+  labs(title = "Growth of 'gg' pre-fixed package names on CRAN by first release-date",
+       subtitle = "Total number of packages",
+       caption = "Source: CRAN",
+       x = NULL, y = NULL) +
+  theme_classic()
+```
