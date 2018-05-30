@@ -1,3 +1,17 @@
 #posts table {
   text-align: left;
 }
+
+code {
+  position: relative;
+  top: -1px;
+  padding: 4px 4px 2px 4px;
+  display: inline-block;
+  line-height: 1;
+  border-radius: 3px;
+  color: #f03c69;
+  background: #eaeaea; }
+
+a code {
+  text-decoration: underline;
+}
