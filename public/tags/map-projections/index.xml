@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Map Projections on Welcome</title>
+    <link>/tags/map-projections/</link>
+    <description>Recent content in Map Projections on Welcome</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 30 May 2018 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/map-projections/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Choosing the Right Center of Projection For Your Map</title>
+      <link>/blog/choosing_the_right_center_of_projection/</link>
+      <pubDate>Wed, 30 May 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/blog/choosing_the_right_center_of_projection/</guid>
+      <description>The following map of Georgia comes from the Washington Posts’ coverage of the 2018 primary elections.
+These kinds of maps - where the center of projection is not based on the feature being mapped - are seen quite often in the Washington Post, New York Times, and other major US news publishers.
+The map at hand shows the state of Georgia - tilted to the left, as though rotated counter-clockwise about its center.</description>
+    </item>
+    
+  </channel>
+</rss>
