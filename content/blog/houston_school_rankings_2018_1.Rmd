@@ -1,0 +1,484 @@
+---
+title: "What The 2018 Children At Risk Data Reveals About Houston Area Schools"
+author: "Luke Smith"
+date: "`r Sys.Date()`"
+tags: [houston, schools]
+description: "Few bright spots shine for the Houston area in the 2018 data."
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : "What The 2018 Children At Risk Data Reveals About Houston Area Schools"
+  description : "Few bright spots shine for the Houston area in the 2018 data."
+  image       : "https://seasmith.github.io/blog/houston_school_report_2018/figure-html/plot_race.png"
+og :
+  image : "https://seasmith.github.io/blog/houston_school_report_2018/figure-html/plot_race.png"
+---
+
+```{r knitr-opts, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_chunk$set(eval=FALSE)
+```
+
+```{r load-deps}
+library(tidyverse)
+library(jsonlite)
+library(extrafont); loadfonts("win", TRUE)
+library(magick)
+library(plotly)
+library(ggrepel)
+library(grid)
+library(lemon)
+```
+
+```{r create-imgs-folder}
+if (dir.exists("houston_school_report_2018/figure-html"))
+```
+
+
+```{r import-from-JSON}
+# http://projects.houstonchronicle.com/schoolreportcard/
+# https://www.houstonchronicle.com/local/education/schoolreportcard/
+
+sch <- fromJSON("~/R/my_blog/_twitter/reportcard/schools.json") %>% as_tibble()
+dis <- fromJSON("~/R/my_blog/_twitter/reportcard/districts.json") %>% as_tibble()
+```
+
+```{r plot-variables}
+grade_order <- c(
+  paste0(unlist(lapply(LETTERS[1:4], rep, 3)), c("+", "", "-")),
+  "F", 
+  NA)
+
+race_labels <- c(
+  percentwhite = "% White",
+  percentasian = "% Asian",
+  percenttwo   = "% Two Races",
+  percentpacisl = "% Pacific Islander",
+  percentamindian = "% American Indian",
+  percenthispanic = "% Hispanic",
+  percentafam = "% Black"
+)
+
+```
+
+```{r aggregated}
+sch <- sch %>%
+  separate(rank, c("rank", "rank_pop")) %>%
+  separate(rank2017, c("rank2017", "rank2017_pop")) %>%
+  separate(rank2016, c("rank2016", "rank2016_pop")) %>%
+  separate(rank2015, c("rank2015", "rank2015_pop")) %>%
+  mutate_at(vars(starts_with("rank"), -contains("_pop")), as.integer) %>%
+  mutate(movement = rank - rank2017) %>%
+  mutate_at(vars(starts_with("percent")), str_replace, "%", "") %>%
+  mutate_at(vars(starts_with("percent")), as.double) %>%
+  mutate(sat = str_remove(sat, " \\(.*"),
+         sat = as.integer(sat),
+         act = str_remove(act, " \\(.*"),
+         act = as.integer(act),
+         grade = factor(grade, grade_order, ordered = TRUE))
+```
+
+```{r quantize-grades}
+minus_1 <- function(x) x - 1L
+
+quant_grades <- sch %>%
+    transmute_at(vars(grade:grade2015), factor, levels = rev(grade_order), ordered = TRUE) %>%
+    transmute_all(as.integer) %>%
+    transmute_all(minus_1)
+
+names(quant_grades) <- paste0("q_", names(quant_grades))
+
+sch <- sch %>%
+  bind_cols(quant_grades)
+```
+
+```{r summarize}
+sch_sum <- sch %>%
+  group_by(district) %>%
+  summarize_at(vars(q_grade:q_grade2015, sat, act), mean, na.rm = TRUE) %>%
+  mutate_at(vars(q_grade:q_grade2015), round) %>%
+  mutate_at(vars(q_grade:q_grade2015), as.integer) %>%
+  arrange(desc(q_grade))
+
+sch_sum2 <- sch %>%
+  group_by(district) %>%
+  summarize_at(vars(enrollment), sum, na.rm = TRUE)
+```
+
+```{r top-20-grades-df}
+districts <- sch %>%
+  group_by(district) %>%
+  summarize_at(vars(q_grade:q_grade2015, sat, act), mean, na.rm = TRUE) %>%
+  arrange(desc(q_grade)) %>%
+  inner_join(sch_sum2, by = "district") %>%
+  arrange(desc(enrollment))
+
+top_20 <-  districts %>%
+  slice(1:20) %>%
+  select(district:q_grade2015) 
+
+top_20 <- top_20 %>%
+  gather(... = -district) %>%
+  mutate(key = case_when(
+    key == "q_grade" ~ 2018L,
+    key == "q_grade2017" ~ 2017L,
+    key == "q_grade2016" ~ 2016L,
+    key == "q_grade2015" ~ 2015L
+  ))
+
+top_20 <- top_20 %>%
+    split(.$district) %>%
+    map(~mutate(.x, mod = coef(lm(value ~ key, data = .x))[[2]])) %>%
+    bind_rows()
+
+top_20_hi <- top_20 %>% filter(mod > 0)
+top_20_lo <- top_20 %>% filter(mod < 0)
+
+
+top_20_grades <- ggplot(mapping = aes(key, value)) +
+  # geom_line(aes(group = district, color = factor(sign(mod)))) +
+  geom_line(aes(group = district), top_20_lo, color = "thistle2") +
+  geom_line(aes(group = district), top_20_hi, color = "thistle4") +
+  # scale_color_manual(guide = FALSE, values = c("thistle2", "thistle4")) +
+  scale_x_continuous(NULL, limits = c(2015, 2020), breaks = 2015:2018) +
+  scale_y_continuous(NULL, limits = c(0, 12), breaks = 0:12, labels = rev(grade_order[-14])) +
+  labs(title = "20 Largest Houston Area School Districts",
+       subtitle = "School District Performance (Average Of All Schools)",
+       caption = "Source: Children At Risk (2018 School Ranking)") +
+  theme_classic(base_size = 10, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text("Lato"),
+        legend.position = c(0.675, 0.245),
+        legend.direction = "horizontal",
+        legend.title = element_text(hjust = 0.5),
+        legend.background = element_rect(color = "gray30"),
+        plot.caption = element_text(color = "gray50"))
+
+top_20_grades <- top_20_grades +
+  geom_text_repel(aes(label = district), filter(top_20, key == 2018),
+                  direction = "y", hjust = 0, nudge_x = 0.5, nudge_y = -0.5,
+                  family = "Lato", size = 3, segment.color = "gray65",
+                  color = "gray40", segment.size = 0.2)
+
+top_20_names <-top_20 %>%
+  filter(key == 2018) %>%
+  arrange(desc(value)) %>%
+  pull(district)
+```
+
+```{r top_20_grades}
+ggsave("top_20_grades.png", top_20_grades, width = 5, height = 7, dpi = 600)
+
+image_read("top_20_grades2.png") %>%
+  image_resize("1344x")
+# ggplotly(line_chart)
+```
+
+```{r not-top-20}
+not_top_20 <- sch %>%
+    group_by(district) %>%
+    summarize_at(vars(q_grade:q_grade2015, sat, act), mean, na.rm = TRUE) %>%
+    arrange(desc(q_grade)) %>%
+    inner_join(sch_sum2, by = "district") %>%
+    arrange(desc(enrollment)) %>%
+    slice(21:87) 
+
+not_top_20 <- not_top_20 %>%
+    gather(... = -district) %>%
+    mutate(key = case_when(
+        key == "q_grade" ~ 2018L,
+        key == "q_grade2017" ~ 2017L,
+        key == "q_grade2016" ~ 2016L,
+        key == "q_grade2015" ~ 2015L
+    )) %>%
+    split(.$district) %>%
+    map(~mutate(.x, mod = coef(lm(value ~ key, data = .x))[[2]])) %>%
+    bind_rows() %>%
+  inner_join(not_top_20 %>% select(district, enrollment), by = "district")
+```
+
+
+```{r article-numbers}
+sch %>%
+    summarize(n = sum(enrollment, na.rm = TRUE))
+# 1304989
+
+top_20_hi %>%
+    distinct(district) %>%
+    inner_join(districts %>% select(district, enrollment), by = "district") %>%
+    summarize(n = sum(enrollment))
+# 112240
+
+not_top_20 %>%
+    filter(mod > 0) %>%
+    distinct(district) %>%
+    nrow()
+# 26
+
+not_top_20 %>%
+    filter(mod > 0) %>%
+    distinct(district, enrollment) %>%
+    summarize(n = sum(enrollment))
+# 92427
+
+not_top_20 %>%
+    filter(mod < 0) %>%
+    distinct(district) %>%
+    nrow()
+# 35
+
+not_top_20 %>%
+    filter(mod < 0) %>%
+    distinct(district, enrollment) %>%
+    summarize(n = sum(enrollment))
+# 145288
+
+not_top_20 %>%
+    filter(is.na(mod)) %>%
+    distinct(district) %>%
+    nrow()
+# 2
+
+not_top_20 %>%
+    filter(is.na(mod)) %>%
+    distinct(district, enrollment) %>%
+    summarize(n = sum(enrollment))
+# 1534
+
+sch %>%
+    mutate(afam = (percentafam * enrollment) / 100,
+           amin = (percentamindian * enrollment) / 100,
+           asia = (percentasian * enrollment) / 100,
+           hisp = (percenthispanic * enrollment) / 100,
+           paci = (percentpacisl * enrollment) / 100,
+           twor = (percenttwo * enrollment) / 100,
+           whit = (percentwhite * enrollment) / 100) %>%
+    select(campus, district, afam:whit) %>%
+    summarize_at(vars(afam:whit), sum, na.rm = TRUE) %>%
+    mutate_all(function(x) (x / 1304989) * 100)
+
+#> # A tibble: 1 x 7
+#>    afam  amin  asia  hisp  paci  twor  whit
+#>   <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
+#> 1  17.2 0.461  6.74  49.5 0.120  1.96  24.0
+
+districts %>%
+    filter(district %in% c("Spring ISD", "Aldine ISD", "Alief ISD", "Pasadena ISD", "Houston ISD")) %>%
+    summarize(n = sum(enrollment))
+# 426945
+```
+
+```{r}
+plot_grade2018 <- sch %>%
+  filter(level == "High school") %>%
+  ggplot(aes(grade, sat)) +
+  geom_point(aes(size = enrollment), position = position_jitter(0.1),
+             pch = 21, color = "gray40", fill = "gray25", alpha = 0.25) +
+  scale_size_area("School Enrollment", labels = scales::comma) +
+  scale_x_discrete(NULL, expand = c(0, 0)) +
+  scale_y_continuous(NULL) +
+  facet_wrap(vars(grade), nrow = 1, scales = "free_x") +
+  guides(size = guide_legend(title.position = "top")) +
+  labs(title = "Houston Area School Performance",
+       subtitle = "SAT Score (School Average) vs. School Grade",
+       caption = "Source: Children At Risk (2018 School Ranking)") +
+  theme_classic(base_size = 12, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = c(0.55, 0.92),
+        legend.direction = "horizontal",
+        legend.title = element_text(hjust = 0.5),
+        legend.background = element_rect(color = "gray30"),
+        plot.caption = element_text(color = "gray50"))
+```
+
+
+```{r plot_grade2018, eval=FALSE}
+ggsave("plot_grade2018.png", plot_grade2018, width = 6, height = 6, dpi = 600)
+
+image_read("plot_grade2018.png") %>%
+  image_resize("1344x")
+```
+
+```{r heat-map_schools}
+# HOUSTON ISD: GRADE VS SAT
+sch %>%
+  filter(district == "Houston ISD") %>%
+  ggplot(aes(grade, sat, size = enrollment)) +
+  geom_point(position = position_jitter(0.1), pch = 21,
+             color = "gray40", fill = "gray25", alpha = 0.25) +
+  scale_size_area("School Enrollment", labels = scales::comma) +
+  scale_x_discrete(NULL, expand = c(0, 0)) +
+  scale_y_continuous(NULL) +
+  theme_classic(base_size = 10, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text("Lato"),
+        legend.position = c(0.675, 0.75),
+        legend.direction = "horizontal",
+        legend.title = element_text(hjust = 0.5),
+        legend.background = element_rect(color = "gray30"),
+        plot.caption = element_text(color = "gray50"))
+  
+
+sch %>%
+    filter(district == "Houston ISD") %>%
+    select(grade) %>%
+    gather(... = grade) %>%
+    count(value) %>%
+    arrange(desc(n)) %>%
+    mutate(n_pct = n / sum(n))
+
+sch %>%
+    filter(district %in% top_20_names) %>%
+    select(campus, enrollment:percentwhite, grade) %>%
+    group_by(grade) %>%
+    summarize(n = n()) %>%
+    mutate(n_pct = n / sum(n)) %>%
+    arrange(desc(grade)) %>%
+    mutate(csum = cumsum(n_pct)) %>%
+    ggplot() +
+    geom_line(aes(as.integer(rev(grade)), csum)) +
+    scale_x_continuous(breaks = 1:13, labels = rev(grade_order[-14])) +
+    theme_classic(base_family = "Lato")
+```
+
+```{r heat-map_schools}
+# School grade heat map
+grade_heat_map <- sch %>%
+  filter(district %in% top_20_names) %>%
+  mutate(district = factor(district, rev(top_20_names), ordered = TRUE)) %>%
+  ggplot(aes(district)) +
+  geom_bar(aes(fill = grade), position = "fill", width = 1) +
+  scale_fill_manual(values = pals::coolwarm(15)[-(7:8)],
+                    "2018 Grade"
+                    ) +
+  scale_y_continuous(NULL, expand = expand_scale(), sec.axis = dup_axis()
+                     # breaks = c(0, 1), labels = scales::percent
+                     ) +
+  scale_x_discrete(NULL, expand = expand_scale()) +
+  coord_flip() +
+  labs(title = "Houston Area School Grades By District",
+       subtitle = "Normalized To Number Of Schools Per District",
+       caption = "Source: Children At Risk (2018 School Ranking)") +
+  guides(fill = guide_legend(direction = "horizontal", label.position = "bottom",
+                             title.position = "top", title.hjust = 0,
+                             keywidth = unit(1, "cm"), nrow = 1)) +
+  # guides(fill = guide_colorbar(direction = "horizontal", label.position = "bottom",
+  #                              title.position = "top",
+  #                              barwidth = unit(1, "cm"))) +
+  theme_classic(base_size = 8, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text("Lato"),
+        legend.position = "top",
+        legend.justification = "left",
+        legend.margin = margin(0,0,0,0),
+        legend.key.width = unit(0, "cm"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x.top = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        legend.title = element_text(hjust = 0.5),
+        plot.caption = element_text(color = "gray50"))
+
+ggsave("grade_heat_map.png", grade_heat_map, width = 4, height = 6, dpi = 600)
+```
+
+```{rheat-map_students}
+# totals <- function(x, y) {
+#   x <- enquo(x)
+#   y <- enquo(y)
+#   
+#     set_names(list(quo((!!x / 100) * !!y)), str_remove(quo_text(x), "percent"))
+# }
+
+students <- sch %>%
+    filter(district %in% top_20_names) %>%
+    select(campus, district, enrollment:percentwhite, grade) %>%
+    mutate(afam = (percentafam / 100) * enrollment,
+           amindian = (percentamindian / 100) * enrollment,
+           asian = (percentasian / 100) * enrollment,
+           hispanic = (percenthispanic / 100) * enrollment,
+           pacisl = (percentpacisl / 100) * enrollment,
+           two = (percenttwo / 100) * enrollment,
+           white = (percentwhite / 100) * enrollment) %>%
+    group_by(district) %>%
+    mutate(enrollment_pct = enrollment / sum(enrollment, na.rm = TRUE)) %>%
+    group_by(district, grade) %>%
+    summarize(enrollment_pct = sum(enrollment_pct, na.rm = TRUE),
+              enrollment = sum(enrollment, na.rm = TRUE),
+              afam = sum(afam),
+              amindian = sum(amindian),
+              asian = sum(asian),
+              hispanic = sum(hispanic),
+              pacisl = sum(pacisl),
+              two = sum(two),
+              white = sum(white),
+              percentafam = afam / sum(enrollment),
+              percentamindian = amindian / sum(enrollment),
+              percentasian = asian / sum(enrollment),
+              percenthispanic = hispanic / sum(enrollment),
+              percentpacisl = pacisl / sum(enrollment),
+              percenttwo = two / sum(enrollment),
+              percentwhite = white / sum(enrollment)) 
+
+students %>%
+  ggplot(aes(factor(district, rev(top_20_names), ordered = TRUE), enrollment_pct)) +
+  geom_col(aes(fill = grade), position = "fill", width = 1) +
+  scale_fill_manual(values = pals::coolwarm(15)[-(7:8)],
+                    "2018 Grade"
+  ) +
+  scale_y_continuous(NULL, expand = expand_scale(), sec.axis = dup_axis()
+                     # breaks = c(0, 1), labels = scales::percent
+  ) +
+  scale_x_discrete(NULL, expand = expand_scale()) +
+  coord_flip() +
+  theme_classic(base_size = 8, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text("Lato"),
+        legend.position = "top",
+        legend.justification = "left",
+        legend.margin = margin(0,0,0,0),
+        legend.key.width = unit(0, "cm"),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x.top = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        legend.title = element_text(hjust = 0.5),
+        plot.caption = element_text(color = "gray50"))
+```
+
+<!-- Mention "High School Performance" rather than just "School Performance" in the -->
+<!-- second graphic. -->
+
+The [2018 Children At Risk](https://texasschoolguide.org/school-rankings/) data reveals a startlingly trend: the declining quality of Houston area school districts.
+
+The 20 largest Houston area school districts enroll nearly 1 million students -- representing 81% of all Houston area enrolled students. 
+
+Since 2015, only 3 of the 20 largest districts have shown signs of improvement.
+
+
+![](figure-html/top_20_grades2.png)
+
+The three districts showing signs of improvement account for a mere 8.6% of all Houston area enrolled students.
+
+Of the school districts not part of the 20 largest, only 26 out of 67 showed signs of improvement -- accounting for 7.1% of all enrolled students. _(NOTE: 2 school districts received no grade and accounted for 0.1% of all enrolled students)_
+
+Improvement in school districts is needed, especially since 10 of the 20 largest districts have a majority of schools graded C+ or below, and 13 of the 20 largest districts have at least one failing school.
+
+![](figure-html/grade_heat_map.png)
+
+In Houston ISD, the problem with failing schools is profound -- 67 of 274 schools (24%) are failing.
+
+However, the situation among the largest 20 districts is the worst at Spring ISD which has the highest rate of failing schools at 33%.  Those failing schools account for an astounding 48% of the district's total enrolled students.
+
+The school grades matter, too. At the school-level, there is an expected relationship between grade and SAT score: the higher the grade, the higher the SAT score.
+
+
+![](figure-html/plot_grade2018.png)
+
+If negative trends in Houston area school districts continue, declines in average SAT score will very likely follow.
+
