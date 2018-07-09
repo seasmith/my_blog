@@ -25,7 +25,7 @@ knitr::opts_chunk$set(eval=FALSE)
 ```{r load-deps}
 library(tidyverse)
 library(jsonlite)
-library(extrafont); loadfonts("win", TRU)E
+library(extrafont); loadfonts("win", TRUE)
 library(magick)
 library(plotly)
 library(ggrepel)
@@ -144,7 +144,7 @@ scores_by_race <- scores_by_race %>%
 ```{r, dpi=300, fig.height=7, fig.width=7, eval=FALSE}
 plot_race <- sch_by_race %>%
   ggplot(aes(value, sat)) +
-  geom_hline(yintercept = 1375, color = "gray50") +
+  geom_hline(yintercept = 1369, color = "gray50") +
   geom_point(aes(size = new_enrollment), 
              pch = 21, color = "gray40", fill = "gray25", alpha = 0.25) +
   geom_smooth(method = "lm", se = FALSE, color = "coral", size = 0.7) +
@@ -287,7 +287,8 @@ students2 %>%
                      # breaks = c(0, 1), labels = scales::percent
   ) +
   scale_x_discrete(NULL, expand = expand_scale()) +
-  scale_fill_viridis_d(direction = -1) +
+  scale_fill_manual(values = pals::coolwarm(15)[-(7:8)]) +
+  # scale_fill_viridis_d(direction = -1) +
   theme_classic(base_size = 8, base_family = "Lato") +
   theme(strip.background = element_blank(),
         strip.text = element_text("Lato"),
@@ -300,14 +301,51 @@ students2 %>%
         plot.caption = element_text(color = "gray50"))
 
 students %>%
-    select(district, grade, percentafam:percentwhite) %>%
-    gather(... = -c(district, grade)) %>%
-    mutate(key = factor(key, rev(race_order), ordered = TRUE)) %>%
-    filter(district == "Houston ISD") %>%
-    ggplot(aes(factor(grade, rev(grade_order), ordered = TRUE), value)) +
-    geom_point() +
-    geom_smooth(method = "lm") +
-    facet_wrap(vars(key), nrow = 1)
+  select(district, grade, percentafam:percentwhite) %>%
+  gather(... = -c(district, grade)) %>%
+  mutate(key = factor(key, rev(race_order), ordered = TRUE)) %>%
+  filter(district == "Houston ISD") %>%
+  ggplot(aes(factor(grade, rev(grade_order), ordered = TRUE), value)) +
+  geom_point(aes(color = key)) +
+  geom_smooth(method = "lm") +
+  scale_color_manual(values = c("steelblue4", "orange2", "steelblue4", "orange2", "steelblue4", "orange2", "steelblue4"),
+                     guide = FALSE) +
+  facet_wrap(vars(key), nrow = 1) +
+  theme_classic(base_size = 8, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text("Lato"),
+        legend.position = "top",
+        # axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        # axis.text.x.top = element_blank(),
+        # axis.text.x.bottom = element_blank(),
+        legend.title = element_text(hjust = 0.5),
+        plot.caption = element_text(color = "gray50"))
+
+
+srd <- students %>%
+  select(district, grade, percentafam:percentwhite) %>%
+  gather(... = -c(district, grade)) %>%
+  mutate(key = factor(key, rev(race_order), ordered = TRUE)) %>%
+  filter(district %in% top_20_names) %>%
+  map(~{
+    ggplot(.x, aes(factor(grade, rev(grade_order), ordered = TRUE), value)) +
+      geom_point(aes(color = key)) +
+      geom_smooth(method = "lm") +
+      scale_color_manual(values = c("steelblue4", "orange2", "steelblue4", "orange2", "steelblue4", "orange2", "steelblue4"),
+                         guide = FALSE) +
+      facet_wrap(vars(key), nrow = 1) +
+      theme_classic(base_size = 8, base_family = "Lato") +
+      theme(strip.background = element_blank(),
+            strip.text = element_text("Lato"),
+            legend.position = "top",
+            axis.ticks = element_blank(),
+            legend.title = element_text(hjust = 0.5),
+            plot.caption = element_text(color = "gray50"))
+  })
+    
+
+
 ```
 SAT performance in Houston has a peculiar correlation with racial groups.
 

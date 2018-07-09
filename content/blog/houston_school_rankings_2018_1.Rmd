@@ -2,7 +2,7 @@
 title: "What The 2018 Children At Risk Data Reveals About Houston Area Schools"
 author: "Luke Smith"
 date: "`r Sys.Date()`"
-tags: [houston, schools]
+tags: [houston, schools, children at risk]
 description: "Few bright spots shine for the Houston area in the 2018 data."
 twitter :
   card    : "summary_large_image"
@@ -10,9 +10,9 @@ twitter :
   creator : "@lksmth"
   title   : "What The 2018 Children At Risk Data Reveals About Houston Area Schools"
   description : "Few bright spots shine for the Houston area in the 2018 data."
-  image       : "https://seasmith.github.io/blog/houston_school_report_2018/figure-html/plot_race.png"
+  image       : "https://seasmith.github.io/blog/houston_school_rankings_2018_1/figure-html/grade_heat_map.png"
 og :
-  image : "https://seasmith.github.io/blog/houston_school_report_2018/figure-html/plot_race.png"
+  image : "https://seasmith.github.io/blog/houston_school_rankings_2018_1/figure-html/grade_heat_map.png"
 ---
 
 ```{r knitr-opts, echo=FALSE, warning=FALSE, message=FALSE}
@@ -42,8 +42,8 @@ if (dir.exists("houston_school_report_2018/figure-html"))
 # http://projects.houstonchronicle.com/schoolreportcard/
 # https://www.houstonchronicle.com/local/education/schoolreportcard/
 
-sch <- fromJSON("~/R/my_blog/_twitter/reportcard/schools.json") %>% as_tibble()
-dis <- fromJSON("~/R/my_blog/_twitter/reportcard/districts.json") %>% as_tibble()
+sch <- fromJSON("~/R/my_blog/_twitter/c_a_r/schools.json") %>% as_tibble()
+dis <- fromJSON("~/R/my_blog/_twitter/c_a_r/districts.json") %>% as_tibble()
 ```
 
 ```{r plot-variables}
@@ -294,6 +294,32 @@ plot_grade2018 <- sch %>%
         legend.title = element_text(hjust = 0.5),
         legend.background = element_rect(color = "gray30"),
         plot.caption = element_text(color = "gray50"))
+
+# SAME PLOT BUT COLOR MAPPED TO SAT PERFORMANCE
+# sch %>%
+#     filter(level == "High school") %>%
+#     ggplot(aes(grade, sat)) +
+#     geom_point(aes(size = enrollment, color = sat >= 1375, fill = sat >= 1375), position = position_jitter(0.1),
+#                pch = 21, alpha = 0.25) +
+#     scale_size_area("School Enrollment", labels = scales::comma) +
+#     scale_x_discrete(NULL, expand = c(0, 0)) +
+#     scale_y_continuous(NULL) +
+#     scale_color_manual(values = c("brown", "steelblue"), guide = FALSE) +
+#     scale_fill_manual(values = c("brown", "steelblue"), guide = FALSE) +
+#     facet_wrap(vars(grade), nrow = 1, scales = "free_x") +
+#     guides(size = guide_legend(title.position = "top")) +
+#     labs(title = "Houston Area School Performance",
+#          subtitle = "SAT Score (School Average) vs. School Grade",
+#          caption = "Source: Children At Risk (2018 School Ranking)") +
+#     theme_classic(base_size = 12, base_family = "Lato") +
+#     theme(strip.background = element_blank(),
+#           strip.text = element_blank(),
+#           axis.ticks.x = element_blank(),
+#           legend.position = c(0.55, 0.92),
+#           legend.direction = "horizontal",
+#           legend.title = element_text(hjust = 0.5),
+#           legend.background = element_rect(color = "gray30"),
+#           plot.caption = element_text(color = "gray50"))
 ```
 
 
@@ -346,7 +372,7 @@ sch %>%
     theme_classic(base_family = "Lato")
 ```
 
-```{r heat-map_schools}
+```{r heat-map_schools-2}
 # School grade heat map
 grade_heat_map <- sch %>%
   filter(district %in% top_20_names) %>%
@@ -387,7 +413,7 @@ grade_heat_map <- sch %>%
 ggsave("grade_heat_map.png", grade_heat_map, width = 4, height = 6, dpi = 600)
 ```
 
-```{rheat-map_students}
+```{r heat-map_students}
 # totals <- function(x, y) {
 #   x <- enquo(x)
 #   y <- enquo(y)
@@ -458,14 +484,14 @@ The [2018 Children At Risk](https://texasschoolguide.org/school-rankings/) data 
 
 The 20 largest Houston area school districts enroll nearly 1 million students -- representing 81% of all Houston area enrolled students. 
 
-Since 2015, only 3 of the 20 largest districts have shown signs of improvement.
+Since 2015, only 3 of the 20 largest districts have shown signs of improvement. That is according to the Children At Risk's <a style="text-decoration:none; color:inherit">C@R</a> school grade -- a measure of overall school quality.
 
 
 ![](figure-html/top_20_grades2.png)
 
 The three districts showing signs of improvement account for a mere 8.6% of all Houston area enrolled students.
 
-Of the school districts not part of the 20 largest, only 26 out of 67 showed signs of improvement -- accounting for 7.1% of all enrolled students. _(NOTE: 2 school districts received no grade and accounted for 0.1% of all enrolled students)_
+Of the school districts not part of the 20 largest, only 26 of 67 showed signs of improvement -- accounting for 7.1% of all enrolled students. _(NOTE: 2 school districts received no grade and accounted for 0.1% of all enrolled students)_
 
 Improvement in school districts is needed, especially since 10 of the 20 largest districts have a majority of schools graded C+ or below, and 13 of the 20 largest districts have at least one failing school.
 
@@ -473,12 +499,14 @@ Improvement in school districts is needed, especially since 10 of the 20 largest
 
 In Houston ISD, the problem with failing schools is profound -- 67 of 274 schools (24%) are failing.
 
-However, the situation among the largest 20 districts is the worst at Spring ISD which has the highest rate of failing schools at 33%.  Those failing schools account for an astounding 48% of the district's total enrolled students.
+However, the situation among the largest 20 districts is the worst in Spring ISD which has the highest rate of failing schools at 33%.  Those failing schools enroll an astounding 48% of the district's total students.
 
 The school grades matter, too. At the school-level, there is an expected relationship between grade and SAT score: the higher the grade, the higher the SAT score.
 
 
 ![](figure-html/plot_grade2018.png)
 
-If negative trends in Houston area school districts continue, declines in average SAT score will very likely follow.
+All but one school with a grade of D- or F failed to reach the Houston area average SAT score of 1369.
+
+If the negative trend in Houston area school districts continues, a decline in average SAT score will very likely follow.
 
