@@ -316,7 +316,7 @@ im_name <- im_monthly %>%
   summarize(Imports = sum(Imports))
 ```
 
-```{r plot_summary, include=FALSE}
+```{r plot_summary, eval=FALSE}
 # Alternate using points instead of vlines to show
 # oil price.
 # NEED TO SUMMARIZE OIL PRICES BY MONTH
@@ -844,6 +844,7 @@ csly <- im_monthly %>%
   pull(change) %>%
   .[!is.na(.)] %>%
   round(3) %>%
+  abs() %>%
   scales::percent()
   # I()
 ```
