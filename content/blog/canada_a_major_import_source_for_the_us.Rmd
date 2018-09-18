@@ -10,9 +10,9 @@ twitter :
   creator : "@lksmth"
   title   : "Canada: A Major Oil Import Source For The US"
   description : "Canada appears to be on the verge of winning a majority of the US's oil import market."
-  image       : "https://seasmith.github.io/blog/canada_a_major_import_source_for_the_us/figure-html/canad-v-all-1.png"
+  image       : "https://seasmith.github.io/blog/canada_a_major_import_source_for_the_us_files/figure-html/canad-v-all-1.png"
 og :
-  image : "https://seasmith.github.io/blog/canada_a_major_import_source_for_the_us/figure-html/canad-v-all-1.png"
+  image : "https://seasmith.github.io/blog/canada_a_major_import_source_for_the_us_files/figure-html/canad-v-all-1.png"
 ---
 
 ```{r setup_std, include=FALSE}
