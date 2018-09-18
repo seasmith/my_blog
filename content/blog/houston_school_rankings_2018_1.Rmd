@@ -163,7 +163,7 @@ top_20_grades <- top_20_grades +
                   family = "Lato", size = 3, segment.color = "gray65",
                   color = "gray40", segment.size = 0.2)
 
-top_20_names <-top_20 %>%
+top_20_names <- top_20 %>%
   filter(key == 2018) %>%
   arrange(desc(value)) %>%
   pull(district)

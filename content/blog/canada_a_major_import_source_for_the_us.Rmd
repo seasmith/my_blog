@@ -1,0 +1,901 @@
+---
+title  : "Canada: A Major Oil Import Source For The US"
+author : "Luke Smith"
+date   : "`r Sys.Date()`"
+tags   : [r, oil, oil and gas, imports, canada, united states]
+description: "Canada appears to be on the verge of winning a majority of the US's oil import market."
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : "Canada: A Major Oil Import Source For The US"
+  description : "Canada appears to be on the verge of winning a majority of the US's oil import market."
+  image       : "https://seasmith.github.io/blog/canada_a_major_import_source_for_the_us/figure-html/canad-v-all-1.png"
+og :
+  image : "https://seasmith.github.io/blog/canada_a_major_import_source_for_the_us/figure-html/canad-v-all-1.png"
+---
+
+```{r setup_std, include=FALSE}
+
+# ---- Library_Tidyverse_Setup
+library(tidyverse)
+library(lubridate)
+
+# ---- Library_ploting_Setup
+library(ggalt)
+library(scales)
+library(extrafont); loadfonts("win", quiet = TRUE)
+library(ggrepel)
+
+# ---- Library_Web_Setup
+library(rvest)
+library(jsonlite)
+
+# ---- Library_Reporting_Setup
+library(knitr)
+library(kableExtra)
+
+
+
+# ---- Opts_Setup
+knitr::opts_chunk$set(echo =  FALSE)
+knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(message    = FALSE)
+knitr::opts_chunk$set(warning    = FALSE)
+
+
+
+# ---- R_Options_Setup
+org_scipen <- getOption("scipen")
+options(scipen = 100)
+
+org_digits <- getOption("digits")
+options(digits = 2)
+
+
+
+# ---- knitr_Options_Setup
+org_inline <- knit_hooks$get("inline")
+org_plot   <- knit_hooks$get("plot")
+
+
+
+# ---- Hooks_Setup
+
+knit_hooks$set(inline = function(x) {
+  if (is.numeric(x) | is.integer(x)) return(formatC(x, format = "d", big.mark = ",")) else
+    if (is.character(x)) return(stringr::str_to_title(x)) else
+      return(x)
+})
+
+mod_inline <- knit_hooks$get("inline")
+
+
+
+# ---- Extra_Function_Setup
+# -- Find days in a year
+days_in_year <- function(date) {
+  c(366, 365)[c(leap <- lubridate::leap_year(date), !leap)]
+}
+
+# -- Control how percentages are formatted
+my_percent <- function(x, i = 1) {
+  sprintf(sprintf("%s%s%s", "%.", i, "f%%"), x * 100)
+}
+
+# -- Convert listified JSON data into a nested tibble
+to_tibble <- function(x) {
+  isdf  <- unname(which(unlist(map(x, is.data.frame))))
+  isndf <- seq_along(x)[-isdf]
+  tbbl  <- add_column(bind_cols(x[isndf]), x[isdf])
+  names(tbbl)[isdf] <- names(x)[isdf]
+  names(tbbl)[isndf] <- names(x)[isndf]
+  return(tbbl)
+}
+
+# -- Source and return only the .$value
+source_value <- function(file) {
+  stopifnot(file.exists(file))
+  value <- source(file, echo = FALSE)
+  value <- value["value"][[1]]
+}
+
+# -- Capitalize
+capitalize <- function(string) {
+  substr(string, 1, 1) <- toupper(substr(string, 1, 1))
+  string
+}
+
+# -- Default theme
+theme_default <- function(text_size = 16) {
+  theme_minimal(base_family = "Lato") +
+    theme(panel.grid.minor = element_blank(),
+          text = element_text(family = "Lato", size = text_size),
+          complete = TRUE)
+}
+
+# ---- Color_Setup ----
+# Plot set up
+my_red        <- "#ce1141"
+my_red2       <- "#a33c56"
+# my_verylight_red <- 
+my_lightred <- "#fabdcd"
+my_darkred  <- "#870b2b"
+my_blue   <- "#4fa8ff"
+my_blue2  <- "#1141ce"
+my_purple <- "#8E3694"
+my_lightgreen <- "#198f5a"
+my_lightgreen_2 <- "#329b6c"
+my_lightgreen_3 <- "#4ca87e"
+my_lightgreen_4 <- "#66b491"
+my_verylight_green   <- "#e5f2ec"
+my_verylight_green_2 <- "#cce6da"
+my_verylight_green_3 <- "#b2d9c8"
+my_green   <- "#008348"
+my_green_2 <- "#007540"
+my_green_3 <- "#006839"
+my_green_4 <- "#005b32"
+my_green_5 <- "#004e2b"
+my_green_6 <- "#004124"
+my_darkgreen <- "#00341c"
+my_darkgreen_2 <- "#002715"
+my_darkgreen_3 <- "#001a0e"
+my_orange  <- "#e15c39"
+my_orange2 <- "#834800"
+
+
+```
+
+```{r setup_extra, include=FALSE}
+library(networkD3)
+library(zeallot)
+library(zoo)
+library(magrittr)
+library(cowplot)
+library(magick)
+
+tmp_dir <- tempdir()
+```
+
+
+
+```{r import_data, include=FALSE, eval=FALSE}
+api <- getOption("api_key_eia")
+
+base_category <- "http://api.eia.gov/category/?api_key="
+q_category    <- "&category_id="
+
+by_origin <- 1292191
+
+# Read:
+# - "Crude Oil Imports"
+#   - "By Origin"
+
+main <- paste0(base_category, api, q_category, by_origin) %>%
+  read_html() %>%
+  html_text() %>%
+  fromJSON() %>%
+  .$category %>%
+  .$childcategories %>%
+  as_tibble()
+
+# Exclude these category_id's
+excluded <- c(1292261:1292269)
+
+# Filter out the excluded
+main <- main %>%
+  filter(!(category_id %in% excluded))
+
+urls <- paste0(base_category, api, q_category, main$category_id)
+
+fetch_series_meta <- function(x) {
+  h <- read_html(x)
+  h <- html_text(h)
+  h <- fromJSON(h)
+  k <- as_tibble(h$category$childseries)
+  k <- add_column(k,
+                  Category = h$category$category_id)
+  return(k)
+}
+
+im_meta <- urls %>%
+  map(fetch_series_meta) %>%
+  reduce(function(...) union_all(...))
+
+# Add crude type column
+im_meta <- im_meta %>% mutate(type = str_replace(name, "Imports of ", ""),
+                              type = str_replace(type, " (of crude oil|crude oil) .*", ""))
+
+id_category <- "http://api.eia.gov/series/?api_key="
+q_series    <- "&series_id="
+
+# Assemble series urls
+urls <- paste0(id_category, api, q_series, im_meta$series_id)
+
+# Fetch series by individual url
+fetch_series_data <- function(x) {
+  h <- read_html(x)
+  h <- html_text(h)
+  h <- fromJSON(h)
+  k <- as_tibble(h$series$data[[1]])
+  names(k) <- c("Year", "Imports")
+  k <- add_column(k,
+                  Frequency = h$series$f,
+                  Series = h$series$series_id)
+  return(k)
+}
+
+# Fetch series data
+im_data <- urls %>%
+  map(fetch_series_data) %>%
+  reduce(function(...) union_all(...))
+
+# Join with other meta information to get
+# individual country names
+im_data <- im_data %>%
+  left_join(im_meta, by = c("Series" = "series_id")) %>%
+  select(-name) %>%
+  mutate(Category = as.integer(Category)) %>%
+  left_join(main, by = c("Category" = "category_id"))
+
+im_data <- im_data %>% mutate(Imports = as.integer(Imports))
+
+# Split into annual and monthly
+c(im_annual, im_monthly) %<-% {im_data %>% split(.$Frequency)}
+
+# Convert Year into type date
+im_monthly <- im_monthly %>%
+  mutate(date = as.Date(paste0(gsub("(\\w{4})(\\w{2})",
+                                    "\\1-\\2", Year), "-01"),
+                        format = "%Y-%m-%d"))
+```
+
+```{r wrangle_data, include=FALSE, eval=FALSE}
+im_monthly <- im_monthly %>%
+  select(-Year, -(Frequency:Category)) %>%
+  rename(Date = date)
+```
+
+```{r other_imports_to_consider, include=FALSE, eval=FALSE}
+exports_by_destination_by_product <- 319767
+exports_by_export_area_by_product <- 316159
+
+imports_by_percent_by_api_gravity <- 330514
+```
+
+```{r save_data, include=FALSE, eval=FALSE}
+new_dir <- "C:/Users/Luke/R/misc/oil/US/imports"
+if (!dir.exists(new_dir)) dir.create(new_dir)
+
+save(im_meta, file = paste0(new_dir, "/im_meta.RData"))
+save(im_data, file = paste0(new_dir, "/im_data.RData"))
+save(im_monthly, file = paste0(new_dir, "/im_monthly.RData"))
+save(im_annual, file = paste0(new_dir, "/im_annual.RData"))
+```
+
+```{r import_data_2, include=FALSE}
+new_dir <- "C:/Users/Luke/R/misc/oil/US/imports"
+# new_dir <- "C:/Users/Luke/R/misc/oil/US/imports"
+load(paste0(new_dir, "/im_monthly.RData"))
+```
+
+
+```{r setup_plots, include=FALSE}
+# Colors for the five crude types:
+my_colors <- c("#984807", "#e15c39", "#008348", "#4c7093", "#d6a300")
+
+# Oil price
+# MUST DOWNLOAD AND IMPORT ACTUAL OIL PRICES!
+oil_price <- tibble(Date  = as.Date(c("2015-01-01", "2016-02-01")),
+                    Price = c(47.22, 30.32),
+                    name = "World",
+                    pin_date = as.Date(c("2012-04-01", "2012-04-01")),
+                    pin_imports = c(9.75, 9.5),
+                    pin_text = paste0("= oil at $", c(47.22, 30.32)))
+```
+
+
+Last year, my [exploration into US imports of Canadian oil](http://seasmith.github.io/blog/us_oil_imports_a_tale_of_one_country/) revealed both Canada's dominance and growth as an import source.
+
+One year later, Canada remains the top source of US oil imports and is poised to continue to grow its market share.
+
+
+```{r prep_summary, include=FALSE}
+# Aggregated types and countries (TOTAL IMPORTS)
+im_total <- im_monthly %>%
+  filter(type != "all grades") %>%
+  mutate(Imports = Imports / days_in_month(Date)) %>%
+  group_by(Date) %>%
+  summarize(Imports = sum(Imports))
+
+# Aggregate types; individual countries
+im_name <- im_monthly %>%
+  filter(type != "all grades") %>%
+  mutate(Imports = Imports / days_in_month(Date)) %>%
+  group_by(Date, name) %>%
+  summarize(Imports = sum(Imports))
+```
+
+```{r plot_summary, include=FALSE}
+# Alternate using points instead of vlines to show
+# oil price.
+# NEED TO SUMMARIZE OIL PRICES BY MONTH
+# IN ORDER FOR THE POINTS TO INTERSECT
+# WITH THE LINE.
+oil_price <- oil_price %>%
+  mutate(ym = as.yearmon(Date)) %>%
+  left_join(im_total %>%
+              mutate(ym = as.yearmon(Date)) %>%
+              select(-Date),
+            by = "ym") %>%
+  select(-ym)
+
+plot_imports <- im_total %>%
+  mutate(name = "World") %>%
+  ggplot() +
+  geom_line(aes(Date, Imports / 1000), size = 0.6) +
+  geom_point(data = oil_price,
+             aes(Date, Imports / 1000,
+                 fill = factor(Date)),
+             size = 3,
+             pch = 21) +
+  geom_point(data = oil_price,
+             aes(pin_date, pin_imports,
+                 fill = factor(Date)),
+             size = 3,
+             pch = 21) +
+  geom_text(data = oil_price,
+            aes(pin_date, pin_imports,
+                label = pin_text),
+            nudge_x = 505) +
+  scale_fill_manual(values = c("orange", "red")) +
+  scale_x_date(NULL, expand = expand_scale()) +
+  scale_y_continuous(NULL, expand = c(0.01, 0.01)) +
+  guides(fill  = FALSE) +
+  labs(title = paste0("No More Oil Import Growth"),
+       subtitle = paste0("US Oil Imports (mbpd)"),
+       y = "Imports (mbpd)") +
+  theme_classic(base_size = 11, base_family = "Lato")
+
+ggsave(plot_imports, file = f_imports <- "~/R/my_blog/_draft/us-canada/plot_imports.png",
+       width = 5, height = 7, dpi = 600)
+
+f_imports %>%
+  image_read() %>%
+  image_resize("1344x")
+```
+
+```{r prep_sankey, include=FALSE}
+# Days in data range; for dividing total oil imports
+days_in_range <- im_monthly$Date %>%
+  range() %>%
+  {((.[2] + days_in_month(.[2]) - 1) - .[1]) + 1} %>%
+  as.integer()
+
+
+# Summarize imports by `name` (country) and `type`
+type_name <- im_monthly %>%
+  filter(type != "all grades") %>%
+  mutate(Imports = Imports * 1000) %>%
+  group_by(type, name) %>%
+  summarize(Imports = sum(Imports)) %>%
+  ungroup()
+
+# Filter to find the top 10 overall producers (of all types)
+name_top_10 <- type_name %>%
+  group_by(name) %>%
+  summarize(Imports = sum(Imports)) %>%
+  arrange(desc(Imports)) %>%
+  filter(row_number() <= 10)
+
+# Use top 10 to find their production by type; removing
+# all others
+type_name_top_10 <- type_name %>%
+  filter(name %in% name_top_10$name) %>%
+  rename(from = type, to = name) %>%
+  mutate_at(vars(to, from), str_to_title)
+
+# Place all others that are not in top 10 here (imports
+# by type)
+type_name_all_others <- type_name %>%
+  filter(!(name %in% name_top_10$name)) %>%
+  group_by(type) %>%
+  summarize(Imports = sum(Imports)) %>%
+  ungroup() %>%
+  add_column(to = "All Others") %>%
+  rename(from = type) %>%
+  mutate_at(vars(to, from), str_to_title)
+
+# Summarize to `Imports` by `type`; will show flow from
+# all production to individual crude types
+type_all <- type_name %>%
+  group_by(type) %>%
+  summarize(Imports = sum(Imports)) %>%
+  ungroup() %>%
+  add_column(from = "Imports per day 2009 to June 2017") %>%
+  rename(to = type) %>%
+  mutate_at(vars(to, from), function(x) case_when(
+    grepl("2009 to June 2018", x) ~ x,
+    TRUE                         ~ str_to_title(x)))
+
+# Convert barrels to barrels per day by dividing total
+# oil imports by number of days in range
+type_all %<>% mutate(Imports = Imports / days_in_range)
+type_name_top_10 %<>% mutate(Imports = Imports / days_in_range)
+type_name_all_others %<>% mutate(Imports = Imports / days_in_range)
+
+# Create empty list to hold:
+#   * links
+#   * nodes
+#   * encoding
+im_sankey <- list()
+
+# Create `from`/`to` links
+im_sankey$links <- type_all %>%
+  bind_rows(type_name_top_10) %>%
+  bind_rows(type_name_all_others)
+
+# Concatenate all nodes in order
+im_sankey$nodes <- im_sankey$links %>%
+{c(.$from, .$to)} %>%
+  unique() %>%
+  tibble(name = .)
+
+# Encode all nodes (using base-0) for mapping
+im_sankey$encoding <- im_sankey$nodes %>%
+  add_column(encoding_to = seq_len(nrow(im_sankey$nodes)) - 1)
+
+# Add encodings to the links
+im_sankey$links <- im_sankey$links %>%
+  left_join(im_sankey$encoding, by = c("to" = "name")) %>%
+  left_join(im_sankey$encoding %>%
+              rename(encoding_from = encoding_to),
+            by = c("from" = "name"))
+
+# Assign group id's for the nodes; controls coloring
+im_sankey$nodes <- im_sankey$nodes %>%
+  add_column(id = c("total",
+                    rep("type", 5),
+                    rep("operator", 11)))
+```
+
+```{r prep_sankey_2009, include=FALSE}
+days_in_range_2009 <- im_monthly %>%
+  filter(year(Date) == 2009) %>%
+  distinct(Date) %>%
+  summarize(days = sum(days_in_month(Date))) %>%
+  pull(days)
+
+# Summarize imports by `name` (country) and `type`
+type_name_2009 <- im_monthly %>%
+  filter(type != "all grades") %>%
+  filter(year(Date) == 2009) %>%
+  mutate(Imports = Imports * 1000) %>%
+  group_by(type, name) %>%
+  summarize(Imports = sum(Imports)) %>%
+  ungroup()
+
+# Use top 10 to find their production by type; removing
+# all others
+type_name_2009_top_10 <- type_name_2009 %>%
+  filter(name %in% name_top_10$name) %>%
+  rename(from = type, to = name) %>%
+  mutate_at(vars(to, from), str_to_title)
+
+# Place all others that are not in top 10 here (imports
+# by type)
+type_name_2009_all_others <- type_name_2009 %>%
+  filter(!(name %in% name_top_10$name)) %>%
+  group_by(type) %>%
+  summarize(Imports = sum(Imports)) %>%
+  ungroup() %>%
+  add_column(to = "All Others") %>%
+  rename(from = type) %>%
+  mutate_at(vars(to, from), str_to_title)
+
+# Summarize to `Imports` by `type`; will show flow from
+# all production to individual crude types
+type_all_2009 <- type_name_2009 %>%
+  group_by(type) %>%
+  summarize(Imports = sum(Imports)) %>%
+  ungroup() %>%
+  add_column(from = "Imports 2009") %>%
+  rename(to = type) %>%
+  mutate_at(vars(to, from), str_to_title)
+
+# Convert barrels to barrels per day by dividing total
+# oil imports by number of days in range
+type_all_2009 %<>% mutate(Imports = Imports / days_in_range_2009)
+type_name_2009_top_10 %<>% mutate(Imports = Imports / days_in_range_2009)
+type_name_2009_all_others %<>% mutate(Imports = Imports / days_in_range_2009)
+
+
+# Create empty list to hold:
+#   * links
+#   * nodes
+#   * encoding
+im_sankey_2009 <- list()
+
+# Create `from`/`to` links
+im_sankey_2009$links <- type_all_2009 %>%
+  bind_rows(type_name_2009_top_10) %>%
+  bind_rows(type_name_2009_all_others)
+
+# Concatenate all nodes in order
+im_sankey_2009$nodes <- im_sankey_2009$links %>%
+{c(.$from, .$to)} %>%
+  unique() %>%
+  tibble(name = .)
+
+# Encode all nodes (using base-0) for mapping
+im_sankey_2009$encoding <- im_sankey_2009$nodes %>%
+  add_column(encoding_to = seq_len(nrow(im_sankey_2009$nodes)) - 1)
+
+# Add encodings to the links
+im_sankey_2009$links <- im_sankey_2009$links %>%
+  left_join(im_sankey_2009$encoding, by = c("to" = "name")) %>%
+  left_join(im_sankey_2009$encoding %>%
+              rename(encoding_from = encoding_to),
+            by = c("from" = "name"))
+
+# Assign group id's for the nodes; controls coloring
+im_sankey_2009$nodes <- im_sankey_2009$nodes %>%
+  add_column(id = c("total",
+                    rep("type", 5),
+                    rep("operator", 11)))
+```
+
+```{r prep_sankey_2018, include=FALSE}
+days_in_range_2018 <- im_monthly %>%
+  filter(year(Date) == 2018) %>%
+  distinct(Date) %>%
+  summarize(days = sum(days_in_month(Date))) %>%
+  pull(days)
+
+# Summarize imports by `name` (country) and `type`
+type_name_2018 <- im_monthly %>%
+  filter(type != "all grades") %>%
+  filter(year(Date) == 2018) %>%
+  mutate(Imports = Imports * 1000) %>%
+  group_by(type, name) %>%
+  summarize(Imports = sum(Imports)) %>%
+  ungroup()
+
+# Use top 10 to find their production by type; removing
+# all others
+type_name_2018_top_10 <- type_name_2018 %>%
+  filter(name %in% name_top_10$name) %>%
+  rename(from = type, to = name) %>%
+  mutate_at(vars(to, from), str_to_title)
+
+# Place all others that are not in top 10 here (imports
+# by type)
+type_name_2018_all_others <- type_name_2018 %>%
+  filter(!(name %in% name_top_10$name)) %>%
+  group_by(type) %>%
+  summarize(Imports = sum(Imports)) %>%
+  ungroup() %>%
+  add_column(to = "All Others") %>%
+  rename(from = type) %>%
+  mutate_at(vars(to, from), str_to_title)
+
+# Summarize to `Imports` by `type`; will show flow from
+# all production to individual crude types
+type_all_2018 <- type_name_2018 %>%
+  group_by(type) %>%
+  summarize(Imports = sum(Imports)) %>%
+  ungroup() %>%
+  add_column(from = "Projected 2018 Imports") %>%
+  rename(to = type) %>%
+  mutate_at(vars(to, from), str_to_title)
+
+# Convert barrels to barrels per day by dividing total
+# oil imports by number of days in range
+type_all_2018 %<>% mutate(Imports = Imports / days_in_range_2018)
+type_name_2018_top_10 %<>% mutate(Imports = Imports / days_in_range_2018)
+type_name_2018_all_others %<>% mutate(Imports = Imports / days_in_range_2018)
+
+
+# Create empty list to hold:
+#   * links
+#   * nodes
+#   * encoding
+im_sankey_2018 <- list()
+
+# Create `from`/`to` links
+im_sankey_2018$links <- type_all_2018 %>%
+  bind_rows(type_name_2018_top_10) %>%
+  bind_rows(type_name_2018_all_others)
+
+# Concatenate all nodes in order
+im_sankey_2018$nodes <- im_sankey_2018$links %>%
+{c(.$from, .$to)} %>%
+  unique() %>%
+  tibble(name = .)
+
+# Encode all nodes (using base-0) for mapping
+im_sankey_2018$encoding <- im_sankey_2018$nodes %>%
+  add_column(encoding_to = seq_len(nrow(im_sankey_2018$nodes)) - 1)
+
+# Add encodings to the links
+im_sankey_2018$links <- im_sankey_2018$links %>%
+  left_join(im_sankey_2018$encoding, by = c("to" = "name")) %>%
+  left_join(im_sankey_2018$encoding %>%
+              rename(encoding_from = encoding_to),
+            by = c("from" = "name"))
+
+# Assign group id's for the nodes; controls coloring
+im_sankey_2018$nodes <- im_sankey_2018$nodes %>%
+  add_column(id = c("total",
+                    rep("type", 5),
+                    rep("operator", 11)))
+```
+
+```{r canada_summary, include=FALSE}
+canada_2009 <- im_monthly %>%
+  filter(name == "Canada" & year(Date) == 2009 & type != "all grades") %>%
+  summarize(Imports = sum(Imports)) %>%
+  mutate(Imports = Imports / days_in_range_2009) %$%
+  Imports
+
+canada_2018 <- im_monthly %>%
+  filter(name == "Canada" & year(Date) == 2018 & type != "all grades") %>%
+  summarize(Imports = sum(Imports)) %>%
+  mutate(Imports = Imports / days_in_range_2018) %$%
+  Imports
+
+canada_share_2018 <- im_monthly %>%
+  filter(name == "Canada" & year(Date) == 2018 & type != "all grades") %>%
+  group_by(type) %>%
+  summarize(Imports = sum(Imports)) %>%
+  mutate(share = Imports / sum(Imports))
+
+canada_heavy_2018 <- sum(canada_share_2018$share[grepl("heavy", canada_share_2018$type)])
+```
+
+
+```{r plot-by-type-name, fig.height=9}
+theme_set(theme_default())
+
+# Type; aggregated all countries
+p_type_agg <- im_monthly %>%
+  filter(type != "all grades") %>%
+  mutate(Imports = Imports / days_in_month(Date)) %>%
+  group_by(type, Date) %>%
+  summarize(Imports = sum(Imports)) %>%
+  ggplot() +
+  geom_line(aes(Date, Imports / 1000,
+                color = type)) +
+  scale_y_continuous(labels = comma,
+                     breaks = c(0, 2, 4)) +
+  scale_x_date(breaks = as.Date(c("2010-01-01", "2018-01-01")),
+               labels = lubridate::year) +
+  scale_color_manual(values = my_colors) +
+  facet_wrap(~type, labeller = labeller(.default = capitalize), ncol = 1) +
+  labs(subtitle = "Combined imports from the world",
+       y = NULL,
+       x = NULL) +
+  guides(color = FALSE) +
+  theme_default(16)
+
+ggsave(f_type_agg <- tempfile("p_type_agg", tmp_dir, ".png"), p_type_agg,
+       width = 4, height = 12, dpi = 600)
+
+type_ind_labs <- tibble(name = "Canada", type = "heavy sour", Date = as.Date("2014-01-01"), Imports = 2200)
+
+# Canada w/ alpha and size
+p_type_ind <- im_monthly %>%
+  filter(type != "all grades") %>%
+  mutate(Imports = Imports / days_in_month(Date)) %>%
+  group_by(type, Date, name) %>%
+  summarize(Imports = sum(Imports)) %>%
+  ggplot(aes(Date, Imports / 1000,
+             color = type, group = name)) +
+  geom_line(aes(size  = name == "Canada",
+                alpha = name == "Canada")) +
+  geom_text(aes(label = name), data = type_ind_labs, size = 4.6) +
+  scale_y_continuous(labels = comma,
+                     breaks = c(0, 1, 2)) +
+  scale_x_date(NULL,
+               breaks = as.Date(c("2010-01-01", "2018-01-01")),
+               labels = lubridate::year) +
+  scale_color_manual(values = my_colors) +
+  scale_size_discrete(range = c(0.3, 1)) +
+  scale_alpha_discrete(range = c(0.7, 1)) +
+  facet_wrap(~type, labeller = labeller(.default = capitalize), ncol = 1) +
+  labs(subtitle = "Imports from individual countries",
+       y = NULL,
+       x = NULL) +
+  guides(color = FALSE,
+         size  = FALSE,
+         alpha = FALSE) +
+  theme_default(16)
+
+ggsave(f_type_ind <- tempfile("p_type_ind", tmp_dir, ".png"), p_type_ind,
+       width = 4, height = 12, dpi = 600)
+
+
+comb_plot <- f_type_agg %>%
+    image_read() %>%
+    image_join(
+        f_type_ind %>%
+            image_read()
+    ) %>%
+    image_append()
+
+comb_plot_title <- image_blank(image_info(comb_plot)$width, 250, "white") %>%
+  image_annotate("Heavy sour dominates Canadian oil exports to the US",
+                 size = 200, color = "black", font = "Lato",
+                 location = geometry_point(5, 5))
+
+comb_plot_subtitle <- image_blank(image_info(comb_plot)$width, 200, "white") %>%
+  image_annotate("Imports (mbpd)",
+                 size = 150, color = "black", font = "Lato",
+                 location = geometry_point(5, 5))
+
+comb_plot_title %>%
+  image_join(comb_plot_subtitle) %>%
+  image_join(comb_plot) %>%
+  image_append(TRUE) %>%
+  image_join(
+    image_blank(image_info(.)$width, 105, "white") %>%
+      image_annotate("Source: US EIA",
+                     size = 100, color = "gray50", font = "Lato",
+                     location = geometry_point(4095, 5))
+  ) %>%
+  image_append(TRUE) %>%
+  image_resize("1344x")
+```
+
+Canadian oil makes up nearly a majority of US oil imports in 2018, at 47% of all imports.
+
+In May 2018, the US imported 3.87 mpbd from Canada while importing 3.96 mpbd from the rest of the world combined -- a difference of only 91,000 barrels per day.
+
+```{r canad-v-all}
+top_ten_2018 <- im_monthly %>%
+  filter(between(Date, as.Date("2018-01-01"), as.Date("2018-12-31"))) %>%
+  filter(type == "all grades") %>%
+  group_by(name) %>%
+  summarize(Imports = sum(Imports, na.rm = TRUE)) %>%
+  arrange(desc(Imports)) %>%
+  slice(1:10) %>%
+  pull("name")
+
+can_v_all <- im_monthly %>%
+  filter(type != "all grades") %>%
+  mutate(Imports = Imports / days_in_month(Date)) %>%
+  group_by(is_canada = name == "Canada", Date) %>%
+  summarize(Imports = sum(Imports, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(is_canada = if_else(is_canada, "Canada", "All Others"))
+
+cva_labs <- can_v_all %>%
+  filter(Date == max(Date)) %>%
+  mutate(Date = Date + 520)
+
+p_cva <- can_v_all %>%
+  ggplot(aes(Date, Imports / 1000, color = is_canada)) +
+  geom_line() +
+  geom_text_repel(aes(label = is_canada), data = cva_labs,
+                  hjust = 0, direction = "y", seed = 4) +
+  scale_color_manual(values = c("steelblue", "firebrick"), guide = FALSE) +
+  scale_x_date(NULL, expand = expand_scale(), labels = c(2010, 2018),
+               breaks = as.Date(c("2010-01-01", "2018-01-01")),
+               limits = c(min(can_v_all$Date), max(cva_labs$Date))) +
+  scale_y_continuous(NULL, labels = scales::comma) +
+  # theme_classic(base_size = 15, base_family = "Lato")
+  theme_default(13) +
+  theme(panel.grid.minor = element_blank())
+
+ggsave(f_cva <- tempfile("cva", tmp_dir, ".png"), p_cva,
+       width = 5, height = 5, dpi = 600)
+
+f_cva %>%
+  image_read() %>%
+  image_join(
+    image_blank(image_info(.)$width, 140, "white") %>%
+      image_annotate("Imports (mbpd)",
+                     color = "black", font = "Lato", size = 90,
+                     location = geometry_point(5, 5))
+    , .
+  ) %>%
+  image_append(stack = TRUE) %>%
+  image_join(
+    image_blank(image_info(.)$width, 155, "white") %>%
+      image_annotate("US Oil Imports: Canada Vs. Rest Of The World",
+                     color = "black", font = "Lato", size = 110,
+                     location = geometry_point(5, 5))
+    , .
+  ) %>%
+  image_append(stack = TRUE) %>%
+  image_join(
+    image_blank(image_info(.)$width, 105, "white") %>%
+      image_annotate("Source: US EIA",
+                     size = 90, color = "gray50", font = "Lato",
+                     location = geometry_point(2350, 5))
+  ) %>%
+  image_append(TRUE) %>%
+  image_resize("1344x")
+```
+
+
+```{r, eval=FALSE}
+im_monthly %>%
+  filter(type != "all grades") %>%
+  mutate(Imports = Imports / days_in_month(Date)) %>%
+  group_by(is_canada = name == "Canada", Date) %>%
+  summarize(Imports = sum(Imports, na.rm = TRUE)) %>%
+  ungroup() %>%
+  filter(year(Date) == 2018) %>%
+  spread("is_canada", Imports) %>%
+  mutate(diff = `TRUE` - `FALSE`)
+```
+
+```{r}
+# csly = change since last year
+csly <- im_monthly %>%
+  filter(grepl(paste0(top_ten_2018, collapse = "|"), name)) %>%
+  filter(type == "all grades") %>%
+  filter(between(lubridate::year(Date), 2017L, 2018L)) %>%
+  filter(between(lubridate::month(Date), 1L, 6L)) %>%
+  group_by(year = lubridate::year(Date)) %>%
+  summarize(Imports = sum(Imports, na.rm = TRUE)) %>%
+  mutate(change = (Imports / lag(Imports)) - 1) %>%
+  pull(change) %>%
+  .[!is.na(.)] %>%
+  round(3) %>%
+  scales::percent()
+  # I()
+```
+
+Total US imports for the first six months of 2018 are down `r csly` compared to the first six months of 2017.
+
+### US Oil Imports: 2009 & 2018
+#### Imports By Type And Country (Top 10 US Import Sources And "All Others")
+```{r plot_sankey_2009}
+scale_total <- type_name %>% summarize(Imports = sum(Imports))
+scale_2009 <- type_name_2009 %>% summarize(Imports = sum(Imports))
+
+scale_2018 <- type_name_2018 %>% summarize(Imports = sum(Imports))
+
+scale_2018 <- ((scale_2018$Imports * (12/6)) / scale_2009$Imports)
+
+scale_2009 <- 1
+
+# Make the plot
+sankey <- sankeyNetwork(Links = im_sankey_2009$links,
+                        Nodes = im_sankey_2009$nodes,
+                        Source = "encoding_from",
+                        Target = "encoding_to",
+                        Value  = "Imports",
+                        NodeID = "name",
+                        NodeGroup = "id",
+                        units     = "bpd",
+                        colourScale = JS("d3.scaleOrdinal(['#4c7093', '#e15c39', '#008348'])"),
+                        fontSize   = 16,
+                        fontFamily = "Open Sans",
+                        nodeWidth  = 20,
+                        height = (672 / 2) * scale_2009)
+
+sankey
+```
+
+```{r plot_sankey_2018}
+# Make the plot
+sankey <- sankeyNetwork(Links = im_sankey_2018$links,
+                        Nodes = im_sankey_2018$nodes,
+                        Source = "encoding_from",
+                        Target = "encoding_to",
+                        Value  = "Imports",
+                        NodeID = "name",
+                        NodeGroup = "id",
+                        units     = "bpd",
+                        colourScale = JS("d3.scaleOrdinal(['#4c7093', '#e15c39', '#008348'])"),
+                        fontSize   = 16,
+                        fontFamily = "Open Sans",
+                        nodeWidth  = 20,
+                        height = (672 / 2) * scale_2018)
+
+sankey
+```
+
