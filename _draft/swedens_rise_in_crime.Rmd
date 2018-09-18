@@ -1,0 +1,367 @@
+---
+title: "Sweden's Rise In Crime"
+author: "Luke Smith"
+date: "`r Sys.Date()`"
+tags: [sweden, crime]
+description: ""
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : "Sweden's Rise In Crime"
+  description : ""
+  image       : ""
+og :
+  image : ""
+---
+
+```{r knitr-opts, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_chunk$set(eval=TRUE)
+```
+
+<!-- # Difference in statistics -->
+<!--   *  Crime Survey (NTU): A literal survey asking if respondents were the victim of any particular crime -->
+<!--     * Also asks respondents about their faith in the justice system -->
+<!--   *  Reported Crime: Recorded cases of a suposed committed crime. May include repeated counts and erroneous, or otherwise unusual reporting, of crimes. -->
+<!--     * Consipracy to committ murder may be registered as 'lethal violence' -->
+<!--     * Rape offenses very likely increased due to change in the deifition of rape -- though no concensus exists on how much the change in definition explains the increase in rape -->
+
+<!-- # Manslaughter: https://www.bra.se/bra-in-english/home/crime-and-statistics/murder-and-manslaughter.html -->
+<!--   *  Includes reported cases of lethal violence where lethal violence is highly likely to be the cause of death -->
+<!--   *  The statistic regarding reported offences is misleading where lethal violence is concerned, since it shows all reported incidents with a lethal outcome where there initially was reason to investigate whether lethal violence may have been used -->
+<!--   *  It also occurs that several police reports are prepared for a single case of suspected lethal violence, which means that the statistic contains repeats. -->
+<!--   *  Moreover, attempts, preparation, and conspiracy to commit murder or manslaughter are erroneously registered as completed murder or manslaughter -->
+
+In February 2017, US President Donald Trump spoke about the dangers of taking in refugees from Syria -- an active war-zone where militant Islamic groups combat an oppressive dictator.
+
+In the speech, Trump commented about "last night in Sweden", which prompted UKIP politician Nigel Farage two days later to state that Malmo, Sweden is the "rape capital" of Europe. Farage implied this was due to Sweden's migrant population, particularly refugees.
+
+An examination of Sweden's crime statistics, from [Brå](https://www.bra.se/bra-in-english/home/crime-and-statistics.html) (an agency within Sweden's Ministry of Justice), does reveal dramatic rises in some crime categories.
+
+```{r}
+library(plotly)
+library(tidyverse)
+library(readxl)
+library(extrafont); loadfonts("win", quiet = TRUE)
+library(magick)
+# library(ggalt)
+# library(sf)
+```
+
+```{r import-asylum-data}
+f_asy <- "~/R/my_blog/_draft/asy_data/unhcr_world.csv"
+
+asy <- read_csv(f_asy, skip = 3L)
+
+asy <- asy %>%
+  rename(Applied = `Applied during year`,
+         Decisions = `Total decisions`,
+         Pending_End = `Total pending end-year`,
+         Host = `Country / territory of asylum/residence`)
+
+asy <- asy %>%
+  mutate(Host = case_when(
+    Host == "Serbia and Kosovo (S/RES/1244 (1999))" ~ "Serbia",
+    Host == "Iran (Islamic Rep. of)"                ~ "Iran (Islamic Republic of)",
+    Host == "Czech Rep."                            ~ "Czechia",
+    Host == "Syrian Arab Rep."                      ~ "Syrian Arab Republic",
+    Host == "United Rep. of Tanzania"               ~ "United Republic of Tanzania",
+    Host == "Rep. of Korea"                         ~ "Republic of Korea",
+    TRUE                                            ~ Host
+  ))
+
+asy_sum <- asy %>%
+  group_by(Year, Host, Origin) %>%
+  summarize(n = sum(Applied, na.rm = TRUE)) %>%
+  mutate(Asylum = Host)
+
+asy_sum2 <- asy %>%
+{
+  x <- .
+  x %>%
+    group_by(Year, Host) %>%
+    summarize_at(vars(Applied, Decisions, Pending_End), sum, na.rm = TRUE) %>%
+    mutate(Origin = "Total") %>%
+    bind_rows(x %>% group_by(Origin, Year) %>% summarize_at(vars(Applied, Decisions, Pending_End), sum, na.rm = TRUE)) %>%
+    ungroup()
+}
+
+# asy_sum2 <- asy_sum2 %>%
+#   mutate(Host = case_when(
+#     Host == "Venezuela (Bolivarian Republic of)" ~ "Venezuela",
+#     Host == "Sint Maarten (Dutch part)"   ~ "St. Maarten",
+#     Host == "United Republic of Tanzania" ~ "Tanzania",
+#     TRUE ~ Host
+#   ))
+```
+
+```{r}
+f_poc <- "~/R/my_blog/_draft/asy_data/unhcr_poc.csv"
+
+poc <- read_csv(f_poc, skip = 3L)
+
+poc <- poc %>%
+  rename(Host = `Country / territory of asylum/residence`,
+         Refugees = `Refugees (incl. refugee-like situations)`,
+         Pending_Asylum = `Asylum-seekers (pending cases)`,
+         Returned_Refugees = `Returned refugees`,
+         IDP = `Internally displaced persons (IDPs)`,
+         Returned_IDP = `Returned IDPs`,
+         Stateless = `Stateless persons`,
+         Others = `Others of concern`,
+         Total_POC = `Total Population`)
+
+poc <- poc %>%
+    mutate_at(vars(Refugees:Total_POC), as.integer)
+```
+
+```{r import-sweden}
+swe <- read_xls("~/R/my_blog/_draft/sweden/Reported_offences_1950_2017.xls", 
+                skip = 14, sheet = 2, col_names = FALSE)
+
+c_names <- c(
+  "Year",
+  "Total",
+  "Total_Penal",
+  "Life_Health",
+  "Lethal Crime",
+  "Assault",
+  "All Sexual Crimes",
+  "Rape",
+  "Theft",
+  "Burglary",
+  "Domicile",
+  "Vehicle",
+  "From_Vehicle",
+  "Shops",
+  "Robbery",
+  "Fraud",
+  "Damage",
+  "Total_Non_Penal",
+  "Narcotics",
+  "DUI",
+  "Year2"
+)
+
+swe <- swe %>%
+  select(seq(1, 41, by = 2)) %>%
+  set_names(c_names)
+
+swe <- swe %>%
+  mutate(Year = as.integer(Year),
+         Narcotics = as.double(Narcotics))
+```
+
+```{r}
+plot_swe1 <- swe %>%
+  select(Year, `Lethal Crime`, `All Sexual Crimes`, Rape, Narcotics) %>%
+  gather(... = -Year) %>%
+  mutate(key = factor(key, unique(key), ordered = TRUE)) %>%
+  ggplot() +
+  geom_line(aes(Year, value), color = "steelblue", size = 1.4) +
+  scale_x_continuous(NULL, expand = expand_scale()) +
+  scale_y_continuous(NULL, expand = c(0.02, 0.02), labels = scales::comma) +
+  facet_wrap(vars(key), scales = "free_y", ncol = 1) +
+  labs(caption = " ") +
+  theme_classic(base_size = 20, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(size = 22),
+        panel.spacing.x = unit(1, "cm"),
+        plot.margin = margin(0, 0.5, 0.25, 0.25, "cm"),
+        plot.caption = element_text(color = "gray50", size = 17))
+
+plot_swe2 <- swe %>%
+  left_join(
+    asy_sum2 %>%
+      filter(Host == "Sweden"),
+    by = "Year") %>%
+  select(Year, `Lethal Crime`, `All Sexual Crimes`, Rape, Narcotics, Decisions) %>%
+  filter(!is.na(Decisions)) %>%
+  gather(... = -c(Year, Decisions)) %>%
+  mutate(key = factor(key, unique(key), ordered = TRUE)) %>%
+  ggplot(aes(Decisions, value)) +
+  geom_point(pch = 21, fill = "gray70", color = "gray30", size = 3.1) +
+  # geom_smooth(method = "lm", se = FALSE, color = "orange") +
+  scale_x_continuous(NULL, expand = c(0.013, 0.013), labels = scales::comma) +
+  scale_y_continuous(NULL, expand = c(0.03, 0.03), labels = scales::comma) +
+  facet_wrap(vars(key), scales = "free", ncol = 1) +
+  labs(caption = "Source: Brå (Reported Offenses); UN Refugee Agency (UNHCR)") +
+  theme_classic(base_size = 20, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(size = 22),
+        panel.spacing.x = unit(1, "cm"), 
+        plot.margin = margin(0, 0.5, 0.25, 0.25, "cm"),
+        plot.caption = element_text(color = "gray50", size = 17))
+
+ggsave(plot_swe1, file = f_swe1 <- "~/R/my_blog/_draft/sweden/plot_swe1.png", height = 15, width = 7, dpi = 600)
+ggsave(plot_swe2, file = f_swe2 <- "~/R/my_blog/_draft/sweden/plot_swe2.png", height = 15, width = 7, dpi = 600)
+```
+
+```{r}
+img_swe1 <- f_swe1 %>%
+  image_read()
+img_swe2 <- f_swe2 %>%
+  image_read()
+
+img_swe1 <- img_swe1 %>%
+  image_join(
+    image_blank(4200, 250, "white") %>%
+      image_annotate("Crime Rates Per 100,000 Persons (1950-2017)",
+                     size = 185, color = "black", font = "Lato",
+                     location = geometry_point(50, 5))
+    , .
+  ) %>%
+  image_append(stack = TRUE)
+
+
+img_swe2 <- img_swe2 %>%
+  image_join(
+    image_blank(4200, 250, "white") %>%
+      image_annotate("Crime Rates And Asylum Decisions (2000-2017)",
+                     size = 185, color = "black", font = "Lato",
+                     location = geometry_point(50, 5))
+    , .
+  ) %>%
+  image_append(stack = TRUE)
+
+
+img_swe1 %>%
+  image_join(
+    image_blank(400, 4450, "white")
+  ) %>%
+  image_append() %>%
+  image_join(
+    img_swe2
+  ) %>%
+  image_append() %>%
+  image_join(
+    image_blank(8900, 400, "white") %>%
+      image_annotate("Have Increases In Asylum Decisions Affected Crime In Sweden?",
+                     size = 290, color = "black", font = "Lato",
+                     location = geometry_point(50, 5))
+    , .
+  ) %>%
+  image_append(stack = TRUE) %>%
+  image_resize("1344x")
+```
+
+The rise in lethal crime in 2017 may be due to errors, such as: conspiracy to comitt murder and attempted murder registered as murder; counting multiple cases per single death; and other reported incidents with a lethal outcome (including suicide) registered as murder or manslaughter. 
+
+Therefore, for very recent years such as 2017, these errors can give the appearance of a higher than usual lethal crime rate.
+
+However, when coupled with the UN Refugee Agency's data for asylum decisions, newly admitted refugees, there does not appear to be a strong correlation to support the claims against Malmo being the rape capital of Europe.
+
+```{r}
+nr <- swe %>%
+  left_join(
+    asy_sum2 %>%
+      filter(Host == "Sweden"),
+    by = "Year") %>%
+  select(Year, `All Sexual Crimes`, Rape) %>%
+  mutate(`All Sexual Crimes Less Rape` = `All Sexual Crimes` - Rape) %>%
+  gather(... = -Year)
+
+nr_labs <- nr %>%
+  group_by(key) %>%
+  filter(Year == 2013L) %>%
+  mutate(lab = key,
+         lab = if_else(key == "All Sexual Crimes Less Rape", "All Sexual Crimes\nLess Rape", lab)) %>%
+  mutate(Year = case_when(key == "All Sexual Crimes Less Rape" ~ 1993L,
+                          key == "All Sexual Crimes" ~ 1994L,
+                          TRUE ~Year),
+         value = case_when(key == "All Sexual Crimes Less Rape" ~ 40,
+                           key == "All Sexual Crimes" ~128,
+                           TRUE ~value)) %>%
+  I()
+
+plot_not_rape <- nr %>%
+  ggplot(aes(Year, value, color = key)) +
+  geom_line(size = 0.7) +
+  geom_text(aes(label = lab), nr_labs, hjust = 0, nudge_y = 15) +
+  scale_x_continuous(NULL, expand = expand_scale(), breaks = seq(1960, 2010, by = 10)) +
+  scale_y_continuous(NULL, expand = c(0.02, 0.02)) +
+  scale_color_manual(values = c("#4c415f", "#73628f", "#998ab2"),guide = FALSE) +
+  labs(caption = "Source: Brå (Reported Offenses)") +
+  theme_classic(base_size = 16, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(size = 15),
+        panel.spacing.x = unit(1, "cm"),
+        plot.margin = margin(0, 0.5, 0.25, 0.25, "cm"),
+        plot.caption = element_text(color = "gray50", size = 15))
+
+ggsave(plot_not_rape, file = f_not_rape <- "~/R/my_blog/_draft/sweden/plot_not_rape.png", height = 7, width = 7, dpi = 600)
+
+f_not_rape %>%
+  image_read() %>%
+  {
+    img <- .
+    i <- image_info(img)
+    image_blank(i$width, 230, "white") %>%
+      image_annotate("How Rape Has Affected All Sex Crimes In Sweden",
+                     size = 185, font = "Lato", color = "black",
+                     location = geometry_point(70, 5)) %>%
+      # image_join(
+      #   image_blank(i$width, 185, "white") %>%
+      #     image_annotate("The Definition Of Rape",
+      #                    size = 135, font = "Lato", color = "black",
+      #                    location = geometry_point(70, 0))
+      # ) %>%
+      # image_append(stack = TRUE) %>%
+      image_join(
+        image_blank(i$width, 200, "white") %>%
+          image_annotate("Sexual Crime Rates (Per 100,000 Persons)",
+                         size = 130, font = "Lato", color = "black",
+                         location = geometry_point(70, 5))
+      ) %>%
+      image_append(stack = TRUE) %>%
+      image_join(img)
+  } %>%
+    image_append(stack = TRUE) %>%
+    image_resize("1344x")
+```
+
+```{r swe-ger, eval=FALSE}
+poc %>%
+  filter(Host == "Sweden" | Host == "Germany") %>%
+  select(-Origin) %>%
+  group_by(Year, Host) %>%
+  summarize_all(sum, na.rm = TRUE) %>%
+  ungroup() %>%
+  select(-IDP, -Total_POC, -Returned_IDP) %>%
+  gather(... = -c(Year, Host)) %>%
+  ggplot() +
+  geom_line(aes(Year, value, color = Host)) +
+  facet_wrap(vars(key), scales = "free_y")
+```
+
+```{r, eval=FALSE}
+{
+  swe %>%
+    left_join(poc %>%
+                filter(Host == "Sweden") %>%
+                select(-Host, -Origin) %>%
+                group_by(Year) %>%
+                summarize_all(sum, na.rm = TRUE), by = "Year") %>%
+    select(Year, `Lethal Crime`, `All Sexual Crimes`, Rape, Narcotics, Total_POC) %>%
+    gather(... = -c(Year, Total_POC)) %>%
+    mutate(decade = cut(Year, breaks = c(1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020)),
+           decade = factor(decade, unique(decade), ordered = TRUE)) %>%
+    ggplot(aes(Total_POC, value)) +
+    geom_point(aes(fill = Year), pch = 21, size = 5) +
+    scale_fill_viridis_c() +
+    facet_wrap(vars(key), scale = "free_y") +
+    theme_classic(base_size = 13, base_family = "Lato") +
+    theme(strip.background = element_blank())
+} %>%
+  # ggplotly() %>%
+  I()
+```
+
+The rape rate in Sweden rose in 2016 and 2017, however the rate does not appear particularly elevated above the overall level of the 2010s.
+
+The rape rate rose during the mid-2000s, as did other crimes such as all sexual crimes and those involving narcotics.
+
+The data does not appear to support some of the claims made by politicians, however it should be noted that the mid-2000s, a period of rising crime, did coincide with the arrival of other war refugees from Iraq and Afghanistan.

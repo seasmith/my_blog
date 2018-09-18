@@ -9,15 +9,12 @@ tags   : [r, oil and gas, economics, plotting]
 # source("setup_std.R")
 
 # ---- Library_Tidyverse_Setup
-library(plyr)
 library(tidyverse)
 library(lubridate)
 library(forcats)
-library(stringi)
 
 # ---- Library_ploting_Setup
 library(gridExtra)
-library(ggExtra)
 library(GGally)
 library(ggalt)
 library(scales)
@@ -30,21 +27,15 @@ library(jsonlite)
 library(knitr)
 library(kableExtra)
 
-
-
 # ---- Opts_Setup
 knitr::opts_chunk$set(echo =  FALSE)
 knitr::opts_chunk$set(fig.height = 7)
 knitr::opts_chunk$set(message    = FALSE)
 knitr::opts_chunk$set(warning    = FALSE)
 
-
-
 # ---- Options_Setup
 old_scipen <- getOption("scipen")
 options(scipen = 100)
-
-
 
 # ---- Hooks_Setup
 knit_hooks$set(inline = function(x) {
@@ -54,7 +45,6 @@ knit_hooks$set(inline = function(x) {
 })
 old_inline <- knit_hooks$get("inline")
 old_plot   <- knit_hooks$get("plot")
-
 
 
 # ---- Inline_Function_Setup
@@ -75,31 +65,12 @@ il_num_base <- function(x, current_base = 0, new_base = 0) {
 }
 
 
-
 # ---- Extra_Function_Setup
 source_value <- function(file) {
   stopifnot(file.exists(file))
   value <- source(file, echo = FALSE)
   value <- value["value"][[1]]
 }
-
-
-
-# ---- Color_Setup
-# Plot set up
-my_red        <- "#ce1141"
-my_red2       <- "#a33c56"
-my_lightred   <- "#fabdcd"
-my_darkred    <- "#870b2b"
-my_blue       <- "#4fa8ff"
-my_blue2      <- "#1141ce"
-my_purple     <- "#8E3694"
-my_green      <- "#008348"
-my_green2     <- "#1e6545"
-my_lightgreen <- "#00be68"
-my_darkgreen  <- "#00371e"
-my_orange     <- "#e15c39"
-my_orange2    <- "#834800"
 
 
 # ---- Recession_Setup
@@ -200,7 +171,7 @@ prod <- proto_prod %>%
 
 names(prod) <- proto_prod %>% map(function(x) x$series$name)
 ex <- names(prod)[c(1, 4, 30)] %>%
-  stri_replace("", regex = " Field Production .*")
+  str_replace("", " Field Production .*")
 
 prod <- prod %>%
   plyr::ldply() %>%
@@ -210,10 +181,10 @@ prod <- prod %>%
          region      = .id)
 
 prod <- prod %>%
-  mutate(region = stri_replace(region,
-                               "",
-                               regex = "Field Production .*")) %>%
-  mutate(region = stri_trim(region)) %>%
+  mutate(region = str_replace(region,
+                              "",
+                              "Field Production .*")) %>%
+  mutate(region = str_trim(region)) %>%
   mutate(state = state.abb[match(region, state.name)]) %>%
   mutate(production = production * 1000)
 

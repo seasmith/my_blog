@@ -27,29 +27,29 @@ library(stringi)
 # ---- Library_ploting_Setup
 library(grid)
 library(gridExtra)
-library(ggExtra)
-library(GGally)
 library(ggalt)
 library(scales)
-library(extrafont)
-loadfonts("win")
+library(extrafont); loadfonts("win", quiet = TRUE)
 
 # ---- Library_Web_Setup
 library(rvest)
 library(jsonlite)
+library(httr)
+
 
 # ---- Library_Reporting_Setup
 library(knitr)
 library(kableExtra)
 
-# ---- My_Blogging_Setup
-library(blg)
+library(sf)
 
 # ---- Opts_Setup
 knitr::opts_chunk$set(echo =  FALSE)
 knitr::opts_chunk$set(fig.height = 7)
 knitr::opts_chunk$set(message    = FALSE)
 knitr::opts_chunk$set(warning    = FALSE)
+knitr::opts_chunk$set(include    = FALSE)
+
 
 
 # ---- R_Options_Setup
@@ -82,8 +82,21 @@ my_green  <- "#59B300"
 ```
 
 ```{r setup_extra, include=FALSE}
-library(httr)
 ISO_3166_1 <- ISOcodes::ISO_3166_1 %>% as_tibble()
+# data(world, package = "spData")
+
+# https://hub.arcgis.com/datasets/a21fdb46d23e4ef896f31475217cbb08_1
+world <- st_read("~/R/my_blog/_draft/Countries_WGS84/Countries_WGS84.shp")
+
+# https://hub.arcgis.com/datasets/252471276c9941729543be8789e06e12_0
+world2 <- st_read("~/R/my_blog/_draft/UIA_World_Countries_Boundaries/UIA_World_Countries_Boundaries.shp")
+
+world2 <- world2 %>%
+  inner_join(
+    ISO_3166_1 %>%
+      select(Alpha_2, Alpha_3),
+    by = c("ISO" = "Alpha_2")
+  )
 ```
 
 ```{r fred_notes, include=FALSE, eval=FALSE}
@@ -178,7 +191,7 @@ state_lookup <- state_lookup %>%
     add_row(state_abb = "DC", state_name = "Washington DC")
 
 gsp_data <- gsp_data %>%
-    mutate(state_abb = stri_sub(State, 1L, 2L)) %>%
+    mutate(state_abb = str_sub(State, 1L, 2L)) %>%
     left_join(state_lookup, by = "state_abb")
 
 # Convert columns to correct class and correct value
@@ -247,10 +260,10 @@ gdp_data <- gdp_data %>%
 
 gdp_match_tbl <- gdp_meta %>%
     select(id, title) %>%
-    mutate(title = stri_replace(title, "", regex = "^Gross Domestic Product for "))
+    mutate(title = str_replace(title, "^Gross Domestic Product for ", ""))
 
 gdp_data <- gdp_data %>%
-    mutate(Nation2 = stri_sub(Nation, 7L, 9L)) %>%
+    mutate(Nation2 = str_sub(Nation, 7L, 9L)) %>%
     left_join(gdp_match_tbl, by = c("Nation" = "id"))
 ```
 
@@ -267,7 +280,7 @@ most_recent <- gsp_data %>%
   filter(date == max(date))
 ```
 
-```{r gdp_checks, include=FALSE, eval=TRUE, cache=TRUE}
+```{r gdp_checks, include=FALSE, eval=FALSE, cache=TRUE}
 gdp_title_lookup <- gdp_data %>% distinct(title)
 
 map_int(sort(unique(year(gdp_data$date))), ~{
@@ -325,7 +338,7 @@ corrections <- tribble(
 )
 ```
 
-```{r actual_analysis, include=FALSE, eval=FALSE}
+```{r final_product, include=FALSE, eval=FALSE}
 gsp <- gsp_data %>%
   filter(year(date) == 2014)
 
@@ -336,7 +349,52 @@ not_included <- gdp_data %>%
   filter(year(date) == 2014) %>%
   anti_join(gdp_title_lookup, ., by = "title") %>%
   rename(Nation = title)
+```
 
+```{r write_to_file}
+save(gsp_data, file = "gsp_data.RData")
+save(gdp_data, file = "gdp_data.RData")
+
+save(gsp, file = "gsp.RData")
+save(gdp, file = "gdp.RData")
+```
+
+```{r tidy_country_names}
+corrections <- tribble(
+  ~gdp_name, ~world_name, ~actual_name,
+  # "Brunei Darussalam", "Brunei", "Brunei",
+  "the Plurinational State of Bolivia", "Bolivia", "Bolivia",
+  "Bahamas", "Bahamas, The", "The Bahamas",
+  "Belarus", "Byelarus", "Belarus",
+  "the Democratic Republic of the Congo", "Zaire", "Congo",
+  "Cote d'Ivoire", "Ivory Coast", "Ivory Coast",
+  "Gambia", "Gambia, The", "The Gambia",
+  "Hong Kong", "", "Hong Kong",
+  "Isle of Man", "Man, Isle of", "Isle of Man",
+  "Islamic Republic of Iran", "Iran", "Iran",
+  "Saint Kitts and Nevis", "St. Kitts and Nevis", "Saint Kitts and Nevis",
+  "Republic of Korea", "South Korea", "South Korea",
+  "Kosovo", "", "Kosovo",
+  "Lao People's Democratic Republic", "Loas", "Loas",
+  "Saint Lucia", "St. Lucia", "Saint Lucia",
+  "Libyan Arab Jamahiriya", "Libya", "Libya",
+  "Republic of Moldova", "Moldova", "Moldova",
+  "the former Yugoslav Republic of Macedonia", "Macedonia", "Macedonia",
+  "Macao", "Macau", "Macau",
+  "Palau", "Pacific Islands (Palau)", "Palau",
+  # "Russian Federation", "Russia", "Russia",
+  "Democratic Republic of Timor-Leste", "", "Timor-Leste",
+  "United Republic of Tanzania", "Tanzania, United Republic of", "Tanzania",
+  "Saint Vincent and the Grenadines", "St. Vincent and the Grenadines", "Saint Vincent and the Grenadines",
+  "Bolivarian Republic of Venezuela", "Venezuela", "Venezuela",
+  "U.S. Virgin Islands", "Virgin Islands", "Virgin Islands",
+  "Viet Nam", "Vietnam", "Vietnam",
+  # "Samoa", "American Samoa", "Samoa",
+  "the Republic of South Sudan", "", ""
+)
+```
+
+```{r actual_analysis, include=FALSE, eval=FALSE}
 # How many nations have GDP's less than US states
 lt <- gsp %>%
     split(.$state_name) %>%
@@ -353,3 +411,4 @@ lt_count <- lt %>%
     select(state, num = V1) %>%
     arrange(desc(num))
 ```
+

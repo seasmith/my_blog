@@ -1,0 +1,448 @@
+---
+title: "Houston School Rankings: Misc"
+author: "Luke Smith"
+date: "`r Sys.Date()`"
+tags: [houston, schools]
+description: ""
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : "Houston School Rankings: Misc"
+  description : ""
+  image       : ""
+og :
+  image : ""
+---
+  
+```{r knitr-opts, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_chunk$set(eval=TRUE)
+```
+
+```{r load-deps}
+# library(plotly)
+library(pals)
+library(tidyverse)
+library(jsonlite)
+library(extrafont); loadfonts("win", TRUE)
+library(magick)
+library(ggrepel)
+library(grid)
+library(lemon)
+library(ggalt)
+```
+
+```{r create-imgs-folder, eval=FALSE}
+if (dir.exists("houston_school_report_2018/figure-html"))
+```
+
+
+```{r import-from-JSON}
+# http://projects.houstonchronicle.com/schoolreportcard/
+# https://www.houstonchronicle.com/local/education/schoolreportcard/
+
+sch <- fromJSON("~/R/my_blog/_twitter/c_a_r/schools.json") %>% as_tibble()
+dis <- fromJSON("~/R/my_blog/_twitter/c_a_r/districts.json") %>% as_tibble()
+```
+
+```{r custom-functions}
+`%notin%` <- compose(`!`, `%in%`)
+
+minus_1 <- function(x) x - 1L
+```
+
+```{r plot-variables}
+grade_order <- c(
+  paste0(unlist(lapply(LETTERS[1:4], rep, 3)), c("+", "", "-")),
+  "F", 
+  NA)
+
+type_order <- c("Elementary", "Middle", "High")
+
+race_labels <- c(
+  percentwhite = "% White",
+  percentasian = "% Asian",
+  percenttwo   = "% Two Races",
+  percentpacisl = "% Pacific Islander",
+  percentamindian = "% American Indian",
+  percenthispanic = "% Hispanic",
+  percentafam = "% Black",
+  percentother = "% Other"
+)
+
+# From first analysis
+top_20_names <- c("Tomball ISD", "Pearland ISD", "Katy ISD", "Conroe ISD", "Clear Creek ISD", 
+                  "Lamar CISD", "Yes Prep Public Schools Inc", "Cypress-Fairbanks ISD", 
+                  "Klein ISD", "Fort Bend ISD", "Humble ISD", "Galena Park ISD", 
+                  "Alvin ISD", "Spring Branch ISD", "Goose Creek CISD", "Houston ISD", 
+                  "Pasadena ISD", "Alief ISD", "Aldine ISD", "Spring ISD")
+```
+
+```{r import-from-excel}
+h <- list.files("~/R/my_blog/_twitter/c_a_r", full.names = TRUE) %>%
+  grep("\\.xlsx$", ., value = TRUE) %>%
+  map(readxl::read_xlsx)
+
+names(h) <- c("Elementary", "High", "Middle")
+
+h <- h %>%
+  map(~gather(.x, ... = -`Campus ID`)) %>%
+  map(~mutate(.x, key = case_when(
+    key == "Campus ID" ~ "campus_id",
+    key == "Campus Name" ~ "campus",
+    key == "District" ~ "district",
+    key == "County" ~ "county",
+    key == "Grade Range" ~ "range",
+    key == "Charter?" ~ "is_charter",
+    key == "Magnet?" ~ "is_magnet",
+    key == "Enrollment" ~ "enrollment",
+    key == "% African American" ~ "percentafam",
+    key == "% Asian" ~ "percentasian",
+    key == "% Hispanic" ~ "percenthispanic",
+    key == "% White" ~ "percentwhite",
+    key == "% Eco Dis" ~ "percentecodis",
+    key == "Mobility Rate" ~ "mobility",
+    key == "% Meets Grade Level - Reading" ~ "at_reading",
+    key == "% Meets Grade Level - Math" ~ "at_math",
+    key == "Growth Score" ~ "score_growth",
+    key == "Student Achievement Grade" ~ "grade_student",
+    key == "Campus Performance Grade" ~ "grade_campus",
+    key == "Growth Grade" ~ "grade_growth",
+    key == "C@R Grade" ~ "grade_cr",
+    key == "State Rank" ~ "rank_state",
+    key == "Regional Rank" ~ "rank_region",
+    key == "% Meets Grade Level - English I + II" ~ "at_reading",
+    key == "% Meets Grade Level - Algebra I" ~ "at_math",
+    key == "SAT/ACT Participation Rate" ~ "test_part",
+    key == "Average SAT Total Score" ~ "sat_score",
+    key == "Average ACT Total Score" ~ "act_score",
+    key == "AP/IB Participation Rate" ~ "adv_part",
+    key == "AP/IB Pass Rate" ~ "adv_pass",
+    key == "Graduation Rate" ~ "grad_rate",
+    key == "College Readiness Grade" ~ "grade_readiness"
+  ))) %>%
+  map(~spread(.x, key, value)) %>%
+  bind_rows(.id = "type") %>%
+  rename(campus_id = `Campus ID`)
+
+h <- h %>%
+  mutate_at(vars(at_math:at_reading,
+                 mobility:percentwhite,
+                 score_growth, act_score:grad_rate,
+                 test_part), as.double) %>%
+  mutate_at(vars(enrollment, rank_region:rank_state,
+                 sat_score, campus_id), as.integer)
+
+h <- h %>%
+  mutate_at(vars(starts_with("grade_")), factor, levels = grade_order, ordered = TRUE) %>%
+  mutate(type = factor(type, type_order, ordered = TRUE))
+
+# Add 'other' as a racial category
+h <- h %>%
+  mutate(other = enrollment - ((percentafam + percentasian + percenthispanic + percentwhite) * enrollment) / 100) %>%
+  mutate(other = if_else(other < 0, 0, other),
+         percentother = (other / enrollment) * 100)
+```
+
+```{r distros, eval=FALSE, fig.height=12}
+h %>%
+    keep(is.numeric) %>%
+    select(-campus_id) %>%
+    gather() %>%
+    ggplot(aes(value)) +
+    geom_bkde(aes(y = ..count..)) +
+    facet_wrap(vars(key), scales = "free", ncol = 3) +
+    theme_classic(base_size = 10, base_family = "Lato") +
+    theme(strip.background = element_blank(),
+          strip.text = element_text("Lato"),
+          legend.position = c(0.675, 0.65),
+          legend.direction = "horizontal",
+          legend.title = element_text(hjust = 0.5),
+          legend.background = element_rect(color = "gray30"),
+          panel.spacing = unit(1, "cm"),
+          plot.caption = element_text(color = "gray50"))
+```
+
+
+
+```{r, eval=FALSE}
+# JUST HISD
+h %>%
+  filter(district %in% str_to_upper(top_20_names)) %>%
+  group_by(type, grade_cr) %>%
+  summarize(percentafam = sum((percentafam * enrollment) / 100) / sum(enrollment),
+            percentasian = sum((percentasian * enrollment) / 100) / sum(enrollment),
+            percenthispanic = sum((percenthispanic * enrollment) / 100) / sum(enrollment),
+            percentwhite = sum((percentwhite * enrollment) / 100) / sum(enrollment),
+            percentother = sum((percentother * enrollment) / 100) / sum(enrollment),
+            n = n()) %>%
+  gather(... = -c(type, grade_cr, n)) %>%
+  mutate(value2 = n * value) %>%
+  ggplot(aes(grade_cr, value2)) +
+  geom_col(aes(fill = key), position = "stack", width = 1) +
+  facet_wrap(vars(type)) +
+  theme_classic(base_size = 10, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text("Lato"),
+        legend.position = c(0.675, 0.65),
+        legend.direction = "horizontal",
+        legend.title = element_text(hjust = 0.5),
+        legend.background = element_rect(color = "gray30"),
+        panel.spacing = unit(1, "cm"),
+        plot.caption = element_text(color = "gray50"))
+```
+
+
+## Top and Bottom 5 by race, grade, and school type
+
+```{r, fig.height=9}
+# BEST 5 IN THE TOP 20
+h2 <- h %>%
+  group_by(type, grade_cr, district) %>%
+  summarize(afam = sum((percentafam * enrollment) / 100),
+            asian = sum((percentasian * enrollment) / 100),
+            hispanic = sum((percenthispanic * enrollment) / 100),
+            white = sum((percentwhite * enrollment) / 100),
+            other = sum((percentother * enrollment) / 100),
+            percentafam = afam / sum(enrollment),
+            percentasian = asian / sum(enrollment),
+            percenthispanic = hispanic / sum(enrollment),
+            percentwhite = white / sum(enrollment),
+            percentother = other / sum(enrollment),
+            enrollment = sum(enrollment),
+            n = n()) %>%
+  ungroup() #%>%
+  # mutate(percentother = if_else(percentother < 0, 0, percentother))
+  
+# TOP 5
+h2 %>%
+  filter(district %in% str_to_upper(top_20_names[1:5])) %>%
+  select(-enrollment) %>%
+  gather(... = -c(type, district, grade_cr, n)) %>%
+  mutate(value2 = n * value)  %>%
+  filter(key %notin% c("afam", "asian", "hispanic", "white", "other")) %>%
+  ggplot(aes(grade_cr, value2)) +
+  geom_col(aes(fill = key), position = "fill", width = 1) +
+  facet_wrap(vars(district, type), ncol = 3, scales = "free_x") +
+  theme_classic(base_size = 10, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text("Lato"),
+        legend.position = "top",
+        legend.direction = "horizontal",
+        legend.title = element_text(hjust = 0.5),
+        legend.background = element_rect(color = "gray30"),
+        panel.spacing = unit(1, "cm"),
+        plot.caption = element_text(color = "gray50"))
+
+# BOTTOM 5
+h2 %>%
+  filter(district %in% str_to_upper(top_20_names[16:20])) %>%
+  select(-enrollment) %>%
+  gather(... = -c(type, district, grade_cr, n)) %>%
+  mutate(value2 = n * value)  %>%
+  filter(key %notin% c("afam", "asian", "hispanic", "white", "other")) %>%
+  ggplot(aes(grade_cr, value2)) +
+  geom_col(aes(fill = key), position = "fill", width = 1) +
+  facet_wrap(vars(district, type), ncol = 3, scales = "free_x") +
+  theme_classic(base_size = 10, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text("Lato"),
+        legend.position = "top",
+        legend.direction = "horizontal",
+        legend.title = element_text(hjust = 0.5),
+        legend.background = element_rect(color = "gray30"),
+        panel.spacing = unit(1, "cm"),
+        plot.caption = element_text(color = "gray50"))
+```
+
+## Top 20 by race, grade, and school type
+
+```{r, fig.height=36}
+h2 %>%
+  filter(district %in% str_to_upper(top_20_names)) %>%
+  select(-enrollment) %>%
+  # arrange(desc(grade_cr)) %>%
+  add_row(type = "Elementary", district = "YES PREP PUBLIC SCHOOLS INC") %>%
+  # mutate(district = factor(district, unique(district), ordered = TRUE)) %>%
+  mutate(district = factor(district, str_to_upper(top_20_names), ordered = TRUE)) %>%
+  gather(... = -c(type, district, grade_cr, n)) %>%
+  mutate(value2 = n * value)  %>%
+  filter(key %notin% c("afam", "asian", "hispanic", "white", "other")) %>%
+  ggplot(aes(grade_cr, value2)) +
+  geom_col(aes(fill = key), position = "fill", width = 1) +
+  scale_fill_discrete(NULL) +
+  scale_y_continuous(NULL) +
+  facet_wrap(vars(district, type), ncol = 3, scales = "free_x") +
+  guides(fill = guide_legend(label.position = "bottom")) +
+  theme_classic(base_size = 10, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text("Lato"),
+        legend.position = "top",
+        legend.direction = "horizontal",
+        legend.title = element_text(hjust = 0.5),
+        # legend.background = element_rect(color = "gray30"),
+        legend.background = element_blank(),
+        panel.spacing = unit(1, "cm"),
+        plot.caption = element_text(color = "gray50"))
+```
+
+# Top 20 by grade and race
+
+```{r, fig.height=7}
+h2 %>%
+  filter(district %in% str_to_upper(top_20_names)) %>%
+  add_row(type = "Elementary", district = "YES PREP PUBLIC SCHOOLS INC") %>%
+  mutate(district = factor(district, str_to_upper(top_20_names), ordered = TRUE)) %>%
+  group_by(district, type) %>%
+  summarize(percentafam = sum(percentafam * enrollment) / sum(enrollment),
+            percentasian = sum(percentasian * enrollment) / sum(enrollment),
+            percenthispanic = sum(percenthispanic * enrollment) / sum(enrollment),
+            percentwhite = sum(percentwhite * enrollment) / sum(enrollment),
+            percentother = sum(percentother * enrollment) / sum(enrollment)) %>%
+  gather(... = -c(district, type)) %>%
+  ggplot(aes(type, value)) +
+  geom_col(aes(fill = key), position = "fill", width = 1) +
+  facet_wrap(vars(district)) +
+  theme_classic(base_size = 10, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text("Lato"),
+        legend.position = "top",
+        legend.direction = "horizontal",
+        legend.title = element_text(hjust = 0.5),
+        legend.background = element_rect(color = "gray30"),
+        panel.spacing = unit(1, "cm"),
+        plot.caption = element_text(color = "gray50"))
+```
+
+
+```{r}
+h2 %>%
+  group_by(district) %>%
+  summarize(afam = sum(afam),
+            asian = sum(asian),
+            hispanic = sum(hispanic),
+            white = sum(white),
+            other = sum(other),
+            percentafam = afam / sum(enrollment),
+            percentasian = asian / sum(enrollment),
+            percenthispanic = hispanic / sum(enrollment),
+            percentwhite = white / sum(enrollment),
+            percentother = other / sum(enrollment),
+            enrollment = sum(enrollment),
+            grade_cr = mean(as.integer(grade_cr))) %>%
+  arrange(desc(grade_cr)) %>%
+  select(-(afam:other), -enrollment, -grade_cr) %>%
+  filter(district %in% str_to_upper(top_20_names)) %>%
+  mutate(district = factor(district, district, ordered = TRUE)) %>%
+  gather(... = -c(district)) %>%
+  ggplot(aes(district, value)) +
+  geom_col(aes(fill = key), position = "fill") +
+  coord_flip() +
+  theme_classic(base_size = 10, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_text("Lato"),
+        legend.position = "top",
+        legend.direction = "horizontal",
+        legend.title = element_text(hjust = 0.5),
+        legend.background = element_rect(color = "gray30"),
+        panel.spacing = unit(1, "cm"),
+        plot.caption = element_text(color = "gray50"))
+```
+
+```{r}
+h_by_race <- h %>%
+    filter(type == "High") %>%
+    # mutate(percentother = 100 - (percentafam + percentasian + percenthispanic + percentwhite)) %>%
+    # mutate(percentother = if_else(percentother < 0, 0, percentother)) %>%
+    select(campus, sat_score, act_score, percentafam:percentasian, percenthispanic:percentwhite, percentother) %>%
+    gather(... = -c(sat_score, act_score, campus)) %>%
+    left_join(h %>% select(campus, enrollment), by = "campus") %>%
+    mutate(key_enrollment = (value * enrollment) / 100)
+
+scores_by_race <- h_by_race %>%
+    group_by(key) %>%
+    summarize(tot_enrollment = sum(key_enrollment),
+              sat_score = sum(sat_score * (key_enrollment / tot_enrollment), na.rm = TRUE),
+              act_score = sum(act_score * (key_enrollment / tot_enrollment), na.rm = TRUE)) %>%
+    arrange(desc(sat_score))
+
+scores_order <- scores_by_race$key
+
+h_by_race <- h_by_race %>%
+  mutate(key = factor(key, levels = scores_order, ordered = TRUE))
+
+scores_by_race <- scores_by_race %>%
+  mutate(key = factor(key, levels = scores_order, ordered = TRUE))
+```
+
+```{r}
+plot_race <- h_by_race %>%
+    ggplot(aes(value, sat_score)) +
+    geom_hline(yintercept = 1369, color = "gray50") +
+    geom_point(aes(size = key_enrollment), 
+               pch = 21, color = "gray40", fill = "gray25", alpha = 0.25) +
+    geom_smooth(method = "lm", se = FALSE, color = "coral", size = 0.7) +
+    scale_size("Enrollment Size by Race", range = c(0, 6), labels = scales::comma) +
+    scale_x_continuous(NULL, labels = function(x) paste0(x, "%"),
+                       breaks = scales::pretty_breaks(4)) +
+    scale_y_continuous(NULL) +
+    facet_wrap(vars(key), scales = "free_x", labeller = labeller(key = race_labels)) +
+    labs(title = "Houston Area Student Performance",
+         subtitle = "SAT Score (School Average) and Racial Composition",
+         caption = "Source: Children At Risk (2018 School Ranking)") +
+    guides(size = guide_legend(title.position = "top")) +
+    theme_classic(base_size = 10, base_family = "Lato") +
+    theme(strip.background = element_blank(),
+          strip.text = element_text("Lato"), 
+          legend.position = c(0.73, 0.40),
+          legend.direction = "horizontal",
+          legend.title = element_text(hjust = 0.5),
+          legend.background = element_rect(color = "gray30"),
+          panel.spacing.x = ggplot2::unit(0.4, "cm"),
+          plot.caption = element_text(color = "gray50"))
+
+ggsave("imgs/plot_race.png", plot_race, width = 5, height = 7, dpi = 600)
+```
+
+```{r, eval=FALSE, fig.height=9}
+# SAT SCORE VS GRADE
+# FACETTED BY DISTRICT
+h %>%
+    filter(district %in% str_to_upper(top_20_names)) %>%
+    group_by(district) %>%
+    mutate(sat_mean = mean(sat_score, na.rm = TRUE)) %>%
+    ungroup() %>%
+    arrange(desc(sat_mean)) %>%
+    mutate(district = factor(district, unique(district), ordered = TRUE)) %>%
+    ggplot(aes(grade_cr, sat_score)) +
+    geom_hline(aes(yintercept = sat_mean, color = sat_mean >= 1369)) +
+    geom_hline(yintercept = 1369) +
+    geom_point(alpha = 0.3, pch = 21, fill = "gray25", color = "gray40") +
+    facet_wrap(vars(district)) +
+    scale_color_manual(values = c("brown", "steelblue"), guide = FALSE) +
+    scale_x_discrete(NULL) +
+    scale_y_continuous(NULL) +
+    theme_classic(base_size = 10, base_family = "Lato") +
+    theme(strip.background = element_blank(),
+          strip.text = element_text("Lato"),
+          legend.position = "top",
+          legend.direction = "horizontal",
+          legend.title = element_text(hjust = 0.5),
+          legend.background = element_rect(color = "gray30"),
+          panel.spacing = unit(1, "cm"),
+          plot.caption = element_text(color = "gray50"))
+```
+
+![](imgs/plot_race.png)
+<!-- On the brink: Rock-bottom Worthing High School struggle to renew promise -->
+<!-- https://www.houstonchronicle.com/news/article/On-the-brink-Rock-bottom-Worthing-High-School-13055207.php -->
+
+SAT performance in Houston has a peculiar correlation with racial groups.
+
+Schools that have higher enrollment rates of whites, asians, and students of two races tend to have higher average SAT scores.
+
+There is a strong negative trend in SAT performance among schools with higher enrollment rates of hispanics and blacks.
+
