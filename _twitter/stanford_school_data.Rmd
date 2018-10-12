@@ -1,0 +1,223 @@
+---
+title  : "Examining the Stanford School Data"
+author : "Luke Smith"
+date   : "`r Sys.Date()`"
+tags   : []
+description: ""
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : ""
+  description : ""
+  image       : ""
+og :
+  image : ""
+---
+
+```{r knitr-opts, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+```
+
+```{r, load-pkgs}
+library(tidyverse)
+library(jsonlite)
+library(lemon)
+library(extrafont); loadfonts("win", TRUE)
+library(magick)
+```
+
+```{r load-data, cache=TRUE}
+url <- "https://static01.nyt.com/newsgraphics/2016/03/24/school-districts/7ce8537c7b0b8f55ca9a2328bd27b8e56d5542a7/districts2.json"
+d <- fromJSON(url)
+d <- as_tibble(d)
+```
+
+```{r largest-three-states}
+# LARGEST THREE STATES ----------------------------------------------------
+three_state <- d %>%
+  filter(stateabb %in% c("CA", "TX", "NY")) %>%
+  mutate(stateabb = factor(stateabb, levels = c("NY", "TX", "CA"), ordered = TRUE))
+
+three_state_sum <- three_state %>%
+  group_by(stateabb) %>%
+  summarize(tot_avgrdall = sum(avgrdall),
+            weight = sum(mean_poolgs * (avgrdall / tot_avgrdall)),
+            sesall = sum(sesall * (avgrdall / tot_avgrdall)))  %>%
+  mutate(stateabb = factor(stateabb, levels = c("NY", "TX", "CA"), ordered = TRUE))
+
+three_state2 <- three_state %>% select(-stateabb)
+
+p3 <- ggplot(three_state, aes(sesall, mean_poolgs, size = avgrdall)) +
+  geom_point(aes(fill = stateabb), three_state,
+             pch = 21, alpha = 0.3, color = "gray40") +
+  geom_hline(aes(yintercept = weight, color = stateabb), three_state_sum) +
+  # geom_vline(aes(xintercept = sesall, color = stateabb), three_state_sum) +
+  # geom_point(aes(fill = stateabb), three_state,
+  #            pch = 21, color = "gray30", alpha = 0.5) +
+  scale_size_area(max_size = 10, guide = FALSE) +
+  scale_color_discrete(guide = FALSE) +
+  scale_fill_discrete(guide = FALSE) +
+  scale_x_continuous("Parental Socioeconomic Status") +
+  scale_y_continuous(NULL) +
+  labs(title = "Education of the Top Three States",
+       subtitle = "Mean Education Attainment (Grades Above or Below National Average)",
+       caption = "Source: New York Times") +
+  facet_wrap(vars(stateabb)) +
+  theme_classic(base_size = 12, base_family = "Lato") +
+  theme(strip.background = element_blank())
+
+# Save
+ggsave("~/R/my_blog/_twitter/three_state_plot.png", p3,
+       width = 7, height = 5, dpi = 500)
+
+# Print
+image_read("three_state_plot.png") %>%
+  image_resize("1344x")
+```
+
+```{r all-states}
+# ALL STATES --------------------------------------------------------------
+all_state_sum <- d %>%
+  group_by(stateabb) %>%
+  summarize(tot_avgrdall = sum(avgrdall),
+            weight = sum(mean_poolgs * (avgrdall / tot_avgrdall)),
+            sesall = sum(sesall * (avgrdall / tot_avgrdall))) %>%
+  arrange(desc(weight))
+
+state_order <- all_state_sum$stateabb
+
+all_state_sum <- all_state_sum %>%
+  mutate(stateabb = factor(stateabb, levels = stateabb, ordered = TRUE))
+
+all_state <- d %>% select(-stateabb)
+
+all_race <- ggplot(all_state, aes(sesall, mean_poolgs, size = avgrdall)) +
+  geom_point(pch = 21, color = "gray70", fill = "gray70", alpha = 0.3) +
+  geom_smooth(method = "lm", se = FALSE, color = "gray20") +
+  # geom_point(aes(color = stateabb, fill = stateabb), 
+  #            d %>% mutate(stateabb = factor(stateabb, levels = state_order, ordered = TRUE)),
+  #            pch = 21, alpha = 0.3) +
+  geom_point(aes(fill = stateabb), 
+             d %>% mutate(stateabb = factor(stateabb, levels = state_order, ordered = TRUE)),
+             pch = 21, color = "gray30", alpha = 0.3) +
+  geom_hline(aes(yintercept = weight, color = stateabb), all_state_sum) +
+  # geom_vline(aes(xintercept = sesall, color = stateabb), all_state_sum) +
+  scale_size_area(max_size = 10, guide = FALSE) +
+  scale_color_discrete(guide = FALSE) +
+  scale_fill_discrete(guide = FALSE) +
+  scale_x_continuous("Parental Socioeconomic Status") +
+  scale_y_continuous(NULL) +
+  labs(title = "Education of All 50 States (Plus Washington D.C.)",
+       subtitle = "Mean Education Attainment (Grades Above or Below National Average)",
+       caption = "Source: New York Times") +
+  facet_rep_wrap(vars(stateabb), ncol = 3) +
+  theme_classic(base_size = 12, base_family = "Lato") +
+  theme(strip.background = element_blank())
+
+ggsave("~/R/my_blog/_twitter/all_race.png", all_race,
+       width = 7, height = 35, dpi = 500)
+
+# Print
+image_read("all_race.png") %>%
+  image_resize("1344x")
+```
+
+```{r, fig.height=22}
+# BLACK -------------------------------------------------------------------
+ggplot(all_state, aes(avgrdblk, mean_poolgs, size = avgrdall)) +
+  geom_point(pch = 21, color = "gray70", fill = "gray70", alpha = 0.5) +
+  geom_point(aes(fill = stateabb), 
+             d %>% mutate(stateabb = factor(stateabb, levels = state_order, ordered = TRUE)),
+             pch = 21, alpha = 0.4, color = "gray30") +
+  geom_smooth(data = d %>% mutate(stateabb = factor(stateabb, levels = state_order, ordered = TRUE)),
+              se = FALSE, method = "lm", color = "black") +
+  # geom_vline(aes(xintercept = sesall, color = stateabb), all_state_sum) +
+  scale_size_area(max_size = 10, guide = FALSE) +
+  scale_color_discrete(guide = FALSE) +
+  scale_fill_discrete(guide = FALSE) +
+  scale_x_continuous("% Black") +
+  scale_y_continuous(NULL) +
+  labs(title = paste0("Education of All 50 States (Plus Washington D.C.)"),
+       subtitle = "Mean Education Attainment (Grades Above or Below National Average)",
+       caption = "Source: New York Times") +
+  facet_wrap(vars(stateabb), ncol = 3) +
+  theme_classic(base_family = "Lato") +
+  theme(axis.title.x.top = element_text())
+
+
+
+# HISPANIC ----------------------------------------------------------------
+ggplot(all_state, aes(avgrdhsp, mean_poolgs, size = avgrdall)) +
+  geom_point(pch = 21, color = "gray70", fill = "gray70", alpha = 0.3) +
+  geom_point(aes(fill = stateabb), 
+             d %>% mutate(stateabb = factor(stateabb, levels = state_order, ordered = TRUE)),
+             pch = 21, alpha = 0.4, color = "gray30") +
+  geom_smooth(data = d %>% mutate(stateabb = factor(stateabb, levels = state_order, ordered = TRUE)),
+              se = FALSE, method = "lm", color = "black") +
+  # geom_vline(aes(xintercept = sesall, color = stateabb), all_state_sum) +
+  scale_size_area(max_size = 10, guide = FALSE) +
+  scale_color_discrete(guide = FALSE) +
+  scale_fill_discrete(guide = FALSE) +
+  scale_x_continuous("% Hispanic") +
+  scale_y_continuous(NULL) +
+  labs(title = paste0("Education of All 50 States (Plus Washington D.C.)"),
+       subtitle = "Mean Education Attainment (Grades Above or Below National Average)",
+       caption = "Source: New York Times") +
+  facet_wrap(vars(stateabb), ncol = 3) +
+  theme_classic(base_family = "Lato") +
+  theme(axis.title.x.top = element_text())
+
+
+
+# WHITE -------------------------------------------------------------------
+ggplot(all_state, aes(avgrdwht, mean_poolgs, size = avgrdall)) +
+  geom_point(pch = 21, color = "gray70", fill = "gray70", alpha = 0.3) +
+  geom_point(aes(fill = stateabb), 
+             d %>% mutate(stateabb = factor(stateabb, levels = state_order, ordered = TRUE)),
+             pch = 21, alpha = 0.4, color = "gray30") +
+  geom_smooth(data = d %>% mutate(stateabb = factor(stateabb, levels = state_order, ordered = TRUE)),
+              se = FALSE, method = "lm", color = "black") +
+  # geom_vline(aes(xintercept = sesall, color = stateabb), all_state_sum) +
+  scale_size_area(max_size = 10, guide = FALSE) +
+  scale_color_discrete(guide = FALSE) +
+  scale_fill_discrete(guide = FALSE) +
+  scale_x_continuous("% White") +
+  scale_y_continuous(NULL) +
+  labs(title = paste0("Education of All 50 States (Plus Washington D.C.)"),
+       subtitle = "Mean Education Attainment (Grades Above or Below National Average)",
+       caption = "Source: New York Times") +
+  facet_wrap(vars(stateabb), ncol = 3) +
+  theme_classic(base_family = "Lato") +
+  theme(axis.title.x.top = element_text())
+```
+
+<!-- MISC -->
+
+```{r size-vs-grade}
+d %>%
+    ggplot(aes(avgrdall, mean_poolgs)) +
+    geom_bin2d() +
+    scale_x_log10() +
+    scale_fill_viridis_c()
+
+d %>%
+    ggplot(aes(avgrdwht, mean_poolgs)) +
+    geom_bin2d() +
+    scale_x_log10() +
+    scale_fill_viridis_c()
+
+d %>%
+    ggplot(aes(avgrdblk, mean_poolgs)) +
+    geom_bin2d() +
+    scale_x_log10() +
+    scale_fill_viridis_c()
+
+d %>%
+    ggplot(aes(avgrdhsp, mean_poolgs)) +
+    geom_bin2d() +
+    scale_x_log10() +
+    scale_fill_viridis_c()
+```

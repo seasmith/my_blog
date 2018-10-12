@@ -35,8 +35,10 @@ library(lemon)
 library(ggalt)
 ```
 
-```{r create-imgs-folder, eval=FALSE}
-if (dir.exists("houston_school_report_2018/figure-html"))
+```{r create-imgs-folder, eval=TRUE}
+tmp_dir <- tempdir()
+
+# if (dir.exists("houston_school_report_2018/figure-html"))
 ```
 
 
@@ -383,7 +385,7 @@ plot_race <- h_by_race %>%
     ggplot(aes(value, sat_score)) +
     geom_hline(yintercept = 1369, color = "gray50") +
     geom_point(aes(size = key_enrollment), 
-               pch = 21, color = "gray40", fill = "gray25", alpha = 0.25) +
+               pch = 21, color = "gray40", fill = "gray25", alpha = 0.25, stroke = 0) +
     geom_smooth(method = "lm", se = FALSE, color = "coral", size = 0.7) +
     scale_size("Enrollment Size by Race", range = c(0, 6), labels = scales::comma) +
     scale_x_continuous(NULL, labels = function(x) paste0(x, "%"),
@@ -407,6 +409,31 @@ plot_race <- h_by_race %>%
 ggsave("imgs/plot_race.png", plot_race, width = 5, height = 7, dpi = 600)
 ```
 
+```{r}
+# GRADUATION RATE VS SAT SCORE
+p_gradr_sat <- h %>%
+  filter(type == "High") %>%
+  ggplot(aes(sat_score, grad_rate)) +
+  geom_point(aes(size = enrollment), position = position_jitter(0.1),
+             pch = 21, color = "gray40", fill = "gray25", alpha = 0.25,
+             stroke = 0) +
+  scale_x_continuous(NULL) +
+  scale_y_continuous(NULL, labels = function(x) scales::percent(x, 2)) +
+  scale_size_continuous("Enrollment", labels = scales::comma) +
+  labs(caption = "Source: Children At Risk (2018 School Ranking)") +
+  blg::blg_theme_default() +
+  theme(legend.position = c(0.90, 0.35),
+        legend.background = element_rect(fill = "white", color = "white"))
+
+ggsave(f_gradr_sat <- tempfile("p_gradr_sat", tmp_dir, ".png"),
+       p_gradr_sat, width = 7, height = 7, dpi = 600)
+
+f_gradr_sat %>%
+  image_read() %>%
+  image_resize("1344x")
+```
+
+
 ```{r, eval=FALSE, fig.height=9}
 # SAT SCORE VS GRADE
 # FACETTED BY DISTRICT
@@ -420,7 +447,7 @@ h %>%
     ggplot(aes(grade_cr, sat_score)) +
     geom_hline(aes(yintercept = sat_mean, color = sat_mean >= 1369)) +
     geom_hline(yintercept = 1369) +
-    geom_point(alpha = 0.3, pch = 21, fill = "gray25", color = "gray40") +
+    geom_point(shape = 19, alpha = 0.3, color = "gray25", stroke = 0) +
     facet_wrap(vars(district)) +
     scale_color_manual(values = c("brown", "steelblue"), guide = FALSE) +
     scale_x_discrete(NULL) +

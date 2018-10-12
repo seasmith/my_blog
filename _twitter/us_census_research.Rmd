@@ -1,0 +1,437 @@
+---
+title: ""
+author: "Luke Smith"
+date: "`r Sys.Date()`"
+tags: [census, united states]
+description: ""
+twitter :
+  card    : "summary_large_image"
+site    : "@lksmth"
+creator : "@lksmth"
+title   : ""
+description : ""
+image       : "https://seasmith.github.io/blog/houston_school_report_2018/figure-html/plot_race.png"
+og :
+  image : "https://seasmith.github.io/blog/houston_school_report_2018/figure-html/plot_race.png"
+---
+  
+```{r knitr-opts, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_chunk$set(eval=TRUE)
+```
+
+```{r}
+library(pals)
+library(tidyverse)
+library(tidycensus)
+library(sf)
+library(units)
+library(extrafont); loadfonts("win", quiet = TRUE)
+library(magick)
+# census_api_key(getOption("api_census"), install = TRUE)
+```
+
+```{r}
+# RACE
+# NATIVITY IN THE UNITED STATES
+# PLACE OF BIRTH BY YEAR OF ENTRY BY CITIZENSHIP
+# AGE AND NATIVITY OF OWN CHILDREN UNDER 18 YEARS
+# SEX BY AGE FOR THE FOREIGN-BORN POPULATION
+# SEX BY AGE
+# WOMEN 15 TO 50 YEARS WHO HAD A BIRTH IN THE PAST 12 MONTHS BY MARITAL STATUS
+
+# MEDIAN INCOME IN THE PAST 12 MONTHS
+# PUBLIC ASSISTANCE INCOME OR FOOD STAMPS/SNAP
+# GINI INDEX OF INCOME INEQUALITY
+```
+
+
+
+<!-- RACE -->
+
+```{r}
+view_16 <- load_variables(2016, "acs5", cache = TRUE)
+
+r16_vars <- view_16 %>%
+  filter(concept == "RACE") %>%
+  pull("name") %>%
+  .[c(-9, -10)]
+
+r16_vars_name <- view_16 %>%
+  filter(concept == "RACE") %>%
+  pull("label") %>%
+  .[c(-9, -10)]
+
+r16_vars_name <- r16_vars_name %>% str_replace(".*!!", "")
+
+race_16 <- get_acs(geography = "county", variables = r16_vars, year = 2016,
+                   geometry = TRUE, key = getOption("api_key_census"))
+
+r16_vars <- r16_vars %>% str_replace("E", "")
+
+race_16 <- race_16 %>%
+  mutate(variable = case_when(
+    variable == r16_vars[1] ~ r16_vars_name[1],
+    variable == r16_vars[2] ~ r16_vars_name[2],
+    variable == r16_vars[3] ~ r16_vars_name[3],
+    variable == r16_vars[4] ~ r16_vars_name[4],
+    variable == r16_vars[5] ~ r16_vars_name[5],
+    variable == r16_vars[6] ~ r16_vars_name[6],
+    variable == r16_vars[7] ~ r16_vars_name[7],
+    variable == r16_vars[8] ~ r16_vars_name[8]
+  ))
+```
+
+```{r}
+geo_16 <- race_16 %>%
+  select(GEOID, NAME) %>%
+  group_by(GEOID) %>%
+  slice(1) %>%
+  ungroup()
+```
+
+
+```{r}
+race_16 %>%
+  filter(variable != "Total") %>%
+  filter(!grepl("Alaska|Hawaii|Puerto Rico", NAME)) %>%
+  mutate(y = estimate[1] > estimate) %>%
+  filter(!grepl("White", variable)) %>%
+  group_by(GEOID) %>%
+  slice(1) %>%
+  ungroup() %>%
+  ggplot() +
+  geom_sf(aes(fill = y, color = y)) +
+  coord_sf(datum = NA, crs = st_crs(102003)) +
+  theme_void()
+```
+
+
+<!-- NATIVITY IN THE UNITED STATES -->
+
+```{r}
+navi_vars <- view_16 %>%
+    filter(grepl("NATIVITY IN THE UNITED STATES", concept)) %>%
+    pull("name")
+
+navi_vars_name <- view_16 %>%
+    filter(grepl("NATIVITY IN THE UNITED STATES", concept)) %>%
+    pull("label")
+
+navi_vars_name <- navi_vars_name %>% str_replace(".*!!", "")
+
+navi_16 <- get_acs(geography = "county", variables = navi_vars, year = 2016,
+             geometry = TRUE, key = getOption("api_key_census"))
+
+navi_vars <- navi_vars %>% str_replace("E", "")
+
+navi_16 <- navi_16 %>%
+  mutate(variable = case_when(
+    variable == navi_vars[1] ~ navi_vars_name[1],
+    variable == navi_vars[2] ~ navi_vars_name[2],
+    variable == navi_vars[3] ~ navi_vars_name[3]
+  ))
+```
+
+```{r}
+navi_16 %>%
+  filter(variable != "Total") %>%
+  filter(!grepl("Alaska|Hawaii|Puerto Rico", NAME)) %>%
+  group_by(GEOID) %>%
+  mutate(percent = estimate / sum(estimate)) %>%
+  ungroup() %>%
+  filter(variable != "Native") %>%
+  ggplot() +
+  geom_sf(aes(fill = percent, color = percent)) +
+  scale_fill_viridis_c() +
+  scale_color_viridis_c() +
+  coord_sf(datum = NA, crs = st_crs(102003)) +
+  theme_void()
+```
+
+
+<!-- INCOME INEQUALITY -->
+
+```{r}
+ii16_vars <- view_16 %>%
+  filter(concept == "GINI INDEX OF INCOME INEQUALITY") %>%
+  pull("name")
+
+ii16_vars_name <- view_16 %>%
+  filter(concept == "GINI INDEX OF INCOME INEQUALITY") %>%
+  pull("label")
+
+ii16_vars_name <- ii16_vars_name %>% str_replace(".*!!", "")
+
+ii_16 <- get_acs(geography = "county", variables = ii16_vars, year = 2016,
+                 geometry = FALSE, key = getOption("api_key_census"))
+
+ii16_vars <- ii16_vars %>% str_replace("E", "")
+
+ii_16 <- ii_16 %>%
+  select(-variable, -moe) %>%
+  rename(gini_index = estimate)
+```
+
+```{r}
+navi_16 %>%
+    inner_join(ii_16 %>% select(-NAME), by = "GEOID") %>%
+    filter(variable != "Total") %>%
+    filter(!grepl("Alaska|Hawaii|Puerto Rico", NAME)) %>%
+    group_by(GEOID) %>%
+    mutate(percent = estimate / sum(estimate)) %>%
+    ungroup() %>%
+    filter(variable != "Native") %>%
+    ggplot() +
+    geom_sf(aes(fill = gini_index, color = gini_index)) +
+    scale_fill_viridis_c(option = "B") +
+    scale_color_viridis_c(option = "B") +
+    coord_sf(datum = NA, crs = st_crs(102003)) +
+    theme_void()
+```
+
+
+<!-- PUBLIC ASSISTANCE INCOME OR FOOD STAMPS/SNAP -->
+
+
+```{r}
+fs16_vars <- view_16 %>%
+  filter(grepl("PUBLIC ASSISTANCE INCOME OR FOOD STAMPS", concept)) %>%
+  pull("name")
+
+fs16_vars_name <- view_16 %>%
+  filter(grepl("PUBLIC ASSISTANCE INCOME OR FOOD STAMPS", concept)) %>%
+  pull("label")
+
+fs16_vars_name <- fs16_vars_name %>% str_replace(".*!!", "")
+
+fs_16 <- get_acs(geography = "county", variables = fs16_vars, year = 2016,
+                 geometry = FALSE, key = getOption("api_key_census"))
+
+fs16_vars <- fs16_vars %>% str_replace("E", "")
+
+fs_16 <- fs_16 %>%
+  select(-variable, -moe) %>%
+  rename(gini_index = estimate)
+
+fs16_vars_name <- fs16_vars_name %>% str_replace(".*!!", "")
+
+fs_16 <- fs_16 %>%
+  mutate(variable = case_when(
+    variable == fs16_vars[1] ~ fs16_vars_name[1],
+    variable == fs16_vars[2] ~ fs16_vars_name[2],
+    variable == fs16_vars[3] ~ fs16_vars_name[3]
+  ))
+```
+
+
+
+<!-- SEX BY AGE -->
+
+
+```{r}
+sex16 <- view_16 %>%
+  filter(grepl("^SEX BY AGE", concept) &
+           !grepl("^SEX BY AGE BY .*", concept) &
+           !grepl("^SEX BY AGE FOR .*", concept))
+
+sex16_vars <- sex16 %>% pull("name")
+
+sex16_vars_name <- sex16 %>% pull("label")
+
+sex16_vars_name <- sex16_vars_name %>%
+  str_replace("Estimate!!", "") %>%
+  str_replace_all("!!", "_") %>%
+  str_replace_all(" ", "_")
+
+sex_16 <- get_acs(geography = "county", variables = sex16_vars,
+                  year = 2016, geometry = FALSE, cache_table = TRUE,
+                  key = getOption("api_key_census"))
+
+sex16 <- sex16 %>%
+  mutate(name = name %>% str_replace("E$", ""))
+
+sex_16 <- sex_16 %>%
+  left_join(sex16 %>% select(name, label, concept), by = c("variable" = "name"))
+
+sex_16 <- sex_16 %>%
+  mutate(label = str_replace(label, "Estimate!!", ""),
+         label = str_replace_all(label, "!!", "_"),
+         label = str_replace_all(label, " ", "_"))
+
+# Total data
+sex_16_tot <- sex_16 %>% filter(concept == "SEX BY AGE")
+
+# Individual races (excluding white-alone)
+sex_16 %>%
+  filter(concept != "SEX BY AGE")
+```
+
+```{r race-maps}
+# Percent by race
+sex_16 %>%
+  filter(!grepl("Alaska|Hawaii|Puerto Rico", NAME)) %>%
+  filter(concept != "SEX BY AGE" & concept != "SEX BY AGE (WHITE ALONE)" & label == "Total") %>%
+  group_by(GEOID) %>%
+  mutate(percent = estimate / sum(estimate)) %>%
+  ungroup() %>%
+  inner_join(geo_16 %>% select(GEOID), by = "GEOID") %>%
+  st_sf() %>%
+  ggplot(aes(fill = percent, color = percent)) +
+  geom_sf() +
+  scale_fill_viridis_c() +
+  scale_color_viridis_c() +
+  coord_sf(datum = NA, crs = st_crs(102003)) +
+  facet_wrap(vars(concept)) +
+  theme_void()
+
+sex_16 %>%
+  filter(!grepl("Alaska|Hawaii|Puerto Rico", NAME)) %>%
+  filter(concept != "SEX BY AGE" & concept != "SEX BY AGE (WHITE ALONE)" & label != "Total") %>%
+  filter(label != "Total_Male" & label != "Total_Female") %>%
+  mutate(label = str_replace(label, "Total_", "")) %>%
+  separate(label, c("sex", "age"), sep = "_", extra = "merge") %>%
+  filter(age == "Under_5_years" & sex == "Male")  %>%
+  group_by(GEOID) %>%
+  mutate(percent = estimate / sum(estimate)) %>%
+  ungroup() %>%
+  inner_join(geo_16 %>% select(GEOID), by = "GEOID") %>%
+  st_sf() %>%
+  ggplot(aes(fill = percent, color = percent)) +
+  geom_sf() +
+  scale_fill_viridis_c() +
+  scale_color_viridis_c() +
+  coord_sf(datum = NA, crs = st_crs(102003)) +
+  facet_wrap(vars(concept)) +
+  theme_void()
+
+sex_16 %>%
+  filter(!grepl("Alaska|Hawaii|Puerto Rico", NAME)) %>%
+  filter(concept != "SEX BY AGE" & concept != "SEX BY AGE (WHITE ALONE)" & label != "Total") %>%
+  filter(label != "Total_Male" & label != "Total_Female") %>%
+  mutate(label = str_replace(label, "Total_", "")) %>%
+  separate(label, c("sex", "age"), sep = "_", extra = "merge") %>%
+  mutate(estimate = if_else(sex == "Female", -estimate, estimate)) %>%
+  group_by(GEOID) %>%
+  mutate(percent = estimate / sum(estimate),
+         age = factor(age, unique(age), ordered = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(age, estimate)) +
+  geom_col(aes(color = sex, fill = sex), width = 1) +
+  facet_wrap(vars(concept)) +
+  coord_flip()
+```
+
+
+```{r half-the-people-here}
+num_counties <- sex_16 %>%
+  filter(!grepl("Alaska|Hawaii|Puerto Rico", NAME)) %>%
+  filter(concept == "SEX BY AGE" & label == "Total") %>%
+  arrange(desc(estimate)) %>%
+  mutate(county_percent = estimate / sum(estimate),
+         county_cum_percent = cumsum(county_percent),
+         county_number = row_number() / n(),
+         is_top_half = county_number <= 0.5) %>%
+  inner_join(geo_16 %>% select(GEOID), by = "GEOID")
+
+num_counties  %>%
+  st_sf() %>%
+  ggplot() +
+  geom_sf(aes(fill = is_top_half, color = is_top_half)) +
+  scale_fill_manual(values = c("brown", "steelblue")) +
+  scale_color_manual(values = c("brown", "steelblue")) +
+  coord_sf(datum = NA, crs = st_crs(102003)) +
+  theme_void()
+
+num_people <- sex_16 %>%
+  filter(!grepl("Alaska|Hawaii|Puerto Rico", NAME)) %>%
+  filter(concept == "SEX BY AGE" & label == "Total") %>%
+  arrange(desc(estimate)) %>%
+  mutate(county_percent = estimate / sum(estimate),
+         county_cum_percent = cumsum(county_percent),
+         county_number = row_number() / n(),
+         is_top_half = county_cum_percent <= 0.5) %>%
+  inner_join(geo_16 %>% select(GEOID), by = "GEOID") %>%
+  st_sf() 
+
+area_labs <- num_people %>%
+  group_by(is_top_half) %>%
+  summarize() %>%
+  mutate(area = st_area(geometry),
+         area = set_units(area, mi^2)) %>%
+  st_set_geometry(NULL)
+
+gg_area_labs <- gsub(" .*", " mi²", scales::comma(round(area_labs$area, 0)))
+
+m1 <- num_people %>%
+  ggplot() +
+  geom_sf(aes(fill = is_top_half, color = is_top_half)) +
+  scale_fill_manual(NULL, values = c("brown", "steelblue"), labels = gg_area_labs) +
+  scale_color_manual(NULL, values = c("brown", "steelblue"), labels = gg_area_labs) +
+  coord_sf(datum = NA, crs = st_crs(102003)) +
+  guides(fill = guide_legend(label.position = "bottom", keyheight = unit(0.1, "cm"))) +
+  labs(title = "Two Halves Of The Contiguous United States",
+       subtitle = "Half Live In The Red Counties, The Other Half In The Blue Counties",
+       caption = "Source: 2016 American Community Survey (US Census Bureau)") +
+  theme_void(base_size = 16, base_family = "Lato") +
+  theme(plot.caption = element_text(color = "gray50"),
+        legend.position = "top", 
+        legend.direction = "horizontal", 
+        legend.margin = margin(0.5, 0, 0, 0, "cm"))
+
+ggsave(f1 <- "_twitter/imgs/half-map.png", m1, width = 7, height = 7, dpi = 600)
+
+f1 %>%
+  image_read() %>%
+  image_resize("x900") %>%
+  image_crop("x830") %>%
+  image_crop("x760+0+70") %>%
+  image_write("_twitter/imgs/half-map-resized.png")
+```
+
+
+```{r}
+county_rank <- num_people %>%
+  st_set_geometry(NULL) %>%
+  select(-variable, -moe, -label, -concept, -county_percent, -county_number, -is_top_half) %>%
+  mutate(rank = row_number()) %>%
+  rename(tot_pop = estimate)
+
+sex_16 %>%
+    filter(!grepl("Alaska|Hawaii|Puerto Rico", NAME)) %>%
+    filter(concept != "SEX BY AGE" & concept != "SEX BY AGE (WHITE ALONE)" & label != "Total") %>%
+    mutate(label = str_replace(label, "Total_", ""),
+           concept = str_replace(concept, "SEX BY AGE ", "")) %>%
+    separate(label, c("sex", "age"), sep = "_", extra = "merge") %>%
+    group_by(GEOID, NAME, concept, age) %>%
+    summarize(estimate = sum(estimate)) %>%
+    ungroup() %>%
+    arrange(desc(estimate)) %>%
+    mutate(county_percent = estimate / sum(estimate),
+           county_cum_percent = cumsum(county_percent),
+           county_number = row_number() / n(),
+           is_top_half = county_cum_percent <= 0.5) %>%
+    semi_join(county_rank %>% filter(rank >= 25)) 
+```
+
+```{r}
+sex_16 %>%
+  filter(!grepl("Alaska|Hawaii|Puerto Rico", NAME)) %>%
+  filter(concept != "SEX BY AGE" & concept != "SEX BY AGE (WHITE ALONE)" & label == "Total") %>%
+  mutate(concept = str_replace(concept, "^SEX BY AGE \\(", ""),
+         concept = str_replace(concept, "\\)$", "")) %>%
+  select(-moe, -label) %>%
+  {
+    o <- .
+    o %>%
+      split(.$concept) %>%
+      purrr::map(~spread(.x, concept, estimate)) %>%
+      purrr::map(~select(.x, -GEOID, -NAME, -variable)) %>%
+      bind_cols() %>%
+      bind_cols(distinct(o, GEOID, NAME), .)
+  } %>%
+  inner_join(geo_16 %>% select(GEOID), by = "GEOID") %>%
+  st_sf() 
+```

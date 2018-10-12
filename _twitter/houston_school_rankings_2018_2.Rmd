@@ -1,5 +1,5 @@
 ---
-title: ""
+title: "2018 Children At Risk Data: Graduation Rates"
 author: "Luke Smith"
 date: "`r Sys.Date()`"
 tags: [houston, schools]
@@ -8,7 +8,7 @@ twitter :
   card    : "summary_large_image"
   site    : "@lksmth"
   creator : "@lksmth"
-  title   : ""
+  title   : "2018 Children At Risk Data: Graduation Rates"
   description : ""
   image       : "https://seasmith.github.io/blog/houston_school_report_2018/figure-html/plot_race.png"
 og :
@@ -54,6 +54,10 @@ dis <- fromJSON("~/R/my_blog/_twitter/c_a_r/districts.json") %>% as_tibble()
 minus_1 <- function(x) x - 1L
 ```
 
+```{r temp-dir}
+tmp_dir <- tempdir()
+```
+
 ```{r plot-variables}
 grade_order <- c(
   paste0(unlist(lapply(LETTERS[1:4], rep, 3)), c("+", "", "-")),
@@ -88,6 +92,7 @@ h <- list.files("~/R/my_blog/_twitter/c_a_r", full.names = TRUE) %>%
 
 names(h) <- c("Elementary", "High", "Middle")
 
+# Assign better column names
 h <- h %>%
   map(~gather(.x, ... = -`Campus ID`)) %>%
   map(~mutate(.x, key = case_when(
@@ -128,6 +133,7 @@ h <- h %>%
   bind_rows(.id = "type") %>%
   rename(campus_id = `Campus ID`)
 
+# Coerce columns to numeric type
 h <- h %>%
   mutate_at(vars(at_math:at_reading,
                  mobility:percentwhite,
@@ -136,6 +142,14 @@ h <- h %>%
   mutate_at(vars(enrollment, rank_region:rank_state,
                  sat_score, campus_id), as.integer)
 
+# Mutate names to title case (from upper case)
+h <- h %>%
+  mutate(district = str_to_title(district),
+         district = str_replace(district, "Isd$",  "ISD"),
+         district = str_replace(district, "Cisd$", "CISD"),
+         district = str_replace(district, "Msd$",  "MSD"))
+
+# Coerce columns to factor
 h <- h %>%
   mutate_at(vars(starts_with("grade_")), factor, levels = grade_order, ordered = TRUE) %>%
   mutate(type = factor(type, type_order, ordered = TRUE))
@@ -145,6 +159,7 @@ h <- h %>%
     mutate(other = enrollment - ((percentafam + percentasian + percenthispanic + percentwhite) * enrollment) / 100) %>%
     mutate(other = if_else(other < 0, 0, other),
            percentother = (other / enrollment) * 100)
+
 ```
 
 ```{r more-tidying}
@@ -168,39 +183,10 @@ h2 <- h %>%
 ```
 
 
-```{r, eval=FALSE}
-# SAT SCORE VS GRADE
-# AVERAGE FOR DISTRICTS
-h3 <- h %>%
-    filter(district %in% str_to_upper(top_20_names)) %>%
-    group_by(district) %>%
-    summarize(sat_mean = mean(sat_score, na.rm = TRUE),
-              grade_mean = mean(as.integer(grade_cr), na.rm = TRUE),
-              enrollment = sum(enrollment, na.rm = TRUE)) %>%
-    ungroup() %>%
-    arrange(desc(sat_mean)) %>%
-    mutate(district = factor(district, unique(district), ordered = TRUE))
-
-# Convert to D3
-h3 %>%
-    ggplot(aes(grade_mean, sat_mean)) +
-    geom_point(aes(size = enrollment), alpha = 0.3, pch = 21, fill = "gray25", color = "gray40") +
-    scale_x_continuous(NULL, breaks = 1:13, labels = grade_order[-14]) +
-    scale_y_continuous(NULL) +
-    theme_classic(base_size = 10, base_family = "Lato") +
-    theme(strip.background = element_blank(),
-          strip.text = element_text("Lato"),
-          legend.position = "top",
-          legend.direction = "horizontal",
-          legend.title = element_text(hjust = 0.5),
-          legend.background = element_rect(color = "gray30"),
-          panel.spacing = unit(1, "cm"),
-          plot.caption = element_text(color = "gray50"))
-```
-
-```{r, fig.height=10}
-h %>%
+```{r para-vars-1}
+hi_lo_grad <- h %>%
   filter(type == "High") %>%
+  filter(grepl("ISD", district)) %>%
   select(campus, grad_rate, enrollment, district) %>%
   mutate(grad_weight = grad_rate * enrollment) %>%
   arrange(grad_rate) %>%
@@ -208,18 +194,36 @@ h %>%
   summarize(grad_rate = mean(grad_rate),
             grad_rate_est = mean(sum(grad_weight) / sum(enrollment))) %>%
   arrange(desc(grad_rate_est)) %>%
-  mutate(district = factor(district, district, ordered = TRUE)) %>%
   select(-grad_rate) %>%
-  # gather(... = -district) %>%
-  # ggplot(aes(district, value)) +
+  mutate(district = factor(district, district, ordered = TRUE)) %>%
+  filter(grad_rate_est == max(grad_rate_est) | grad_rate_est == min(grad_rate_est))
+```
+
+Houston area school districts show a wide disparity in graduation rates, according to the Children At Risk 2018 School Rankings.
+
+Among independent school districts, rural districts occupy the highest and lowest graduation rates.
+
+`r hi_lo_grad$district[[2]]` graduated an estimated `r hi_lo_grad$grad_rate_est[[2]] %>% scales::percent()` of its students while `r hi_lo_grad$district[[1]]` graduated an estimated `r hi_lo_grad$grad_rate_est[[1]] %>% scales::percent()`.
+
+```{r plot-houston-grad-rates}
+p_bar_grad_rate <- h %>%
+  filter(type == "High") %>%
+  select(campus, grad_rate, enrollment, district) %>%
+  mutate(grad_weight = grad_rate * enrollment) %>%
+  arrange(grad_rate) %>%
+  group_by(district) %>%
+  summarize(grad_rate = mean(grad_rate),
+            grad_rate_est = mean(sum(grad_weight) / sum(enrollment))) %>%
+  arrange(grad_rate_est) %>%
+  select(-grad_rate) %>%
+  mutate(district = factor(district, district, ordered = TRUE)) %>%
   ggplot(aes(district, grad_rate_est)) +
-  geom_col(width = 1, color = "white", fill = "thistle4") +
+  geom_col(width = 1.0, color = "white", fill = "thistle4") +
   coord_flip() +
   scale_x_discrete(NULL) +
   scale_y_continuous(NULL, expand = expand_scale(), limits = c(0, 1), sec.axis = sec_axis(~.)) +
-  labs(title = "Houston Area School District Graduation Rates",
-       subtitle = "Estimated District Graduation Rate") +
-  theme_classic(base_size = 10, base_family = "Lato") +
+  labs(caption = "Source: Children At Risk (2018 School Ranking)") +
+  theme_classic(base_size = 12, base_family = "Lato") +
   theme(strip.background = element_blank(),
         strip.text = element_text("Lato"),
         axis.line.y = element_blank(),
@@ -232,71 +236,127 @@ h %>%
         plot.caption = element_text(color = "gray50"))
 # facet_wrap(vars(key))
 
-# GRADUATION AND GRADE
-h %>%
-    filter(type == "High") %>%
-    ggplot(aes(grade_cr, grad_rate)) +
-    geom_point(aes(size = enrollment), position = position_jitter(0.1),
-             pch = 21, color = "gray40", fill = "gray25", alpha = 0.25) +
-    facet_wrap(vars(grade_cr), nrow = 1, scales = "free_x") +
-    theme_classic(base_size = 12, base_family = "Lato") +
-    theme(strip.background = element_blank(),
-          strip.text = element_blank(),
-          axis.ticks.x = element_blank(),
-          legend.position = c(0.55, 0.92),
-          legend.direction = "horizontal",
-          legend.title = element_text(hjust = 0.5),
-          legend.background = element_rect(color = "gray30"),
-          plot.caption = element_text(color = "gray50"))
+ggsave(f_bar_grad_rate <- tempfile("bar-grad-rate", tmp_dir, ".png"),
+       width = 6, height = 9, dpi = 600)
 
-# GRADUATION RATE OF TOP 20
+f_bar_grad_rate %>%
+    image_read() %>%
+    image_join(
+        image_blank(image_info(.)$width, 160, "white") %>%
+            image_annotate("Estimated District Graduation Rate",
+                           size = 115, font = "Lato", color = "black",
+                           location = geometry_point(5, 5))
+        , .
+    ) %>%
+    image_append(TRUE) %>%
+    image_join(
+        image_blank(image_info(.)$width, 185, "white") %>%
+            image_annotate("Houston Area School District Graduation Rates",
+                           size = 155, font = "Lato", color = "black",
+                           location = geometry_point(5, 5))
+        , .
+    ) %>%
+    image_append(TRUE) %>%
+    image_resize("1344x")
+```
+
+They also show a clear positive correlation with the Children At Risk's grade ranking.
+
+```{r grad-vs-grade}
+# GRADUATION AND GRADE
+p_grad_vs_grade <- h %>%
+  filter(type == "High") %>%
+  mutate(grade_cr = fct_rev(grade_cr)) %>%
+  ggplot(aes(grade_cr, grad_rate)) +
+  geom_point(aes(size = enrollment), position = position_jitter(0.1),
+             pch = 21, color = "gray40", fill = "gray25", alpha = 0.25) +
+  scale_x_discrete(NULL) +
+  scale_y_continuous(NULL, labels = function(x) scales::percent(x, 2)) +
+  scale_size_continuous("Enrollment", labels = scales::comma) +
+  labs(
+    # title = "",
+    subtitle = "\n",
+    caption = "Source: Children At Risk (2018 School Ranking)") +
+  # guides(size = guide_legend(title.position = "top")) +
+  facet_wrap(vars(grade_cr), nrow = 1, scales = "free_x") +
+  theme_classic(base_size = 12, base_family = "Lato") +
+  theme(strip.background = element_blank(),
+        strip.text = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = c(0.43, 1.04),
+        legend.direction = "horizontal",
+        legend.title = element_text(hjust = 0.5),
+        legend.background = element_rect(color = "gray30"),
+        plot.caption = element_text(color = "gray50"))
+
+ggsave(f_grad_vs_grade <- tempfile("grad-vs-grade", tmp_dir, ".png"),
+       width = 5, height = 7, dpi = 600)
+
+f_grad_vs_grade %>%
+  image_read() %>%
+  image_join(
+    image_blank(image_info(.)$width, 140, "white") %>%
+      image_annotate("Houston Area Schools: Graduation Rate Vs. Grade",
+                     size = 125, font = "Lato", color = "black",
+                     location = geometry_point(15, 5))
+    , .
+  ) %>%
+  image_append(TRUE) %>%
+  image_resize("1344x")
+```
+
+
+```{r para-vars-2}
 top_20_grad_rate <- h %>%
-  filter(type == "High" & district %in% str_to_upper(top_20_names)) %>%
+  filter(type == "High" & district %in% top_20_names) %>%
   select(campus, grad_rate, enrollment, district) %>%
   group_by(district) %>%
   summarize(grad_rate = mean(grad_rate)) %>%
   ungroup() %>%
   mutate(grad_range = cut_interval(grad_rate, 7),
          grad_range2 = cut(grad_rate, breaks = c(0.5, 0.55, 0.6, 0.65, 0.75, 0.8, 0.85, 0.9, 1))) %>%
-  arrange(grad_range2) %>%
-  pull("district")
+  arrange(grad_range2)
+```
 
-grad_rate_heat_map <- h %>%
-  filter(type == "High" & district %in% str_to_upper(top_20_names)) %>%
+Among the top 20 largest school districts, Yes Prep Public Schools Inc. graduates the highest number of students.
+
+However, the Houston area's largest school district, Houston ISD, graduates a mere `r top_20_grad_rate %>% pull(grad_rate) %>% .[[1]] %>% scales::percent()` of its students.
+
+```{r plot-grad-heat-map}
+top_20_grad_rate <- top_20_grad_rate %>%
+  pull("district") %>%
+  I()
+
+# GRADUATION RATE OF TOP 20
+p_grad_heat_map <- h %>%
+  filter(type == "High" & district %in% top_20_names) %>%
   select(campus, grad_rate, enrollment, district) %>%
   group_by(district) %>%
   arrange(grad_rate) %>%
   ungroup() %>%
   mutate(grad_range = cut_interval(grad_rate, 7),
-         grad_range2 = cut(grad_rate, breaks = c(0.5, 0.55, 0.6, 0.65, 0.75, 0.8, 0.85, 0.9, 1))) %>%
+         grad_range2 = cut(grad_rate, breaks = c(0.5, 0.55, 0.6, 0.65, 0.75, 0.8, 0.85, 0.9, 1.0))) %>%
   arrange(grad_range2) %>%
-  ggplot(aes(factor(district, str_to_upper(top_20_grad_rate), ordered = TRUE), enrollment)) +
-  # geom_col(aes(fill = grad_rate), position = "fill") +
+  ggplot(aes(factor(district, top_20_grad_rate, ordered = TRUE), enrollment)) +
   geom_col(aes(fill = factor(grad_range2, rev(unique(grad_range2)), ordered = TRUE)), position = "fill", width = 1) +
   scale_fill_viridis_d(NULL,
-                       # "2018 Graduation Rate",
                        option = "C", direction =  -1) +
-  #scale_fill_gradientn("2018 Graduation Rate", colours = rev(brewer.purples(n = 7))) +
-  # scale_fill_manual("2018 Graduation Rate", values = rev(brewer.purples(n = 7))) +
   scale_y_continuous(NULL, expand = expand_scale(), sec.axis = dup_axis()
                      # breaks = c(0, 1), labels = scales::percent
   ) +
   scale_x_discrete(NULL, expand = expand_scale()) +
   coord_flip() +
-  labs(title = "Houston Area School Graduation Rates By District (2018)",
-       subtitle = "Normalized To Number And Size Of Schools In District",
+  labs(title = "",
+       subtitle = "",
        caption = "Source: Children At Risk (2018 School Ranking)") +
-  # guides(fill = guide_legend(direction = "horizontal", label.position = "bottom",
-  #                            title.position = "top", title.hjust = 0,
-  #                            keywidth = unit(1, "cm"), nrow = 1)) +
   guides(fill = guide_legend(reverse = TRUE, 
                              label.position = "bottom",
                              title.position = "top", title.hjust = 0,
-                             keywidth = unit(0.3, "cm"), nrow = 1)) +
+                             keywidth = unit(0.5, "cm"), nrow = 1)) +
   theme_classic(base_size = 8, base_family = "Lato") +
   theme(strip.background = element_blank(),
         strip.text = element_text("Lato"),
-        legend.position = "top",
+        legend.position = c(-.40, 1.05),
         legend.direction = "horizontal",
         legend.justification = "left",
         legend.margin = margin(0,0,0,0),
@@ -308,10 +368,42 @@ grad_rate_heat_map <- h %>%
         legend.title = element_text(hjust = 0.5),
         plot.caption = element_text(color = "gray50"))
 
-ggsave("~/R/my_blog/_twitter/imgs/grad_rate_heat_map.png", grad_rate_heat_map, width = 4, height = 6, dpi = 600)
+ggsave(f_grad_heat_map <- tempfile("grad-heat-map", tmp_dir, ".png"),
+       p_grad_heat_map, width = 4, height = 6, dpi = 600)
+
+f_grad_heat_map %>%
+  image_read() %>%
+  image_join(
+    image_blank(image_info(.)$width, 115, "white") %>%
+      image_annotate("Normalized To Number And Size of Schools In District",
+                     size = 80, font = "Lato", color = "black",
+                     location = geometry_point(5, 5))
+    , .
+  ) %>%
+  image_append(TRUE) %>%
+  image_join(
+    image_blank(image_info(.)$width, 130, "white") %>%
+      image_annotate("Houston Area School Graduation Rates By District",
+                     size = 100, font = "Lato", color = "black",
+                     location = geometry_point(5, 5))
+    , .
+  ) %>%
+  image_append(TRUE) %>%
+  image_resize("1344x")
 ```
 
-![](imgs/grad_rate_heat_map.png)
+```{r para-vars-3}
+grad_overall <- h %>%
+  filter(type == "High") %>%
+  select(campus, grad_rate, enrollment, district) %>%
+  summarize(grad_rate = mean(grad_rate)) %>%
+  pull(grad_rate)
+```
+
+Overall, Houston area school districts have an average graduation rate of `r scales::percent(grad_overall)`.
+
+
+<!-- ![](imgs/grad_rate_heat_map.png) -->
 
 ```{r, eval=FALSE}
 h %>%
@@ -672,6 +764,3 @@ srd <- students %>%
             plot.caption = element_text(color = "gray50"))
   })
 ```
-
-
-Houston area school districts have an average graduation rate of `r print("PUT THE DATA HERE")`, aAccording to the 2018 Chidlren At Risk data.

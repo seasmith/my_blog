@@ -37,18 +37,23 @@ knitr::opts_chunk$set(eval=TRUE)
 
 In February 2017, US President Donald Trump spoke about the dangers of taking in refugees from Syria -- an active war-zone where militant Islamic groups combat an oppressive dictator.
 
-In the speech, Trump commented about "last night in Sweden", which prompted UKIP politician Nigel Farage two days later to state that Malmo, Sweden is the "rape capital" of Europe. Farage implied this was due to Sweden's migrant population, particularly refugees.
+In the speech, Trump commented about "last night in Sweden", which prompted UKIP politician Nigel Farage two days later to state that Malmo, Sweden is the "rape capital" of Europe. 
+
+Farage implied Malmo's status was due to Sweden's migrant population, particularly refugees.
 
 An examination of Sweden's crime statistics, from [Brå](https://www.bra.se/bra-in-english/home/crime-and-statistics.html) (an agency within Sweden's Ministry of Justice), does reveal dramatic rises in some crime categories.
 
 ```{r}
-library(plotly)
+# library(plotly)
 library(tidyverse)
 library(readxl)
 library(extrafont); loadfonts("win", quiet = TRUE)
 library(magick)
 # library(ggalt)
 # library(sf)
+library(broom)
+
+tmp_dir <- tempdir()
 ```
 
 ```{r import-asylum-data}
@@ -155,7 +160,7 @@ swe <- swe %>%
          Narcotics = as.double(Narcotics))
 ```
 
-```{r}
+```{r plot-build-asylum-decisions}
 plot_swe1 <- swe %>%
   select(Year, `Lethal Crime`, `All Sexual Crimes`, Rape, Narcotics) %>%
   gather(... = -Year) %>%
@@ -166,10 +171,12 @@ plot_swe1 <- swe %>%
   scale_y_continuous(NULL, expand = c(0.02, 0.02), labels = scales::comma) +
   facet_wrap(vars(key), scales = "free_y", ncol = 1) +
   labs(caption = " ") +
-  theme_classic(base_size = 20, base_family = "Lato") +
+  # theme_classic(base_size = 31, base_family = "Lato") +
+  blg::blg_theme_default(31) +
   theme(strip.background = element_blank(),
-        strip.text = element_text(size = 22),
+        # strip.text = element_text(size = 22),
         panel.spacing.x = unit(1, "cm"),
+        panel.grid.major.x = element_blank(),
         plot.margin = margin(0, 0.5, 0.25, 0.25, "cm"),
         plot.caption = element_text(color = "gray50", size = 17))
 
@@ -185,22 +192,24 @@ plot_swe2 <- swe %>%
   ggplot(aes(Decisions, value)) +
   geom_point(pch = 21, fill = "gray70", color = "gray30", size = 3.1) +
   # geom_smooth(method = "lm", se = FALSE, color = "orange") +
-  scale_x_continuous(NULL, expand = c(0.013, 0.013), labels = scales::comma) +
-  scale_y_continuous(NULL, expand = c(0.03, 0.03), labels = scales::comma) +
-  facet_wrap(vars(key), scales = "free", ncol = 1) +
-  labs(caption = "Source: Brå (Reported Offenses); UN Refugee Agency (UNHCR)") +
-  theme_classic(base_size = 20, base_family = "Lato") +
+  scale_x_continuous(NULL, expand = c(0.013, 0.013), labels = scales::comma,
+                     breaks = scales::pretty_breaks(3)) +
+  scale_y_continuous(NULL, expand = c(0.03, 0.03), labels = scales::comma,
+                     breaks = scales::pretty_breaks(3)) +
+  facet_wrap(vars(key), scales = "free_y", ncol = 1) +
+  # theme_classic(base_size = 31, base_family = "Lato") +
+  blg::blg_theme_default(31) +
   theme(strip.background = element_blank(),
-        strip.text = element_text(size = 22),
+        # strip.text = element_text(size = 22),
         panel.spacing.x = unit(1, "cm"), 
-        plot.margin = margin(0, 0.5, 0.25, 0.25, "cm"),
+        plot.margin = margin(0, 0.5, 1.1, 0.25, "cm"),
         plot.caption = element_text(color = "gray50", size = 17))
 
-ggsave(plot_swe1, file = f_swe1 <- "~/R/my_blog/_draft/sweden/plot_swe1.png", height = 15, width = 7, dpi = 600)
-ggsave(plot_swe2, file = f_swe2 <- "~/R/my_blog/_draft/sweden/plot_swe2.png", height = 15, width = 7, dpi = 600)
+ggsave(plot_swe1, file = f_swe1 <- "~/R/my_blog/_draft/sweden/plot_swe1.png", height = 14, width = 6, dpi = 600)
+ggsave(plot_swe2, file = f_swe2 <- "~/R/my_blog/_draft/sweden/plot_swe2.png", height = 14, width = 6, dpi = 600)
 ```
 
-```{r}
+```{r plot-asylum-decisions}
 img_swe1 <- f_swe1 %>%
   image_read()
 img_swe2 <- f_swe2 %>%
@@ -208,9 +217,17 @@ img_swe2 <- f_swe2 %>%
 
 img_swe1 <- img_swe1 %>%
   image_join(
-    image_blank(4200, 250, "white") %>%
-      image_annotate("Crime Rates Per 100,000 Persons (1950-2017)",
-                     size = 185, color = "black", font = "Lato",
+    image_blank(4200, 252, "white") %>%
+      image_annotate("(1950-2017)",
+                     size = 218, color = "black", font = "Lato",
+                     location = geometry_point(50, 5))
+    , .
+  ) %>%
+  image_append(stack = TRUE) %>%
+  image_join(
+    image_blank(4200, 252, "white") %>%
+      image_annotate("Crime Rates Per 100,000 Persons",
+                     size = 218, color = "black", font = "Lato",
                      location = geometry_point(50, 5))
     , .
   ) %>%
@@ -219,9 +236,17 @@ img_swe1 <- img_swe1 %>%
 
 img_swe2 <- img_swe2 %>%
   image_join(
-    image_blank(4200, 250, "white") %>%
-      image_annotate("Crime Rates And Asylum Decisions (2000-2017)",
-                     size = 185, color = "black", font = "Lato",
+    image_blank(4200, 252, "white") %>%
+      image_annotate("(2000-2017)",
+                     size = 218, color = "black", font = "Lato",
+                     location = geometry_point(50, 5))
+    , .
+  ) %>%
+  image_append(stack = TRUE) %>%
+  image_join(
+    image_blank(4200, 252, "white") %>%
+      image_annotate("Crime Rates And Asylum Decisions",
+                     size = 218, color = "black", font = "Lato",
                      location = geometry_point(50, 5))
     , .
   ) %>%
@@ -230,7 +255,7 @@ img_swe2 <- img_swe2 %>%
 
 img_swe1 %>%
   image_join(
-    image_blank(400, 4450, "white")
+    image_blank(300, 4450, "white")
   ) %>%
   image_append() %>%
   image_join(
@@ -238,13 +263,20 @@ img_swe1 %>%
   ) %>%
   image_append() %>%
   image_join(
-    image_blank(8900, 400, "white") %>%
+    image_blank(image_info(.)$width, 415, "white") %>%
       image_annotate("Have Increases In Asylum Decisions Affected Crime In Sweden?",
-                     size = 290, color = "black", font = "Lato",
+                     size = 310, color = "black", font = "Lato",
                      location = geometry_point(50, 5))
     , .
   ) %>%
   image_append(stack = TRUE) %>%
+  image_join(
+    image_blank(image_info(.)$width, 230, "white") %>%
+      image_annotate("Source: Brå (Reported Offenses); UN Refugee Agency (UNHCR)",
+                     size = 200, font = "Lato", color = "gray50",
+                     location = geometry_point(3100, 0))
+  ) %>%
+  image_append(TRUE) %>%
   image_resize("1344x")
 ```
 
@@ -277,7 +309,7 @@ nr_labs <- nr %>%
                            TRUE ~value)) %>%
   I()
 
-plot_not_rape <- nr %>%
+p_not_rape <- nr %>%
   ggplot(aes(Year, value, color = key)) +
   geom_line(size = 0.7) +
   geom_text(aes(label = lab), nr_labs, hjust = 0, nudge_y = 15) +
@@ -285,14 +317,17 @@ plot_not_rape <- nr %>%
   scale_y_continuous(NULL, expand = c(0.02, 0.02)) +
   scale_color_manual(values = c("#4c415f", "#73628f", "#998ab2"),guide = FALSE) +
   labs(caption = "Source: Brå (Reported Offenses)") +
-  theme_classic(base_size = 16, base_family = "Lato") +
+  # theme_classic(base_size = 18, base_family = "Lato") +
+  blg::blg_theme_default(18) +
   theme(strip.background = element_blank(),
         strip.text = element_text(size = 15),
         panel.spacing.x = unit(1, "cm"),
+        panel.grid.major.x = element_blank(),
         plot.margin = margin(0, 0.5, 0.25, 0.25, "cm"),
         plot.caption = element_text(color = "gray50", size = 15))
 
-ggsave(plot_not_rape, file = f_not_rape <- "~/R/my_blog/_draft/sweden/plot_not_rape.png", height = 7, width = 7, dpi = 600)
+ggsave(f_not_rape <- tempfile("plot_not_rape", tmp_dir, ".png"), 
+       p_not_rape, height = 7, width = 7, dpi = 600)
 
 f_not_rape %>%
   image_read() %>%
@@ -311,9 +346,9 @@ f_not_rape %>%
       # ) %>%
       # image_append(stack = TRUE) %>%
       image_join(
-        image_blank(i$width, 200, "white") %>%
+        image_blank(i$width, 190, "white") %>%
           image_annotate("Sexual Crime Rates (Per 100,000 Persons)",
-                         size = 130, font = "Lato", color = "black",
+                         size = 120, font = "Lato", color = "black",
                          location = geometry_point(70, 5))
       ) %>%
       image_append(stack = TRUE) %>%
@@ -365,3 +400,61 @@ The rape rate in Sweden rose in 2016 and 2017, however the rate does not appear 
 The rape rate rose during the mid-2000s, as did other crimes such as all sexual crimes and those involving narcotics.
 
 The data does not appear to support some of the claims made by politicians, however it should be noted that the mid-2000s, a period of rising crime, did coincide with the arrival of other war refugees from Iraq and Afghanistan.
+
+
+```{r stat-tests}
+tests <- swe %>%
+  left_join(
+    asy_sum2 %>%
+      filter(Host == "Sweden"),
+    by = "Year") %>%
+  select(Year, `Lethal Crime`, `All Sexual Crimes`, Rape, Narcotics, Decisions) %>%
+  filter(!is.na(Decisions)) %>%
+  gather(... = -c(Year, Decisions)) %>%
+  mutate(key = factor(key, unique(key), ordered = TRUE)) %>%
+  group_by(key) %>%
+  nest() %>%
+  mutate(cor = map(data, ~cor.test(.x$Decisions, .x$value)),
+         tidy = map(cor, tidy),
+         mod = map(data, ~lm(value ~ Decisions, data  = .x)),
+         tidy2 = map(mod, broom::tidy),
+         glanced = map(mod, glance),
+         augmented = map(mod, augment))
+
+
+# Standardized Residuals vs. Fitted Values
+p_res_fit <- tests %>%
+  select(key, augmented) %>%
+  unnest() %>%
+  ggplot(aes(.fitted, .std.resid)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(NULL, labels = scales::comma,
+                     expand = c(0.03, 0.03)) +
+  scale_y_continuous(NULL, breaks = scales::pretty_breaks(3),
+                     expand = c(0.03, 0.03)) +
+  facet_wrap(vars(key), scales = "free") +
+  blg::blg_theme_default(18) +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(size = 15),
+        panel.spacing.x = unit(1, "cm"),
+        panel.spacing.y = unit(0.85, "cm"),
+        plot.margin = margin(0, 0.5, 0.25, 0.25, "cm"),
+        plot.caption = element_text(color = "gray50", size = 15))
+
+ggsave(f_res_fit <- tempfile("plot_res_fit", tmp_dir, ".png"), 
+       p_res_fit, height = 7, width = 7, dpi = 600)
+
+# Add title
+f_res_fit %>%
+  image_read() %>%
+  image_join(
+    image_blank(image_info(.)$width, 300, "white") %>%
+      image_annotate("Standardized Residuals vs. Fitted Values",
+                     font = "Lato", size = 180, color = "black",
+                     location = geometry_point(5, 5))
+    , .
+  ) %>%
+  image_append(TRUE) %>%
+  image_resize("1344x")
+```

@@ -1,0 +1,628 @@
+---
+title: "Assylum in Mexico and The United States"
+author: "Luke Smith"
+date: "`r Sys.Date()`"
+tags: [mexico, asylum, refugees]
+description: ""
+twitter :
+  card    : "summary_large_image"
+  site    : "@lksmth"
+  creator : "@lksmth"
+  title   : "Assylum in Mexico and The United States"
+  description : ""
+  image       : ""
+og :
+  image : ""
+---
+
+The past several years have seen a surge in refugees and internally displaced persons.
+
+Syrians and Afghanis escaping violence in their home countries, Rohingya fleeing the Burmese army, and violence in northern Africa, have driven millions toward Europe.
+
+These conflicts consitute the largest sources of 
+
+
+In June 2018, Andres Manual Lopez Obrador (AMLO), then presidential candidate for Mexico and now its president-elect, [made the satement](http://dailycaller.com/2018/06/22/mexican-candidate-immigration-speech/) that it was a right of all migrants in the world to abandon their home country in order to seek a new life in the United States.
+
+That statement may explain an [earlier statement](https://www.reuters.com/article/us-usa-trump-mexico-leftist/mexicos-lopez-obrador-blasts-trumps-immigration-policies-at-la-rally-idUSKBN15S0K7) directed toward then US president Donald Trump, in which AMLO stated that an addition to the US border wall would "denigrate and discriminate against our fellow human beings, it goes against humanity, it goes against intelligence and against history".
+
+
+
+```{r knitr-opts, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_chunk$set(eval=TRUE)
+```
+
+```{r load-deps}
+# library(plotly)
+library(tidyverse)
+library(readxl)
+library(extrafont); loadfonts("win", quiet = TRUE)
+library(magick)
+library(ggalt)
+library(sf)
+library(blg)
+```
+
+```{r tmp-dir}
+tmp_dir <- tempdir()
+```
+
+```{r import-asylum-data}
+f_asy <- "~/R/my_blog/_draft/asy_data/unhcr_world.csv"
+
+asy <- read_csv(f_asy, skip = 3L)
+
+asy <- asy %>%
+  rename(Applied = `Applied during year`,
+         Decisions = `Total decisions`,
+         Pending_End = `Total pending end-year`,
+         Host = `Country / territory of asylum/residence`)
+
+asy <- asy %>%
+  mutate(Host = case_when(
+    Host == "Serbia and Kosovo (S/RES/1244 (1999))" ~ "Serbia",
+    Host == "Iran (Islamic Rep. of)"                ~ "Iran (Islamic Republic of)",
+    Host == "Czech Rep."                            ~ "Czechia",
+    Host == "Syrian Arab Rep."                      ~ "Syrian Arab Republic",
+    Host == "United Rep. of Tanzania"               ~ "United Republic of Tanzania",
+    Host == "Rep. of Korea"                         ~ "Republic of Korea",
+    TRUE                                            ~ Host
+  ))
+
+asy_sum <- asy %>%
+  group_by(Year, Host, Origin) %>%
+  summarize(n = sum(Applied, na.rm = TRUE)) %>%
+  mutate(Asylum = Host)
+
+asy_sum2 <- asy %>%
+{
+  x <- .
+  x %>%
+    group_by(Year, Host) %>%
+    summarize_at(vars(Applied, Decisions, Pending_End), sum, na.rm = TRUE) %>%
+    mutate(Origin = "Total") %>%
+    bind_rows(x %>% group_by(Origin, Year) %>% summarize_at(vars(Applied, Decisions, Pending_End), sum, na.rm = TRUE)) %>%
+    ungroup()
+}
+
+# asy_sum2 <- asy_sum2 %>%
+#   mutate(Host = case_when(
+#     Host == "Venezuela (Bolivarian Republic of)" ~ "Venezuela",
+#     Host == "Sint Maarten (Dutch part)"   ~ "St. Maarten",
+#     Host == "United Republic of Tanzania" ~ "Tanzania",
+#     TRUE ~ Host
+#   ))
+```
+
+```{r import-population-data}
+f_pop <- "~/R/my_blog/_draft/asy_data/WPP2017_POP_F01_1_TOTAL_POPULATION_BOTH_SEXES.xlsx"
+
+pop <- read_xlsx(f_pop, skip = 16)
+
+pop <- pop %>%
+  rename(Region = `Region, subregion, country or area *`)
+```
+
+```{r import-gdp}
+f_gdp <- list.files("~/R/my_blog/_draft/gdp_data", pattern = "\\.csv$", full.names = TRUE)
+
+gdp <- read_csv(f_gdp, skip = 4)
+```
+
+```{r import-resettlement}
+f_res <- "~/R/my_blog/_draft/asy_data/unhcr_popstats_export_resettlement_all_data.csv"
+
+res <- read_csv(f_res, skip = 3)
+
+res <- res %>%
+  rename(Host = `Country / territory of asylum/residence`)
+```
+
+```{r import-remittances}
+f_rem_in <- "~/R/my_blog/_draft/rem_data/Remittancedatainflows(Apr.2018).xls"
+f_rem_out <- "~/R/my_blog/_draft/rem_data/Remittancedataoutflows (Apr.2018).xls"
+
+rem_in  <- read_xls(f_rem_in)
+rem_out <- read_xls(f_rem_out)
+
+rem_in <- rem_in %>%
+  mutate_at(vars(`1970`:`2017p`), as.double) %>%
+  rename(country = `Migrant remittance inflows (US$ million)`)
+
+rem_out <- rem_out %>%
+  mutate_at(vars(`1970`:`2016`), as.double) %>%
+  rename(country = `Migrant remittance outflows (US$ million)`)
+```
+
+```{r import-persons-of-concern}
+f_poc <- "~/R/my_blog/_draft/asy_data/unhcr_poc.csv"
+
+poc <- read_csv(f_poc, skip = 3L)
+
+poc <- poc %>%
+  rename(Host = `Country / territory of asylum/residence`,
+         Refugees = `Refugees (incl. refugee-like situations)`,
+         Pending_Asylum = `Asylum-seekers (pending cases)`,
+         Returned_Refugees = `Returned refugees`,
+         IDP = `Internally displaced persons (IDPs)`,
+         Returned_IDP = `Returned IDPs`,
+         Stateless = `Stateless persons`,
+         Others = `Others of concern`,
+         Total_POC = `Total Population`)
+
+poc <- poc %>%
+    mutate_at(vars(Refugees:Total_POC), as.integer)
+```
+
+```{r import-geo, results='hide'}
+ISO_3166_1 <- ISOcodes::ISO_3166_1 %>% as_tibble()
+# data(world, package = "spData")
+
+# https://hub.arcgis.com/datasets/a21fdb46d23e4ef896f31475217cbb08_1
+world <- st_read("~/R/my_blog/_draft/Countries_WGS84/Countries_WGS84.shp")
+
+# https://hub.arcgis.com/datasets/252471276c9941729543be8789e06e12_0
+world2 <- st_read("~/R/my_blog/_draft/UIA_World_Countries_Boundaries/UIA_World_Countries_Boundaries.shp")
+
+world2 <- world2 %>%
+  inner_join(
+    ISO_3166_1 %>%
+      select(Alpha_2, Alpha_3),
+    by = c("ISO" = "Alpha_2")
+  )
+```
+
+```{r merge-pop-gdp}
+pop_gdp <- pop %>%
+  select(Region, `Country code`, `2015`) %>%
+  rename(pop = `2015`) %>%
+  mutate(`Country code` = as.integer(`Country code`)) %>%
+  left_join(ISO_3166_1 %>% mutate(Numeric = as.integer(Numeric)) %>% select(Numeric, Alpha_3), by = c("Country code" = "Numeric")) %>%
+  left_join(gdp %>% select(`Country Code`, `2015`) %>% rename(gdp = `2015`), by = c("Alpha_3" = "Country Code")) %>%
+  select(-`Country code`, -Alpha_3)
+```
+
+```{r totals}
+asy_total <- asy_sum2 %>%
+  filter(Origin == "Total") %>%
+  group_by(Year) %>%
+  summarize_at(vars(Applied:Pending_End), sum) %>%
+  gather(... = -Year) %>%
+  mutate(key = if_else(key == "Pending_End", "Pending\n(Year End)", key))
+
+asy_total_labs <- asy_total %>%
+  filter(Year == 2017) %>%
+  mutate(key = if_else(key == "Pending_End", "Pending\n(Year End)", key))
+
+tot_plot <- asy_total %>%
+  ggplot(aes(Year, value, color = key)) +
+  geom_line() +
+  geom_text(aes(label = key), asy_total_labs, hjust = 0, nudge_x = 0.1) +
+  scale_y_continuous(NULL, labels = scales::comma, limits = c(600000, 3200000)) +
+  scale_x_continuous(NULL, breaks = seq(2000, 2016, by = 4), 
+                     expand = expand_scale(), limits = c(2000, 2020)) +
+  scale_color_discrete(guide = FALSE) +
+  # facet_wrap(vars(key)) +
+  # labs(title = "Global Refugee Situation",
+  #      subtitle = "Number of Asylum Cases") +
+  # theme_classic(base_family = "Lato", base_size = 13)
+  blg_theme_default(13)
+
+ggsave(tot_file <- tempfile("tot_plot", tmp_dir, ".png"),
+       tot_plot, width = 7, height = 9, dpi = 600)
+
+tot_file %>%
+  image_read() %>%
+  # image_join(
+  #   image_blank(4200, 800, "white")
+  # ) %>%
+  image_resize("1344x")
+```
+
+<!-- ![](asy_imgs/tot_plot.png) -->
+
+```{r, eval=FALSE}
+asy_sum2 %>%
+  group_by(Host) %>%
+  summarize_at(vars(Applied, Decisions, Pending_End), sum, na.rm = TRUE) %>%
+  ungroup() %>%
+  mutate(pct_app = Decisions / Applied) %>%
+  arrange(desc(pct_app)) %>%
+  mutate(rn = row_number()) %>%
+  filter(Host == "United States of America" | Host == "Mexico")
+```
+
+```{r usa-mex-totals, fig.height=19, fig.path="asy_imgs/", dpi=600}
+# Total 2000-2017
+a1 <- asy_sum2 %>%
+  filter(Origin == "Total") %>%
+  select(-Origin) %>%
+  gather(... = -c(Year, Host)) %>%
+  filter(between(Year, 2000, 2017) & key == "Decisions") %>%
+  group_by(Host) %>%
+  summarize(value = sum(value) / 10e5)  %>%
+  arrange(desc(value)) %>%
+  mutate(Host = case_when(
+    Host == "Venezuela (Bolivarian Republic of)" ~ "Venezuela",
+    Host == "Sint Maarten (Dutch part)"   ~ "St. Maarten",
+    Host == "United Republic of Tanzania" ~ "Tanzania",
+    TRUE ~ Host
+  )) %>%
+  mutate(Host = factor(Host, rev(Host), ordered = TRUE),
+         rn = row_number()) %>%
+  filter(rn <= 63) %>%
+  ggplot() +
+  geom_col(aes(Host, value)) +
+  coord_flip() +
+  scale_y_continuous(NULL, labels = scales::comma, expand = expand_scale()) +
+  scale_x_discrete(NULL, expand = expand_scale()) +
+  # theme_classic(base_family = "Lato", base_size = 26) +
+  blg_theme_default(26) +
+  theme(legend.position = "top",
+        legend.direction = "horizontal",
+        panel.grid.major.y = element_blank(),
+        # axis.ticks = element_line(color = "black")
+        NULL)
+
+ggsave(p1 <- tempfile("usa-mex-totals-1", tmp_dir, ".png"), 
+       a1, dpi = 600)
+```
+
+```{r usa-mex-percents, fig.height=38.5, fig.path="asy_imgs/", dpi=600}
+# Percent Population (2015) 2000-2017
+a2 <- asy_sum2 %>%
+  filter(Origin == "Total") %>%
+  select(-Origin) %>%
+  gather(... = -c(Year, Host)) %>%
+  filter(between(Year, 2000, 2017) & key == "Decisions") %>%
+  group_by(Host) %>%
+  summarize(value = sum(value))  %>%
+  left_join(pop, by = c("Host" = "Region")) %>%
+  mutate(pct_pop = value / (`2015` * 1000)) %>%
+  arrange(desc(pct_pop)) %>%
+  mutate(Host = case_when(
+    Host == "Venezuela (Bolivarian Republic of)" ~ "Venezuela",
+    Host == "Sint Maarten (Dutch part)"   ~ "St. Maarten",
+    Host == "United Republic of Tanzania" ~ "Tanzania",
+    TRUE ~ Host
+  )) %>%
+  mutate(Host = factor(Host, rev(Host), ordered = TRUE),
+         rn = row_number()) %>%
+  filter(rn <= 130) %>%
+  ggplot() +
+  geom_col(aes(Host, pct_pop)) +
+  coord_flip() +
+  scale_y_continuous(NULL, labels = scales::percent, expand = expand_scale()) +
+  scale_x_discrete(NULL, expand = expand_scale()) +
+  # theme_classic(base_family = "Lato", base_size = 26) +
+  blg_theme_default(26) +
+  theme(legend.position = "top",
+        legend.direction = "horizontal",
+        panel.grid.major.y = element_blank(),
+        # axis.ticks = element_line(color = "black")
+        NULL
+        )
+
+ggsave(p2 <- tempfile("usa-mex-percents-1", tmp_dir, ".png"), 
+       a2, dpi = 600)
+```
+
+```{r}
+p1 %>%
+  image_read() %>%
+  image_join(
+    image_blank(4200, 375, "white") %>%
+      image_annotate("Number (Millions)",
+                     font = "Lato", color = "black",
+                     size = 275, location = geometry_point(50, 5)),
+    .
+  ) %>%
+  image_append(TRUE) %>%
+  image_join(
+    p2 %>%
+      image_read() %>%
+      image_join(
+        image_blank(4200, 375, "white") %>%
+          image_annotate("Percent of 2015 Population",
+                         font = "Lato", color = "black",
+                         size = 275, location = geometry_point(50, 5)),
+        .
+      ) %>%
+      image_append(TRUE)
+    ) %>%
+  image_append()
+```
+
+```{r diff-stats}
+mex_usa_ref <- asy %>%
+  filter(Host == "United States of America" & Origin == "Mexico") %>%
+  summarize(Decisions = sum(Decisions)) %>%
+  pull(Decisions)
+```
+
+To put into perspective the difference in total approved asylum cases between Mexico and the United States, between 2000-2017 there were `r scales::comma(mex_usa_ref)` approved asylum cases in the United States originating from Mexico alone. That is 8 times the number of total approved asylum cases in Mexico over the same period.
+
+Although resettlement data for Mexico is sparse, there are three years of data to compare to the United States.
+
+Between 2003-2005, Mexico resettled 46 refugees compared to 135,103 resettled by the United States.
+
+```{r combine-data}
+asy_sum3 <- asy_sum2 %>%
+  filter(Origin == "Total") %>%
+  select(-Origin) %>%
+  gather(... = -c(Year, Host)) %>%
+  filter(between(Year, 2000, 2017) & key == "Decisions") %>%
+  group_by(Host) %>%
+  summarize(value = sum(value))  %>%
+  left_join(pop_gdp, by = c("Host" = "Region"))
+
+asy_sum3 <- asy_sum3 %>%
+    mutate(gdp_cap = (gdp / (pop * 1000)),
+           asy_cap = (value / (pop * 1000)))
+
+jsonlite::write_json(asy_sum3 %>%
+                       rename(x = gdp_cap,
+                              y = asy_cap,
+                              n = Host),
+                     "~/R/my_blog/_draft/asy_d3/asylum.json")
+
+# asy_sum3 %>%
+#   mutate(col = case_when(
+#     Host == "United States of America" ~ "brown",
+#     Host == "Mexico" ~ "green",
+#     TRUE ~ "gray50")) %>%
+#   ggplot() +
+#   geom_point(aes(gdp_cap, asy_cap, group = Host, fill = I(col)), pch = 21) +
+#   scale_x_continuous(NULL, expand = c(0.005, 0.005), label = function(x) paste0("$", scales::comma(x))) +
+#   scale_y_continuous(NULL, expand = c(0.01, 0.0), label = scales::percent) +
+#   # scale_fill_manual() +
+#   labs(title = "Does Per Capita GDP Play A Role In Asylum Acceptance?",
+#        subtitle = "Total Approved Asylum Application (2000-2017) As Percent Of 2015 Population") +
+#   theme_classic(base_size = 13, base_family = "Lato")
+```
+
+```{r plotly-scatterplot, eval=FALSE}
+{
+  asy_sum3 %>%
+    mutate(col = case_when(
+      Host == "United States of America" ~ "brown",
+      Host == "Mexico" ~ "green",
+      TRUE ~ "gray70")) %>%
+    ggplot() +
+    geom_point(aes(gdp_cap, asy_cap, group = Host, fill = I(col)), pch = 21, size = 2.1) +
+    scale_x_continuous(NULL, expand = c(0.005, 0.005), label = function(x) paste0("$", scales::comma(x))) +
+    scale_y_continuous(NULL, expand = c(0.01, 0.0), label = scales::percent) +
+    guides(fill = FALSE) +
+    labs(title = "Does Per Capita GDP Play A Role In Asylum Acceptance?",
+         subtitle = "Total Approved Asylum Application (2000-2017) As Percent Of 2015 Population") +
+    # theme_classic(base_size = 13, base_family = "Lato")
+    blg_theme_default(13)
+  
+} %>%
+  ggplotly() %>%
+  hide_legend()
+```
+
+```{r}
+res %>%
+  filter(Host == "United States of America" | Host == "Mexico") %>%
+  filter(between(Year, 2003, 2005)) %>%
+  group_by(Host, Year) %>%
+  summarize(Value = sum(Value, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot() +
+  geom_col(aes(Year, Value)) +
+  scale_x_continuous(NULL, expand = expand_scale(), breaks = 2003:2005) +
+  scale_y_continuous(NULL, expand = expand_scale(), labels = scales::comma) +
+  labs(caption = "Source: UNHCR") +
+  facet_wrap(vars(Host)) +
+  # theme_classic(base_size = 14, base_family = "Lato") +
+  blg_theme_default(14) +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(size = 13), 
+        panel.spacing.x = unit(1, "cm"),
+        plot.caption = element_text(color = "gray50", size = 11),
+        # axis.ticks = element_line(color = "black"),
+        NULL)
+```
+
+```{r usa-mex-table, eval=FALSE}
+asy_sum2 %>%
+  filter(Origin == "Total") %>%
+  select(-Origin) %>%
+  gather(... = -c(Year, Host)) %>%
+  filter(between(Year, 2000, 2017) & key == "Decisions") %>%
+  group_by(Host) %>%
+  summarize(value = sum(value))  %>%
+  arrange(desc(value)) %>%
+  mutate(Host = factor(Host, rev(Host), ordered = TRUE),
+         rn = row_number()) %>%
+  filter(Host == "Mexico" | Host == "United States of America")
+```
+
+```{r misc}
+cen_ame <- asy_sum %>%
+  filter(grepl("United States|Mexico", Host)) %>%
+  filter(grepl("El Salvador|Guatemala|Honduras|Nicaragua", Origin)) %>%
+  ungroup()
+
+cen_ame_labels <- cen_ame %>%
+  filter(Origin == "El Salvador" & Year == 2009) %>%
+  mutate(Year = case_when(
+    Host == "Mexico" ~ 2015L,
+    TRUE ~ Year
+  ),
+  n = case_when(
+    Host == "Mexico" ~ 6000L,
+    TRUE ~ 20000L
+  ))
+
+plot_ca <- cen_ame %>%
+  ggplot(aes(Year, n, color = Asylum, group = Asylum)) +
+  geom_line() +
+  geom_text(aes(label = Host), cen_ame_labels) +
+  scale_color_discrete("Country of Asylum", guide = FALSE) +
+  scale_y_continuous(NULL, labels = scales::comma) +
+  scale_x_continuous(NULL) +
+  facet_wrap(vars(Origin)) +
+  labs(
+    # title = "Asylum Applications by Central Americans", 
+       caption = "Source: UNHCR") +
+  # theme_classic(base_family = "Open Sans", base_size = 14) +
+  blg_theme_default(14) +
+  theme(legend.position = "top",
+        legend.direction = "horizontal",
+        strip.background = element_blank(),
+        strip.text = element_text(size = 13),
+        panel.spacing.x = unit(1, "cm"),
+        plot.caption = element_text(color = "gray50", size = 11),
+        # axis.ticks = element_line(color = "black")
+        NULL)
+
+ggsave(f_ca <- "~/R/my_blog/_draft/asy_imgs/cen_ame.png", 
+       plot_ca, width = 7, height = 7, dpi = 600)
+
+f_ca %>%
+  image_read() %>%
+  image_resize("1344x")
+```
+
+
+```{r}
+poc %>%
+  filter(Host == "United States of America" | Host == "Mexico") %>%
+  select(-Origin) %>%
+  group_by(Year, Host) %>%
+  summarize_all(sum, na.rm = TRUE) %>%
+  ungroup() %>%
+  select(-IDP, -Total_POC, -Returned_IDP, -Pending_Asylum, -Others, -Stateless) %>%
+  left_join(res %>%
+              group_by(Host, Year) %>%
+              summarize(Value = sum(Value, na.rm = TRUE)), by = c("Year", "Host")) %>%
+  rename(Resettled = Value) %>%
+  gather(... = -c(Year, Host)) %>%
+  ggplot(aes(Year, value, color = Host)) +
+  geom_line() +
+  facet_wrap(vars(key))
+```
+
+```{r}
+poc %>%
+    filter(Host == "United States of America" | Host == "Mexico") %>%
+    select(-Origin) %>%
+    group_by(Year, Host) %>%
+    summarize_all(sum, na.rm = TRUE) %>%
+    ungroup() %>%
+    select(-IDP, -Total_POC, -Returned_IDP, -Pending_Asylum, -Others, -Stateless) %>%
+    left_join(res %>%
+                  group_by(Host, Year) %>%
+                  summarize(Value = sum(Value, na.rm = TRUE)), by = c("Year", "Host")) %>%
+    rename(Resettled = Value) %>%
+    gather(... = -c(Year, Host)) %>%
+    left_join(pop %>%
+                  filter(Region == "Mexico" | Region == "United States of America") %>%
+                  select(-Index, -Variant, -Notes, -`Country code`) %>%
+                  gather(... = -Region) %>%
+                  mutate(key = as.integer(key))
+              , by = c("Year" = "key", "Host" = "Region"))
+```
+
+
+```{r not-worth-it, eval=FALSE}
+filter_2017_1 <- asy_sum2 %>%
+  filter(Origin == "Total") %>%
+  select(-Origin) %>%
+  gather(... = -c(Year, Host)) %>%
+  group_by(Year) %>%
+  filter(Year == 2017 & key == "Decisions") %>%
+  arrange(desc(value)) %>%
+  mutate(rn = row_number()) %>%
+  filter(rn <= 33) %>%
+  ungroup() %>%
+  pull(Host)
+
+asy_sum2 %>%
+  filter(Origin == "Total") %>%
+  select(-Origin) %>%
+  filter(Host %in% filter_2017_1) %>%
+  gather(... = -c(Year, Host)) %>%
+  filter(key == "Decisions") %>%
+  ggplot() +
+  geom_line(aes(Year, value)) +
+  facet_wrap(vars(Host), ncol = 1, strip.position = "left")
+
+asy_sum2 %>%
+  filter(Origin == "Total") %>%
+  select(-Origin) %>%
+  gather(... = -c(Year, Host)) %>%
+  filter(Year == 2017 & key == "Decisions") %>%
+  arrange(desc(value)) %>%
+  mutate(rn = row_number(),
+         Host = factor(Host, rev(Host), ordered = TRUE)) %>%
+  filter(rn <= 33) %>%
+  ggplot() +
+  geom_col(aes(Host, value, group = key)) +
+  coord_flip()
+
+# Total 2013-2017
+asy_sum2 %>%
+  filter(Origin == "Total") %>%
+  select(-Origin) %>%
+  gather(... = -c(Year, Host)) %>%
+  filter(between(Year, 2013, 2017) & key == "Decisions") %>%
+  group_by(Host) %>%
+  summarize(value = sum(value))  %>%
+  arrange(desc(value)) %>%
+  mutate(Host = factor(Host, rev(Host), ordered = TRUE),
+         rn = row_number()) %>%
+  filter(rn <= 43) %>%
+  ggplot() +
+  geom_col(aes(Host, value)) +
+  coord_flip()
+```
+
+```{r major-western-nations, eval=FALSE}
+# ~Status
+asy_sum2 %>%
+  filter(Origin == "Total") %>%
+  select(-Origin) %>%
+  filter(grepl("Sweden|France|Germany|Italy|Spain|United States", Host)) %>%
+  gather(... = -c(Year, Host)) %>%
+  ggplot() +
+  geom_line(aes(Year, value, color = Host, group = Host)) +
+  facet_wrap(vars(key)) +
+  labs(title = "Selected Western Nations",
+       subtitle = "Number of Persons") +
+  theme_classic(base_family = "Lato")
+
+# ~Host
+asy_sum2 %>%
+  filter(Origin == "Total") %>%
+  select(-Origin) %>%
+  filter(grepl("Sweden|France|Germany|Italy|Spain|United States", Host)) %>%
+  gather(... = -c(Year, Host)) %>%
+  ggplot() +
+  geom_line(aes(Year, value, color = key, group = key)) +
+  facet_wrap(vars(Host)) +
+  theme_classic(base_family = "Lato")
+```
+
+```{r graph-work, eval=FALSE}
+graph <- asy_sum %>%
+  filter(Host == "United States of America") %>%
+  group_by(Origin) %>%
+  summarize(Decisions = sum(n, na.rm = TRUE)) %>%
+  mutate(Host = "United States of America") %>%
+  select(3, 1, 2) %>%
+  {igraph::graph_from_data_frame(.[, 1:2], vertices = .[, 2:3])}
+
+asy_sum %>%
+  filter(Host == "United States of America") %>%
+  group_by(Origin) %>%
+  summarize(Decisions = sum(n, na.rm = TRUE)) %>%
+  arrange(desc(Decisions)) %>%
+  kableExtra::kable()
+```
