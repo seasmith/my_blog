@@ -3,16 +3,16 @@ title: "2018 Children At Risk Data: Graduation Rates"
 author: "Luke Smith"
 date: "`r Sys.Date()`"
 tags: [houston, schools]
-description: ""
+description: "Wide disparities in graduation rate exist among Houston area schools and school districts."
 twitter :
   card    : "summary_large_image"
   site    : "@lksmth"
   creator : "@lksmth"
   title   : "2018 Children At Risk Data: Graduation Rates"
-  description : ""
-  image       : "https://seasmith.github.io/blog/houston_school_report_2018/figure-html/plot_race.png"
+  description : "Wide disparities in graduation rate exist among Houston area schools and school districts."
+  image       : "https://seasmith.github.io/blog/houston_school_report_2018_2/figure-html/plot-grad-heat-map-1.png"
 og :
-  image : "https://seasmith.github.io/blog/houston_school_report_2018/figure-html/plot_race.png"
+  image : "https://seasmith.github.io/blog/houston_school_report_2018_2/figure-html/plot-grad-heat-map-1.png"
 ---
 
 ```{r knitr-opts, echo=FALSE, warning=FALSE, message=FALSE}
@@ -199,9 +199,9 @@ hi_lo_grad <- h %>%
   filter(grad_rate_est == max(grad_rate_est) | grad_rate_est == min(grad_rate_est))
 ```
 
-Houston area school districts show a wide disparity in graduation rates, according to the Children At Risk 2018 School Rankings.
+Houston area school districts show a wide disparity in graduation rates, according to the [Children At Risk 2018 School Rankings](https://texasschoolguide.org/school-rankings/).
 
-Among independent school districts, rural districts occupy the highest and lowest graduation rates.
+Among independent school districts, rural districts possess the lowest and highest graduation rates.
 
 `r hi_lo_grad$district[[2]]` graduated an estimated `r hi_lo_grad$grad_rate_est[[2]] %>% scales::percent()` of its students while `r hi_lo_grad$district[[1]]` graduated an estimated `r hi_lo_grad$grad_rate_est[[1]] %>% scales::percent()`.
 
@@ -221,7 +221,8 @@ p_bar_grad_rate <- h %>%
   geom_col(width = 1.0, color = "white", fill = "thistle4") +
   coord_flip() +
   scale_x_discrete(NULL) +
-  scale_y_continuous(NULL, expand = expand_scale(), limits = c(0, 1), sec.axis = sec_axis(~.)) +
+  scale_y_continuous(NULL, expand = expand_scale(), limits = c(0, 1),
+                     labels = scales::percent, sec.axis = sec_axis(~., labels = scales::percent)) +
   labs(caption = "Source: Children At Risk (2018 School Ranking)") +
   theme_classic(base_size = 12, base_family = "Lato") +
   theme(strip.background = element_blank(),
@@ -237,7 +238,7 @@ p_bar_grad_rate <- h %>%
 # facet_wrap(vars(key))
 
 ggsave(f_bar_grad_rate <- tempfile("bar-grad-rate", tmp_dir, ".png"),
-       width = 6, height = 9, dpi = 600)
+       width = 6, height = 10, dpi = 600)
 
 f_bar_grad_rate %>%
     image_read() %>%
@@ -260,7 +261,9 @@ f_bar_grad_rate %>%
     image_resize("1344x")
 ```
 
-They also show a clear positive correlation with the Children At Risk's grade ranking.
+There is also a very clear correlation with the Children At Risk's grade ranking and graduation rates.
+
+Outside of a couple outliers in the B+ and A grade, schools receiving a grade of F show the widest disparity in graduation rates among the various grades.
 
 ```{r grad-vs-grade}
 # GRADUATION AND GRADE
@@ -278,8 +281,8 @@ p_grad_vs_grade <- h %>%
     subtitle = "\n",
     caption = "Source: Children At Risk (2018 School Ranking)") +
   # guides(size = guide_legend(title.position = "top")) +
-  facet_wrap(vars(grade_cr), nrow = 1, scales = "free_x") +
-  theme_classic(base_size = 12, base_family = "Lato") +
+  # facet_wrap(vars(grade_cr), nrow = 1, scales = "free_x") +
+  blg::blg_theme_default(text_size = 12) +
   theme(strip.background = element_blank(),
         strip.text = element_blank(),
         axis.ticks.x = element_blank(),
@@ -287,6 +290,7 @@ p_grad_vs_grade <- h %>%
         legend.direction = "horizontal",
         legend.title = element_text(hjust = 0.5),
         legend.background = element_rect(color = "gray30"),
+        panel.grid.major.x = element_line(linetype = "dashed"),
         plot.caption = element_text(color = "gray50"))
 
 ggsave(f_grad_vs_grade <- tempfile("grad-vs-grade", tmp_dir, ".png"),
@@ -307,6 +311,20 @@ f_grad_vs_grade %>%
 
 
 ```{r para-vars-2}
+cut_breaks <- seq(.50, 1, by = 0.05)
+cut_labels <- seq(50, 100, by = 5) %>%
+  c(seq(55, 95, by = 5)) %>%
+  sort() %>%
+  split(ceiling(seq_along(.) / 2))  %>%
+  lapply(paste, collapse = "-") %>%
+  unlist() %>%
+  paste0("%") %>%
+  # paste0("+", .)
+  I()
+
+cut_labels[1] <- paste0("+", cut_labels[1])
+cut_labels[length(cut_labels)] <- paste0("+", cut_labels[length(cut_labels)])
+
 top_20_grad_rate <- h %>%
   filter(type == "High" & district %in% top_20_names) %>%
   select(campus, grad_rate, enrollment, district) %>%
@@ -314,7 +332,7 @@ top_20_grad_rate <- h %>%
   summarize(grad_rate = mean(grad_rate)) %>%
   ungroup() %>%
   mutate(grad_range = cut_interval(grad_rate, 7),
-         grad_range2 = cut(grad_rate, breaks = c(0.5, 0.55, 0.6, 0.65, 0.75, 0.8, 0.85, 0.9, 1))) %>%
+         grad_range2 = cut(grad_rate, breaks = cut_breaks, labels = cut_labels)) %>%
   arrange(grad_range2)
 ```
 
@@ -335,7 +353,7 @@ p_grad_heat_map <- h %>%
   arrange(grad_rate) %>%
   ungroup() %>%
   mutate(grad_range = cut_interval(grad_rate, 7),
-         grad_range2 = cut(grad_rate, breaks = c(0.5, 0.55, 0.6, 0.65, 0.75, 0.8, 0.85, 0.9, 1.0))) %>%
+         grad_range2 = cut(grad_rate, breaks = cut_breaks, labels = cut_labels)) %>%
   arrange(grad_range2) %>%
   ggplot(aes(factor(district, top_20_grad_rate, ordered = TRUE), enrollment)) +
   geom_col(aes(fill = factor(grad_range2, rev(unique(grad_range2)), ordered = TRUE)), position = "fill", width = 1) +
