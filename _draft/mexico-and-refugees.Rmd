@@ -156,47 +156,45 @@ asy_sum2 <- asy %>%
     bind_rows(x %>% group_by(Origin, Year) %>% summarize_at(vars(Applied, Decisions, Pending_End), sum, na.rm = TRUE)) %>%
     ungroup()
 }
-
-# asy_sum2 <- asy_sum2 %>%
-#   mutate(Host = case_when(
-#     Host == "Venezuela (Bolivarian Republic of)" ~ "Venezuela",
-#     Host == "Sint Maarten (Dutch part)"   ~ "St. Maarten",
-#     Host == "United Republic of Tanzania" ~ "Tanzania",
-#     TRUE ~ Host
-#   ))
 ```
 
 ```{r import-population-data}
 f_pop <- "~/R/my_blog/_draft/asy_data/WPP2017_POP_F01_1_TOTAL_POPULATION_BOTH_SEXES.xlsx"
 
 pop <- read_xlsx(f_pop, skip = 16)
+```
 
+```{r tidy-population-data}
 pop <- pop %>%
   rename(Region = `Region, subregion, country or area *`)
 ```
 
-```{r import-gdp}
+```{r import-gdp-data}
 f_gdp <- list.files("~/R/my_blog/_draft/gdp_data", pattern = "\\.csv$", full.names = TRUE)
 
 gdp <- read_csv(f_gdp, skip = 4)
 ```
 
-```{r import-resettlement}
+```{r import-resettlement-data}
 f_res <- "~/R/my_blog/_draft/asy_data/unhcr_popstats_export_resettlement_all_data.csv"
 
 res <- read_csv(f_res, skip = 3)
+```
 
+```{r tidy-resettlement-data}
 res <- res %>%
   rename(Host = `Country / territory of asylum/residence`)
 ```
 
-```{r import-remittances}
+```{r import-remittances-data}
 f_rem_in <- "~/R/my_blog/_draft/rem_data/Remittancedatainflows(Apr.2018).xls"
 f_rem_out <- "~/R/my_blog/_draft/rem_data/Remittancedataoutflows (Apr.2018).xls"
 
 rem_in  <- read_xls(f_rem_in)
 rem_out <- read_xls(f_rem_out)
+```
 
+```{r tidy-remittances-data}
 rem_in <- rem_in %>%
   mutate_at(vars(`1970`:`2017p`), as.double) %>%
   rename(country = `Migrant remittance inflows (US$ million)`)
@@ -206,11 +204,13 @@ rem_out <- rem_out %>%
   rename(country = `Migrant remittance outflows (US$ million)`)
 ```
 
-```{r import-persons-of-concern}
+```{r import-persons-of-concern-data}
 f_poc <- "~/R/my_blog/_draft/asy_data/unhcr_poc.csv"
 
 poc <- read_csv(f_poc, skip = 3L)
+```
 
+```{r tidy-persons-of-concern-data}
 poc <- poc %>%
   rename(Host = `Country / territory of asylum/residence`,
          Refugees = `Refugees (incl. refugee-like situations)`,
@@ -226,7 +226,7 @@ poc <- poc %>%
     mutate_at(vars(Refugees:Total_POC), as.integer)
 ```
 
-```{r import-geo, results='hide'}
+```{r import-geo-data, results='hide'}
 ISO_3166_1 <- ISOcodes::ISO_3166_1 %>% as_tibble()
 # data(world, package = "spData")
 
@@ -235,7 +235,9 @@ world <- st_read("~/R/my_blog/_draft/Countries_WGS84/Countries_WGS84.shp")
 
 # https://hub.arcgis.com/datasets/252471276c9941729543be8789e06e12_0
 world2 <- st_read("~/R/my_blog/_draft/UIA_World_Countries_Boundaries/UIA_World_Countries_Boundaries.shp")
+```
 
+```{r tidy-geo-data}
 world2 <- world2 %>%
   inner_join(
     ISO_3166_1 %>%
@@ -254,6 +256,17 @@ pop_gdp <- pop %>%
   select(-`Country code`, -Alpha_3)
 ```
 
+```{r import-mexico-crime-data}
+mex_crime <- "https://elcri.men/assets/json/national_1990.json" %>%
+  fromJSON()
+```
+
+<!-- End Import and Tidy -->
+
+
+The past several years have seen a surge in refugee and internally displaced person applications -- either caused by political oppression, war, or fraudulent motivations.
+
+
 ```{r totals}
 asy_total <- asy_sum2 %>%
   filter(Origin == "Total") %>%
@@ -268,30 +281,34 @@ asy_total_labs <- asy_total %>%
 
 tot_plot <- asy_total %>%
   ggplot(aes(Year, value, color = key)) +
-  geom_line() +
+  geom_line(size = 1.0) +
   geom_text(aes(label = key), asy_total_labs, hjust = 0, nudge_x = 0.1) +
   scale_y_continuous(NULL, labels = scales::comma, limits = c(600000, 3200000)) +
   scale_x_continuous(NULL, breaks = seq(2000, 2016, by = 4), 
                      expand = expand_scale(), limits = c(2000, 2020)) +
-  scale_color_discrete(guide = FALSE) +
-  # facet_wrap(vars(key)) +
-  # labs(title = "Global Refugee Situation",
-  #      subtitle = "Number of Asylum Cases") +
-  # theme_classic(base_family = "Lato", base_size = 13)
-  blg_theme_default(13)
+  scale_color_manual(guide = FALSE, values = asy_colors) +
+  blg_theme_default(13) +
+  theme(panel.grid.major.x = element_blank())
 
 ggsave(tot_file <- tempfile("tot_plot", tmp_dir, ".png"),
        tot_plot, width = 7, height = 9, dpi = 600)
 
 tot_file %>%
   image_read() %>%
-  # image_join(
-  #   image_blank(4200, 800, "white")
-  # ) %>%
+  set_top_text("Outcomes", size = 125, height = 150) %>%
+  set_top_text("Global Asylum Applications",
+               size = 175, height = 200) %>%
   image_resize("1344x")
 ```
 
-<!-- ![](asy_imgs/tot_plot.png) -->
+
+In June 2018, Andres Manual Lopez Obrador (AMLO), then presidential candidate for Mexico and now its inaugurated leader, [made the satement](http://dailycaller.com/2018/06/22/mexican-candidate-immigration-speech/) that it was a right of all migrants in the world to abandon their home country in order to seek a new life in the United States.
+
+It was a sentiments later echoed by the UN migration pact, which seeks to make human migration a human right.
+
+That statement may explain an [earlier statement](https://www.reuters.com/article/us-usa-trump-mexico-leftist/mexicos-lopez-obrador-blasts-trumps-immigration-policies-at-la-rally-idUSKBN15S0K7) directed toward then US president Donald Trump, in which AMLO stated that an addition to the US border wall would "denigrate and discriminate against our fellow human beings, it goes against humanity, it goes against intelligence and against history".
+
+
 
 ```{r, eval=FALSE}
 asy_sum2 %>%
@@ -305,8 +322,8 @@ asy_sum2 %>%
 ```
 
 ```{r usa-mex-totals, fig.height=19, fig.path="asy_imgs/", dpi=600}
-# Total 2000-2017
-a1 <- asy_sum2 %>%
+# Total Decisions 2000-2017; by country
+total_decisions <- asy_sum2 %>%
   filter(Origin == "Total") %>%
   select(-Origin) %>%
   gather(... = -c(Year, Host)) %>%
@@ -323,17 +340,39 @@ a1 <- asy_sum2 %>%
   mutate(Host = factor(Host, rev(Host), ordered = TRUE),
          rn = row_number()) %>%
   filter(rn <= 63) %>%
-  ggplot() +
-  geom_col(aes(Host, value)) +
+  mutate(col = case_when(
+    Host == "United States of America" ~ "steelblue",
+    Host == "Mexico" ~ "brown",
+    TRUE ~ "gray30"
+  ))
+
+a1_labels <- total_decisions %>%
+    filter(str_detect(Host, "United States of America|Mexico"))
+
+# Add flag png files without printing
+a1_labels$raster <- I(flags)
+a1_labels <- a1_labels %>%
+  mutate(
+    # Move flags to the right so they don't collide with the bars
+    value = value + 0.3,
+    # Add rank ending st, nd, rd, th
+    rn = if_else(Host == "United States of America", "2nd", "63rd")
+  )
+
+a1 <- total_decisions %>%
+  ggplot(aes(Host, value)) +
+  geom_col(aes(fill = col)) +
   coord_flip() +
-  scale_y_continuous(NULL, labels = scales::comma, expand = expand_scale()) +
+  geom_custom(aes(data = raster), data = a1_labels, grob_fun = grid::rasterGrob, fun_params = list(height = unit(0.6, "cm"))) +
+  geom_text(aes(label = rn), data = a1_labels, family = "Lato", size = 6, nudge_y = 0.45) +
+  scale_y_continuous(NULL, labels = scales::comma, expand = expand_scale(), 
+                     sec.axis = dup_axis()) +
   scale_x_discrete(NULL, expand = expand_scale()) +
-  # theme_classic(base_family = "Lato", base_size = 26) +
+  scale_fill_manual(NULL, values = c("brown", "gray30", "steelblue"), guide = FALSE) +
   blg_theme_default(26) +
   theme(legend.position = "top",
         legend.direction = "horizontal",
         panel.grid.major.y = element_blank(),
-        # axis.ticks = element_line(color = "black")
         NULL)
 
 ggsave(p1 <- tempfile("usa-mex-totals-1", tmp_dir, ".png"), 
@@ -342,7 +381,7 @@ ggsave(p1 <- tempfile("usa-mex-totals-1", tmp_dir, ".png"),
 
 ```{r usa-mex-percents, fig.height=38.5, fig.path="asy_imgs/", dpi=600}
 # Percent Population (2015) 2000-2017
-a2 <- asy_sum2 %>%
+percent_decisions <- asy_sum2 %>%
   filter(Origin == "Total") %>%
   select(-Origin) %>%
   gather(... = -c(Year, Host)) %>%
@@ -358,20 +397,43 @@ a2 <- asy_sum2 %>%
     Host == "United Republic of Tanzania" ~ "Tanzania",
     TRUE ~ Host
   )) %>%
+  mutate(col = case_when(
+    Host == "United States of America" ~ "steelblue",
+    Host == "Mexico" ~ "brown",
+    TRUE ~ "gray30"
+  )) %>%
   mutate(Host = factor(Host, rev(Host), ordered = TRUE),
          rn = row_number()) %>%
-  filter(rn <= 130) %>%
-  ggplot() +
-  geom_col(aes(Host, pct_pop)) +
+  filter(rn <= 130)
+
+a2_labels <- percent_decisions %>%
+    filter(str_detect(Host, "United States of America|Mexico"))
+
+# Add flag png files without printing
+a2_labels$raster <- I(flags)
+a2_labels <- a2_labels %>%
+  mutate(
+    # Move flags to the right so they don't collide with the bars
+    pct_pop = pct_pop + 0.013,
+    # Add rank st, th, rd, nd, etc
+    rn = if_else(Host == "United States of America", "40th", "130th")
+    )
+
+a2 <- percent_decisions %>%
+  ggplot(aes(Host, pct_pop)) +
+  geom_col(aes(fill = col)) +
+  geom_custom(aes(data = raster), data = a2_labels, grob_fun = grid::rasterGrob, fun_params = list(height = unit(0.6, "cm"))) +
+  geom_text(aes(label = rn), data = a2_labels,
+            family = "Lato", size = 6, nudge_y = 0.018, color = "gray20") +
   coord_flip() +
-  scale_y_continuous(NULL, labels = scales::percent, expand = expand_scale()) +
+  scale_y_continuous(NULL, labels = scales::percent, expand = expand_scale(), 
+                     sec.axis = dup_axis()) +
   scale_x_discrete(NULL, expand = expand_scale()) +
-  # theme_classic(base_family = "Lato", base_size = 26) +
+  scale_fill_manual(NULL, values = c("brown", "gray30", "steelblue"), guide = FALSE) +
   blg_theme_default(26) +
   theme(legend.position = "top",
         legend.direction = "horizontal",
         panel.grid.major.y = element_blank(),
-        # axis.ticks = element_line(color = "black")
         NULL
         )
 
@@ -416,7 +478,7 @@ To put into perspective the difference in total approved asylum cases between Me
 
 Although resettlement data for Mexico is sparse, there are three years of data to compare to the United States.
 
-Between 2003-2005, Mexico resettled 46 refugees compared to 135,103 resettled by the United States.
+Between 2003-2005, Mexico resettled 46 refugees compared to 135,103 resettled by the United States.bb
 
 ```{r combine-data}
 asy_sum3 <- asy_sum2 %>%
@@ -437,20 +499,6 @@ jsonlite::write_json(asy_sum3 %>%
                               y = asy_cap,
                               n = Host),
                      "~/R/my_blog/_draft/asy_d3/asylum.json")
-
-# asy_sum3 %>%
-#   mutate(col = case_when(
-#     Host == "United States of America" ~ "brown",
-#     Host == "Mexico" ~ "green",
-#     TRUE ~ "gray50")) %>%
-#   ggplot() +
-#   geom_point(aes(gdp_cap, asy_cap, group = Host, fill = I(col)), pch = 21) +
-#   scale_x_continuous(NULL, expand = c(0.005, 0.005), label = function(x) paste0("$", scales::comma(x))) +
-#   scale_y_continuous(NULL, expand = c(0.01, 0.0), label = scales::percent) +
-#   # scale_fill_manual() +
-#   labs(title = "Does Per Capita GDP Play A Role In Asylum Acceptance?",
-#        subtitle = "Total Approved Asylum Application (2000-2017) As Percent Of 2015 Population") +
-#   theme_classic(base_size = 13, base_family = "Lato")
 ```
 
 ```{r plotly-scatterplot, eval=FALSE}
@@ -467,7 +515,6 @@ jsonlite::write_json(asy_sum3 %>%
     guides(fill = FALSE) +
     labs(title = "Does Per Capita GDP Play A Role In Asylum Acceptance?",
          subtitle = "Total Approved Asylum Application (2000-2017) As Percent Of 2015 Population") +
-    # theme_classic(base_size = 13, base_family = "Lato")
     blg_theme_default(13)
   
 } %>%
@@ -488,13 +535,11 @@ res %>%
   scale_y_continuous(NULL, expand = expand_scale(), labels = scales::comma) +
   labs(caption = "Source: UNHCR") +
   facet_wrap(vars(Host)) +
-  # theme_classic(base_size = 14, base_family = "Lato") +
   blg_theme_default(14) +
   theme(strip.background = element_blank(),
         strip.text = element_text(size = 13), 
         panel.spacing.x = unit(1, "cm"),
         plot.caption = element_text(color = "gray50", size = 11),
-        # axis.ticks = element_line(color = "black"),
         NULL)
 ```
 
@@ -538,9 +583,7 @@ plot_ca <- cen_ame %>%
   scale_x_continuous(NULL) +
   facet_wrap(vars(Origin)) +
   labs(
-    # title = "Asylum Applications by Central Americans", 
        caption = "Source: UNHCR") +
-  # theme_classic(base_family = "Open Sans", base_size = 14) +
   blg_theme_default(14) +
   theme(legend.position = "top",
         legend.direction = "horizontal",
@@ -548,7 +591,6 @@ plot_ca <- cen_ame %>%
         strip.text = element_text(size = 13),
         panel.spacing.x = unit(1, "cm"),
         plot.caption = element_text(color = "gray50", size = 11),
-        # axis.ticks = element_line(color = "black")
         NULL)
 
 ggsave(f_ca <- "~/R/my_blog/_draft/asy_imgs/cen_ame.png", 
