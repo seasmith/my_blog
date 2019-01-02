@@ -15,19 +15,6 @@ og :
   image : ""
 ---
 
-The past several years have seen a surge in refugees and internally displaced persons.
-
-Syrians and Afghanis escaping violence in their home countries, Rohingya fleeing the Burmese army, and violence in northern Africa, have driven millions toward Europe.
-
-These conflicts consitute the largest sources of 
-
-
-In June 2018, Andres Manual Lopez Obrador (AMLO), then presidential candidate for Mexico and now its president-elect, [made the satement](http://dailycaller.com/2018/06/22/mexican-candidate-immigration-speech/) that it was a right of all migrants in the world to abandon their home country in order to seek a new life in the United States.
-
-That statement may explain an [earlier statement](https://www.reuters.com/article/us-usa-trump-mexico-leftist/mexicos-lopez-obrador-blasts-trumps-immigration-policies-at-la-rally-idUSKBN15S0K7) directed toward then US president Donald Trump, in which AMLO stated that an addition to the US border wall would "denigrate and discriminate against our fellow human beings, it goes against humanity, it goes against intelligence and against history".
-
-
-
 ```{r knitr-opts, echo=FALSE, warning=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo=FALSE)
 knitr::opts_chunk$set(warning=FALSE)
@@ -35,7 +22,7 @@ knitr::opts_chunk$set(message=FALSE)
 knitr::opts_chunk$set(eval=TRUE)
 ```
 
-```{r load-deps}
+```{r load-dependencies}
 # library(plotly)
 library(tidyverse)
 library(readxl)
@@ -44,17 +31,99 @@ library(magick)
 library(ggalt)
 library(sf)
 library(blg)
+library(egg)
+library(jsonlite)
 ```
 
 ```{r tmp-dir}
 tmp_dir <- tempdir()
 ```
 
+```{r plot-setup}
+# Read flag png files
+flags <- list("flag_usa.png", "flag_mexico.png") %>%
+  lapply(png::readPNG)
+
+asy_colors <- c("#4c415f", "#73628f", "#998ab2")
+
+bg_color <- "white"
+```
+
+```{r functions-setup}
+# Creates title-like text at the top of an image
+# Creates title-like text at the top of an image
+set_top_text <- function(i, text, height = 125, size = 100, font = "Arial", 
+                         color = "black", bg_color = "white", gravity = "northwest",
+                         location = "0+0") {
+  i %>%
+    image_join(
+      image_blank(image_info(.)$width, height = height, color = bg_color) %>%
+        image_annotate(text = text, font = font, color = color, size = size, location = location, gravity = gravity)
+      , .
+    ) %>%
+    image_append(stack = TRUE)
+}
+
+set_bottom_text <- function(i, text, height = 125, size = 100, font = "Arial",
+                            bg_color = "white", color = "black", gravity = "northwest", 
+                            location = "0+0") {
+  i %>%
+    image_join(
+      .,
+      image_blank(image_info(.)$width, height = height, color = bg_color) %>%
+        image_annotate(text = text, font = font, color = color, size = size,
+                       location = location, gravity = gravity)
+    ) %>%
+    image_append(stack = TRUE)
+}
+
+# Pads an image with whitespace on the right-hand side
+set_padding_r <- function(i, size = 100, color = color) {
+  i %>%
+    image_join(
+      image_blank(size, image_info(.)$height, color = color) 
+    ) %>%
+    image_append(stack = FALSE)
+}
+
+# Pads an image with whitespace on the left-hand side
+set_padding_b <- function(i, size = 100, color = color) {
+  i %>%
+    image_join(
+      image_blank(image_info(.)$width, size, color = color) 
+    ) %>%
+    image_append(stack = TRUE)
+}
+
+# Bind (append) images horizontally -- for use with purrr::reduce()
+bind_images_h <- function(x, y, p = 100, bg_color = "white") {
+  x %>% 
+    set_padding_r(size = p, color = bg_color) %>%
+    image_join(y) %>%
+    image_append(stack = FALSE)
+}
+
+# Bind (append) images vertically -- for use with purrr::reduce()
+bind_images_v <- function(x, y, p = 100, bg_color = "white") {
+  x %>% 
+    set_padding_b(size = p, color = bg_color) %>%
+    image_join(y) %>%
+    image_append(stack = TRUE)
+}
+
+```
+
+
+<!-- Import and Tidy -->
+
+
 ```{r import-asylum-data}
 f_asy <- "~/R/my_blog/_draft/asy_data/unhcr_world.csv"
 
 asy <- read_csv(f_asy, skip = 3L)
+```
 
+```{r tidy-asylum-data}
 asy <- asy %>%
   rename(Applied = `Applied during year`,
          Decisions = `Total decisions`,
