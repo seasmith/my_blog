@@ -10,9 +10,9 @@ twitter :
   creator : "@lksmth"
   title   : "2018 Children At Risk Data: Graduation Rates"
   description : "Wide disparities in graduation rate exist among Houston area schools and school districts."
-  image       : "https://seasmith.github.io/blog/houston_school_report_2018_2/figure-html/plot-grad-heat-map-1.png"
+  image       : "https://seasmith.github.io/blog/houston_school_report_2018_2_files/figure-html/plot-grad-heat-map-1.png"
 og :
-  image : "https://seasmith.github.io/blog/houston_school_report_2018_2/figure-html/plot-grad-heat-map-1.png"
+  image : "https://seasmith.github.io/blog/houston_school_report_2018_2_files/figure-html/plot-grad-heat-map-1.png"
 ---
 
 ```{r knitr-opts, echo=FALSE, warning=FALSE, message=FALSE}
