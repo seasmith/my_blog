@@ -1,5 +1,5 @@
 ---
-title: "Sweden's Rise In Crime"
+title: "Sweden's Rise In Crime And Asylum"
 author: "Luke Smith"
 date: "`r Sys.Date()`"
 tags: [sweden, crime]
@@ -16,44 +16,49 @@ og :
 ---
 
 ```{r knitr-opts, echo=FALSE, warning=FALSE, message=FALSE}
-knitr::opts_chunk$set(echo=FALSE)
-knitr::opts_chunk$set(warning=FALSE)
-knitr::opts_chunk$set(message=FALSE)
-knitr::opts_chunk$set(eval=TRUE)
+library(knitr)
+
+opts_chunk$set(echo=FALSE)
+opts_chunk$set(warning=FALSE)
+opts_chunk$set(message=FALSE)
+opts_chunk$set(eval=TRUE)
 ```
 
-<!-- # Difference in statistics -->
-<!--   *  Crime Survey (NTU): A literal survey asking if respondents were the victim of any particular crime -->
-<!--     * Also asks respondents about their faith in the justice system -->
-<!--   *  Reported Crime: Recorded cases of a suposed committed crime. May include repeated counts and erroneous, or otherwise unusual reporting, of crimes. -->
-<!--     * Consipracy to committ murder may be registered as 'lethal violence' -->
-<!--     * Rape offenses very likely increased due to change in the deifition of rape -- though no concensus exists on how much the change in definition explains the increase in rape -->
-
-<!-- # Manslaughter: https://www.bra.se/bra-in-english/home/crime-and-statistics/murder-and-manslaughter.html -->
-<!--   *  Includes reported cases of lethal violence where lethal violence is highly likely to be the cause of death -->
-<!--   *  The statistic regarding reported offences is misleading where lethal violence is concerned, since it shows all reported incidents with a lethal outcome where there initially was reason to investigate whether lethal violence may have been used -->
-<!--   *  It also occurs that several police reports are prepared for a single case of suspected lethal violence, which means that the statistic contains repeats. -->
-<!--   *  Moreover, attempts, preparation, and conspiracy to commit murder or manslaughter are erroneously registered as completed murder or manslaughter -->
-
-In February 2017, US President Donald Trump spoke about the dangers of taking in refugees from Syria -- an active war-zone where militant Islamic groups combat an oppressive dictator.
-
-In the speech, Trump commented about "last night in Sweden", which prompted UKIP politician Nigel Farage two days later to state that Malmo, Sweden is the "rape capital" of Europe. 
-
-Farage implied Malmo's status was due to Sweden's migrant population, particularly refugees.
-
-An examination of Sweden's crime statistics, from [Brå](https://www.bra.se/bra-in-english/home/crime-and-statistics.html) (an agency within Sweden's Ministry of Justice), does reveal dramatic rises in some crime categories.
-
-```{r}
-# library(plotly)
+```{r load-dependencies}
 library(tidyverse)
 library(readxl)
 library(extrafont); loadfonts("win", quiet = TRUE)
 library(magick)
-# library(ggalt)
-# library(sf)
 library(broom)
+library(scales)
 
 tmp_dir <- tempdir()
+```
+
+```{r function-setup}
+bg_color <- "white"
+
+# Creates title-like text at the top of an image
+set_top_text <- function(i, text, height = 125, size = 100, font = "Arial", color = "black", location = "0+0") {
+  i %>%
+    image_join(
+      image_blank(image_info(.)$width, height = height, color = bg_color) %>%
+        image_annotate(text = text, font = font, color = "black", size = size, location = location)
+      , .
+    ) %>%
+    image_append(stack = TRUE)
+}
+
+set_bottom_text <- function(i, text, height = 125, size = 100, location = "0+0", font = "Arial", color = "black") {
+  i %>%
+    image_join(
+      image_blank(image_info(.)$width, height = height, color = bg_color) %>%
+        image_annotate(text = text, font = font, color = "black", size = size,
+                       location = location)
+      , .
+    ) %>%
+    image_append(stack = TRUE)
+}
 ```
 
 ```{r import-asylum-data}
@@ -93,14 +98,6 @@ asy_sum2 <- asy %>%
     bind_rows(x %>% group_by(Origin, Year) %>% summarize_at(vars(Applied, Decisions, Pending_End), sum, na.rm = TRUE)) %>%
     ungroup()
 }
-
-# asy_sum2 <- asy_sum2 %>%
-#   mutate(Host = case_when(
-#     Host == "Venezuela (Bolivarian Republic of)" ~ "Venezuela",
-#     Host == "Sint Maarten (Dutch part)"   ~ "St. Maarten",
-#     Host == "United Republic of Tanzania" ~ "Tanzania",
-#     TRUE ~ Host
-#   ))
 ```
 
 ```{r}
@@ -160,6 +157,29 @@ swe <- swe %>%
          Narcotics = as.double(Narcotics))
 ```
 
+<!-- # Difference in statistics -->
+<!--   *  Crime Survey (NTU): A literal survey asking if respondents were the victim of any particular crime -->
+<!--     * Also asks respondents about their faith in the justice system -->
+<!--   *  Reported Crime: Recorded cases of a suposed committed crime. May include repeated counts and erroneous, or otherwise unusual reporting, of crimes. -->
+<!--     * Consipracy to committ murder may be registered as 'lethal violence' -->
+<!--     * Rape offenses very likely increased due to change in the deifition of rape -- though no concensus exists on how much the change in definition explains the increase in rape -->
+
+<!-- # Manslaughter: https://www.bra.se/bra-in-english/home/crime-and-statistics/murder-and-manslaughter.html -->
+<!--   *  Includes reported cases of lethal violence where lethal violence is highly likely to be the cause of death -->
+<!--   *  The statistic regarding reported offences is misleading where lethal violence is concerned, since it shows all reported incidents with a lethal outcome where there initially was reason to investigate whether lethal violence may have been used -->
+<!--   *  It also occurs that several police reports are prepared for a single case of suspected lethal violence, which means that the statistic contains repeats. -->
+<!--   *  Moreover, attempts, preparation, and conspiracy to commit murder or manslaughter are erroneously registered as completed murder or manslaughter -->
+
+
+The past few years have seen much news made about crime in Sweden -- stemming largely from comments made by US President Donald Trump ("[last night in Sweden](https://www.nytimes.com/2017/02/19/world/europe/last-night-in-sweden-trumps-remark-baffles-a-nation.html)") and UK Independence Party founder Nigel Farage ("[Malmo is now the rape capital of Europe](https://www.independent.co.uk/news/uk/politics/nigel-farage-sweden-donald-trump-rape-capital-of-europe-refugees-malmo-why-wrong-debunked-claim-a7591636.html)"). 
+
+These comments have largely stemmed out of criticism of Sweden's migration policy, particularly concerning the arrival of asylum seekers.
+
+So how has asylum affected Sweden's crime rate?
+
+An examination of Sweden's crime statistics, from [Brå](https://www.bra.se/bra-in-english/home/crime-and-statistics.html) (an agency within Sweden's Ministry of Justice), does reveal dramatic rises in some crime categories, and shows some correlation with UN Refugee Agency data on asylum decisions (newly admitted refugees).
+
+
 ```{r plot-build-asylum-decisions}
 plot_swe1 <- swe %>%
   select(Year, `Lethal Crime`, `All Sexual Crimes`, Rape, Narcotics) %>%
@@ -167,18 +187,18 @@ plot_swe1 <- swe %>%
   mutate(key = factor(key, unique(key), ordered = TRUE)) %>%
   ggplot() +
   geom_line(aes(Year, value), color = "steelblue", size = 1.4) +
-  scale_x_continuous(NULL, expand = expand_scale()) +
+  scale_x_continuous("Asylum Decisions", expand = expand_scale()) +
   scale_y_continuous(NULL, expand = c(0.02, 0.02), labels = scales::comma) +
   facet_wrap(vars(key), scales = "free_y", ncol = 1) +
   labs(caption = " ") +
-  # theme_classic(base_size = 31, base_family = "Lato") +
   blg::blg_theme_default(31) +
   theme(strip.background = element_blank(),
-        # strip.text = element_text(size = 22),
+        strip.text = element_text(hjust = 0),
         panel.spacing.x = unit(1, "cm"),
         panel.grid.major.x = element_blank(),
         plot.margin = margin(0, 0.5, 0.25, 0.25, "cm"),
-        plot.caption = element_text(color = "gray50", size = 17))
+        plot.caption = element_text(color = "gray50", size = 17),
+        axis.title.x = element_text(color = "white", size = 24))
 
 plot_swe2 <- swe %>%
   left_join(
@@ -191,19 +211,18 @@ plot_swe2 <- swe %>%
   mutate(key = factor(key, unique(key), ordered = TRUE)) %>%
   ggplot(aes(Decisions, value)) +
   geom_point(pch = 21, fill = "gray70", color = "gray30", size = 3.1) +
-  # geom_smooth(method = "lm", se = FALSE, color = "orange") +
-  scale_x_continuous(NULL, expand = c(0.013, 0.013), labels = scales::comma,
+  scale_x_continuous("Asylum Decisions (2000-2017)", expand = c(0.013, 0.013), labels = scales::comma,
                      breaks = scales::pretty_breaks(3)) +
   scale_y_continuous(NULL, expand = c(0.03, 0.03), labels = scales::comma,
                      breaks = scales::pretty_breaks(3)) +
   facet_wrap(vars(key), scales = "free_y", ncol = 1) +
-  # theme_classic(base_size = 31, base_family = "Lato") +
   blg::blg_theme_default(31) +
   theme(strip.background = element_blank(),
-        # strip.text = element_text(size = 22),
+        strip.text = element_text(hjust = 0),
         panel.spacing.x = unit(1, "cm"), 
-        plot.margin = margin(0, 0.5, 1.1, 0.25, "cm"),
-        plot.caption = element_text(color = "gray50", size = 17))
+        plot.margin = margin(0, 0.5, 0.8, 0.25, "cm"),
+        plot.caption = element_text(color = "gray50", size = 17),
+        axis.title.x = element_text(color = "black", size = 24))
 
 ggsave(plot_swe1, file = f_swe1 <- "~/R/my_blog/_draft/sweden/plot_swe1.png", height = 14, width = 6, dpi = 600)
 ggsave(plot_swe2, file = f_swe2 <- "~/R/my_blog/_draft/sweden/plot_swe2.png", height = 14, width = 6, dpi = 600)
@@ -215,61 +234,21 @@ img_swe1 <- f_swe1 %>%
 img_swe2 <- f_swe2 %>%
   image_read()
 
-img_swe1 <- img_swe1 %>%
-  image_join(
-    image_blank(4200, 252, "white") %>%
-      image_annotate("(1950-2017)",
-                     size = 218, color = "black", font = "Lato",
-                     location = geometry_point(50, 5))
-    , .
-  ) %>%
-  image_append(stack = TRUE) %>%
-  image_join(
-    image_blank(4200, 252, "white") %>%
-      image_annotate("Crime Rates Per 100,000 Persons",
-                     size = 218, color = "black", font = "Lato",
-                     location = geometry_point(50, 5))
-    , .
-  ) %>%
-  image_append(stack = TRUE)
-
-
-img_swe2 <- img_swe2 %>%
-  image_join(
-    image_blank(4200, 252, "white") %>%
-      image_annotate("(2000-2017)",
-                     size = 218, color = "black", font = "Lato",
-                     location = geometry_point(50, 5))
-    , .
-  ) %>%
-  image_append(stack = TRUE) %>%
-  image_join(
-    image_blank(4200, 252, "white") %>%
-      image_annotate("Crime Rates And Asylum Decisions",
-                     size = 218, color = "black", font = "Lato",
-                     location = geometry_point(50, 5))
-    , .
-  ) %>%
-  image_append(stack = TRUE)
-
-
 img_swe1 %>%
   image_join(
-    image_blank(300, 4450, "white")
+    image_blank(300, image_info(.)$height, "white")
   ) %>%
   image_append() %>%
   image_join(
     img_swe2
   ) %>%
   image_append() %>%
-  image_join(
-    image_blank(image_info(.)$width, 415, "white") %>%
-      image_annotate("Have Increases In Asylum Decisions Affected Crime In Sweden?",
-                     size = 310, color = "black", font = "Lato",
-                     location = geometry_point(50, 5))
-    , .
-  ) %>%
-  image_append(stack = TRUE) %>%
+  set_top_text("Crime Rates Per 100,000 Persons", height = 325,
+               size = 218, color = "black", font = "Lato",
+               location = geometry_point(50, 5)) %>%
+  set_top_text("How Has Asylum Affected Crime In Sweden?", 
+               height = 395, size = 310, color = "black", font = "Lato",
+               location = geometry_point(50, 5)) %>%
   image_join(
     image_blank(image_info(.)$width, 230, "white") %>%
       image_annotate("Source: Brå (Reported Offenses); UN Refugee Agency (UNHCR)",
@@ -280,11 +259,21 @@ img_swe1 %>%
   image_resize("1344x")
 ```
 
-The rise in lethal crime in 2017 may be due to errors, such as: conspiracy to comitt murder and attempted murder registered as murder; counting multiple cases per single death; and other reported incidents with a lethal outcome (including suicide) registered as murder or manslaughter. 
+The mid-2000s, a period of rising crime, coincided with the arrival war refugees from Iraq and Afghanistan.
 
-Therefore, for very recent years such as 2017, these errors can give the appearance of a higher than usual lethal crime rate.
+## Lethal Crime
 
-However, when coupled with the UN Refugee Agency's data for asylum decisions, newly admitted refugees, there does not appear to be a strong correlation to support the claims against Malmo being the rape capital of Europe.
+According to Brå, the rise in lethal crime in recent years, such as 2017, may be due to factors such as: 
+
+* Registering conspiracy to comitt murder and attempted murder bother as murder.
+* Counting multiple cases per single death.
+* Registering non-criminal incidents that involve a lethal outcome (i.e. suicide) as murder or manslaughter.
+
+Since it may take years for these factors to be fully processed by authorities, very recent years such as 2017 will give the appearance of a higher than usual lethal crime rate.
+
+## Sex Related Crimes
+
+A breakdown of sex related crimes shows that sex crimes other than rape have increased at a greater rate in recent years than has rape.
 
 ```{r}
 nr <- swe %>%
@@ -311,13 +300,12 @@ nr_labs <- nr %>%
 
 p_not_rape <- nr %>%
   ggplot(aes(Year, value, color = key)) +
-  geom_line(size = 0.7) +
+  geom_line(size = 1.0) +
   geom_text(aes(label = lab), nr_labs, hjust = 0, nudge_y = 15) +
   scale_x_continuous(NULL, expand = expand_scale(), breaks = seq(1960, 2010, by = 10)) +
   scale_y_continuous(NULL, expand = c(0.02, 0.02)) +
   scale_color_manual(values = c("#4c415f", "#73628f", "#998ab2"),guide = FALSE) +
   labs(caption = "Source: Brå (Reported Offenses)") +
-  # theme_classic(base_size = 18, base_family = "Lato") +
   blg::blg_theme_default(18) +
   theme(strip.background = element_blank(),
         strip.text = element_text(size = 15),
@@ -331,30 +319,25 @@ ggsave(f_not_rape <- tempfile("plot_not_rape", tmp_dir, ".png"),
 
 f_not_rape %>%
   image_read() %>%
-  {
-    img <- .
-    i <- image_info(img)
-    image_blank(i$width, 230, "white") %>%
-      image_annotate("How Rape Has Affected All Sex Crimes In Sweden",
-                     size = 185, font = "Lato", color = "black",
-                     location = geometry_point(70, 5)) %>%
-      # image_join(
-      #   image_blank(i$width, 185, "white") %>%
-      #     image_annotate("The Definition Of Rape",
-      #                    size = 135, font = "Lato", color = "black",
-      #                    location = geometry_point(70, 0))
-      # ) %>%
-      # image_append(stack = TRUE) %>%
-      image_join(
-        image_blank(i$width, 190, "white") %>%
-          image_annotate("Sexual Crime Rates (Per 100,000 Persons)",
-                         size = 120, font = "Lato", color = "black",
-                         location = geometry_point(70, 5))
-      ) %>%
-      image_append(stack = TRUE) %>%
-      image_join(img)
-  } %>%
-    image_append(stack = TRUE) %>%
+  set_top_text("Sexual Crimes Rates (Per 100,000 Persons)", height = 190, size = 120) %>%
+  set_top_text("How Rape Has Affected All Sex Crimes In Sweden", height = 230, size = 185) %>%
+  # {
+  #   img <- .
+  #   i <- image_info(img)
+  #   image_blank(i$width, 230, "white") %>%
+  #     image_annotate("How Rape Has Affected All Sex Crimes In Sweden",
+  #                    size = 185, font = "Lato", color = "black",
+  #                    location = geometry_point(70, 5)) %>%
+  #     image_join(
+  #       image_blank(i$width, 190, "white") %>%
+  #         image_annotate("Sexual Crime Rates (Per 100,000 Persons)",
+  #                        size = 120, font = "Lato", color = "black",
+  #                        location = geometry_point(70, 5))
+  #     ) %>%
+  #     image_append(stack = TRUE) %>%
+  #     image_join(img)
+  # } %>%
+  #   image_append(stack = TRUE) %>%
     image_resize("1344x")
 ```
 
@@ -395,14 +378,11 @@ poc %>%
   I()
 ```
 
-The rape rate in Sweden rose in 2016 and 2017, however the rate does not appear particularly elevated above the overall level of the 2010s.
+<!-- The rape rate in Sweden rose in 2016 and 2017, however the rate does not appear particularly elevated above the overall level of the 2010s. -->
 
-The rape rate rose during the mid-2000s, as did other crimes such as all sexual crimes and those involving narcotics.
+<!-- The rape rate rose during the mid-2000s, as did other crimes such as all sexual crimes and those involving narcotics. -->
 
-The data does not appear to support some of the claims made by politicians, however it should be noted that the mid-2000s, a period of rising crime, did coincide with the arrival of other war refugees from Iraq and Afghanistan.
-
-
-```{r stat-tests}
+```{r stat-tests, eval=FALSE}
 tests <- swe %>%
   left_join(
     asy_sum2 %>%
@@ -456,5 +436,38 @@ f_res_fit %>%
     , .
   ) %>%
   image_append(TRUE) %>%
+  image_resize("1344x")
+```
+
+## Other Crimes
+
+During that time period, many other crimes saw declines while some showed increase.
+
+```{r other-crimes}
+p_other_crimes <- swe %>%
+  select(Year, Theft:Burglary, Robbery, Fraud, DUI) %>%
+  gather(... = -Year) %>%
+  ggplot(aes(Year, value, group = key)) +
+  geom_line(color = "steelblue", size = 1.0) +
+  scale_x_continuous(NULL, breaks = c(1960, 2000),
+                     labels = c(1960, 2000)) +
+  scale_y_continuous(NULL, labels = comma) +
+  facet_wrap(vars(key), scales = "free_y") +
+  labs(caption = "Source: Brå (Reported Offenses)") +
+  blg::blg_theme_default(18) +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(size = 15),
+        panel.spacing.x = unit(1, "cm"),
+        panel.grid.major.x = element_blank(),
+        plot.margin = margin(0, 0.5, 0.25, 0.25, "cm"),
+        plot.caption = element_text(color = "gray50", size = 15))
+
+ggsave(f_other_crimes <- tempfile("p_other_crimes", tmp_dir, ".png"),
+       p_other_crimes, height = 7, width = 7, dpi = 600)
+
+f_other_crimes %>%
+  image_read() %>%
+  set_top_text("Crime Rates Per 100,00 Persons (1950-2017)", size = 120, height = 165) %>%
+  set_top_text("Other Crimes in Sweden", size = 200, height = 215) %>%
   image_resize("1344x")
 ```
